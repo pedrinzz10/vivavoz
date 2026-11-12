@@ -1,0 +1,237 @@
+# **Relatório Analítico e Proposta de Solução: Ecossistema CitizenTech**
+
+## **PARTE I: FUNDAMENTAÇÃO E PESQUISA DE MERCADO**
+
+## **Introdução: A Inovação Tecnológica e a Centralidade do Cidadão**
+
+O advento da Quarta Revolução Industrial e a proliferação ubíqua de sistemas de conectividade, sensores, inteligência artificial e automação redefiniram as dinâmicas de produção, consumo e governança em escala global. Historicamente, o desenvolvimento de soluções tecnológicas tem priorizado a otimização de mercados, a maximização de lucros corporativos e a eficiência de processos industriais. Contudo, observa-se um descompasso estrutural profundo: enquanto as arquiteturas digitais avançam exponencialmente, problemas fundamentais de infraestrutura, mobilidade, sustentabilidade e acesso a direitos básicos permanecem sem resolução no cotidiano das cidades e do campo1.  
+O paradigma da "CitizenTech" (Tecnologia Cidadã) surge como uma resposta crítica a essa assimetria tecnológica. O conceito propõe a criação de ecossistemas digitais fundamentados nas necessidades reais e urgentes das pessoas, combinando dados, conectividade, sistemas inteligentes, sensores e novos modelos de negócio para ampliar direitos, facilitar escolhas, reduzir desigualdades e tornar a vida mais segura, simples e sustentável1. A premissa central é que a inovação tecnológica não tem valor intrínseco se não for capaz de chegar a quem realmente precisa, gerando um benefício concreto que altera a realidade material do indivíduo, seja na metrópole, na pequena cidade, no campo ou em comunidades remotas1.  
+Para que a formulação de soluções no escopo da CitizenTech seja efetiva, é imperativo transcender a observação superficial dos sintomas sociais e realizar uma investigação exaustiva sobre as "dores" estruturais que afligem diferentes grupos vulneráveis no território nacional. O alinhamento com os Objetivos de Desenvolvimento Sustentável (ODS) da Organização das Nações Unidas (ONU) — notadamente os ODS 2 (Fome Zero), 3 (Saúde e Bem-estar), 9 (Indústria, Inovação e Infraestrutura), 10 (Redução das Desigualdades) e 11 (Cidades e Comunidades Sustentáveis) — exige uma compreensão sistêmica de como as variáveis geográficas, econômicas e sociais se interconectam1.  
+O presente relatório exaustivo apresenta uma pesquisa intensa e um mapeamento minucioso das dores, barreiras e impactos de segunda e terceira ordem vivenciados por quatro grupos prioritários: (1) Idosos e Pessoas com Deficiência (PcD), limitados por um ambiente urbano hostil e barreiras de mobilidade; (2) Pequenos Produtores e a Agricultura Familiar, pressionados por assimetrias de mercado, déficits de assistência técnica e extremos climáticos; (3) Habitantes de Favelas e Áreas de Risco, sob a ameaça iminente e recorrente de desastres naturais que geram perdas patrimoniais e sistêmicas; e (4) A população afetada pela Exclusão Digital, que sofre o paradoxo da hiperconectividade precarizada e a impossibilidade de acessar serviços governamentais digitais. Ao dissecar as complexidades inerentes a cada um desses grupos, este documento estabelece as bases conceituais e empíricas necessárias para o desenho de arquiteturas de software, modelos de dados e aplicações móveis que efetivamente subvertam o atual quadro de desigualdade.
+
+## **1\. Pessoas com Deficiência e Idosos: A Crise de Mobilidade Urbana e o Direito à Cidade Negado**
+
+A reconfiguração demográfica brasileira, caracterizada por um envelhecimento populacional acelerado e por uma alta prevalência de pessoas com deficiência (PcD), impõe desafios severos e urgentes ao planejamento urbano e às políticas de mobilidade. As metrópoles brasileiras foram historicamente estruturadas sob a égide do transporte motorizado individual (o modelo "carro-cêntrico"), marginalizando a caminhabilidade, a acessibilidade e o transporte público coletivo de qualidade2. O resultado é um ambiente construído hostil, que cerceia o direito fundamental de ir e vir, limitando a autonomia e a inserção social de milhões de cidadãos.
+
+### **1.1. A Transição Demográfica e a Prevalência de Deficiências no Brasil**
+
+Os resultados do Censo Demográfico de 2022, conduzido pelo Instituto Brasileiro de Geografia e Estatística (IBGE), fornecem um retrato inquestionável do envelhecimento populacional. A população de pessoas idosas (60 anos ou mais de idade) atingiu a marca de 32.113.490 indivíduos, o que representa um crescimento de 56,0% em relação ao contingente registrado no Censo de 20105. Esse fenômeno é evidenciado pelo "índice de envelhecimento", uma métrica que relaciona a proporção de idosos para cada 100 crianças de 0 a 14 anos. No âmbito nacional, esse índice saltou de 44,8 em 2010 para 80,0 em 20225. As projeções demográficas indicam que, até o ano de 2071, os idosos representarão 37,8% de todos os brasileiros, ultrapassando 75 milhões de pessoas7. Em municípios altamente urbanizados da Região Metropolitana de São Paulo, como Osasco, os dados locais já refletem essa pressão, exigindo respostas imediatas das políticas públicas e da inovação tecnológica8.  
+Paralelamente, o levantamento censitário revela que o Brasil possui 14,4 milhões de pessoas com deficiência, o equivalente a 7,3% da população total10. Ao analisar a intersecção entre deficiência e renda, revela-se um quadro de profunda vulnerabilidade. A pobreza é desproporcionalmente mais elevada entre as Pessoas com Deficiência. Dados do IBGE apontam que, entre crianças de 2 a 14 anos com deficiência, 60,9% vivem abaixo da linha da pobreza (rendimento domiciliar *per capita* abaixo de US\$ 8,30 PPC), um índice quase oito pontos percentuais superior ao das pessoas sem deficiência na mesma faixa etária (52,5%)11. Este contexto socioeconômico precarizado significa que este grupo populacional possui menor capacidade de arcar com soluções privadas de mobilidade (como veículos adaptados ou serviços de táxi e transporte por aplicativo), dependendo quase integralmente da infraestrutura pública, que se mostra cronicamente falha.
+
+| Indicador Sociodemográfico (IBGE 2022\) | Dados Referenciais | Variação / Relevância |
+| :---- | :---- | :---- |
+| **População com 60 anos ou mais** | 32.113.490 pessoas | Crescimento de 56,0% frente a 2010\. |
+| **Índice de Envelhecimento Nacional** | 80,0 idosos por 100 jovens | Aumento de 78,5% em 12 anos. |
+| **Pessoas com Deficiência (Total)** | 14,4 milhões (7,3%) | Exige adequação imediata de serviços e infraestrutura. |
+| **Crianças com Deficiência na Pobreza** | 60,9% (\<15 anos) | Evidencia a intersecção de barreiras físicas e financeiras2. |
+| **Proporção de Mulheres PcD vs. Homens** | 55,7% (Pop. Idosa Geral) | A sobrecarga de cuidados recai desigualmente sobre gêneros. |
+
+### **1.2. A Hostilidade do Ambiente Construído: Calçadas e Acessibilidade**
+
+Embora 97,6% das pessoas com deficiência no Brasil residam em áreas classificadas como urbanas12, a conformação dessas áreas atua como uma barreira arquitetônica e social intransponível. A "Pesquisa Urbanística do Entorno dos Domicílios" do Censo 2022 investigou detalhadamente as condições de caminhabilidade. Das 174,2 milhões de pessoas que residem em áreas com características urbanas, impressionantes 119,9 milhões (68,8%) moram em vias que não possuem nenhuma rampa para cadeirantes13. Ainda que tenha havido um avanço quantitativo desde 2010 — quando apenas 5,9 milhões moravam em ruas com rampas, número que subiu para 26,4 milhões em 2022 —, o déficit continua maciço, indicando que apenas 15,2% dos moradores urbanos contam com esse equipamento básico nas imediações de seus lares13.  
+O estado de conservação do calçamento é outro vetor crítico de exclusão. O Censo aponta que 146,4 milhões de moradores (84,0%) vivem em vias dotadas de calçadas. Contudo, a presença física do passeio público não garante acessibilidade: somente 32,8 milhões de pessoas (18,8% do total) residem em vias cujas calçadas são livres de obstáculos2. Obstáculos foram classificados como calçadas quebradas, esburacadas, com desníveis acentuados, ocupação indevida por comércios informais, ou com entradas de estacionamento construídas fora de qualquer padrão técnico13.  
+Esta realidade é corroborada por estudos independentes. A "Campanha Calçadas do Brasil 2019", que avaliou a infraestrutura de mobilidade a pé mantida diretamente pelo poder público (no entorno de escolas, hospitais, creches, e terminais de transporte), revelou um cenário desolador: em uma escala de 0 a 10, nenhuma das 27 capitais brasileiras obteve a nota média mínima aceitável. A cidade com melhor desempenho foi São Paulo, com nota 6,93, enquanto a média nacional foi de parcos 5,71, com capitais como Belém obtendo notas críticas (4,52)14.
+
+### **1.3. Confinamento Involuntário e os Impactos de Segunda Ordem**
+
+A consequência direta de um ambiente inóspito para idosos e pessoas com deficiência não é apenas a dificuldade física, mas a efetivação de um "confinamento domiciliar involuntário". A barreira arquitetônica funciona, na prática, como uma barreira social2. Indivíduos que não conseguem caminhar com segurança até um ponto de ônibus ou uma estação de trem deixam de acessar o mercado de trabalho, evitam compromissos médicos (negligenciando a saúde preventiva) e reduzem drasticamente suas interações sociais, o que impacta negativamente a saúde mental e cognitiva7.  
+A literatura acadêmica do Instituto de Pesquisa Econômica Aplicada (Ipea) sobre acessibilidade e mobilidade corrobora que as políticas de transporte interferem diretamente nas oportunidades de vida. Nas 20 maiores metrópoles do país, a desigualdade de acesso a empregos e serviços de saúde via transporte ativo (a pé ou de bicicleta) e público é severa, criando ilhas de privilégio no centro expandido e vastos desertos de oportunidades nas periferias19. A imobilidade urbana consolida a desigualdade, operando como um mecanismo de exclusão econômica21. A dependência da população de menor renda de um transporte público que já falha na sua capilaridade perpetua o ciclo de pobreza22.
+
+## **2\. Agricultura Familiar e o Pequeno Produtor: Falhas de Mercado, Déficit Tecnológico e Desperdício**
+
+A estrutura agrária e produtiva brasileira apresenta dualidades históricas extremas. De um lado, há um agronegócio empresarial altamente capitalizado, imerso em correntes de exportação global e tecnologias de precisão (Agricultura 4.0). De outro, a agricultura familiar, responsável pela segurança alimentar do país e pelo abastecimento do mercado interno, mas que opera sob severas restrições técnicas, econômicas e climáticas. A agricultura familiar é a base econômica de cerca de 90% dos municípios com até 20 mil habitantes, mas os dados estruturais revelam que sua viabilidade a longo prazo encontra-se ameaçada25.
+
+### **2.1. O Perfil Socioeconômico e a Crise de Assistência Técnica**
+
+De acordo com o Censo Agropecuário de 2017 do IBGE, o Brasil possui 5.071.332 estabelecimentos rurais, dos quais 3.897.408 (76,8%) são classificados como agricultura familiar27. Contudo, essa magnitude numérica esconde uma imensa disparidade na geração de riqueza. Cerca de 53,9% dos estabelecimentos familiares enquadram-se no perfil "Pronaf B", caracterizado por uma renda bruta anual de até R\$ 20 mil. Alarmantemente, este contingente majoritário responde por apenas 2,8% do Valor Bruto de Produção (VBP) de toda a agricultura familiar31.  
+O Censo Agropecuário indica que apenas 19,9% dos mais de 5 milhões de estabelecimentos brasileiros receberam qualquer tipo de assistência técnica, seja governamental, seja de cooperativas ou ONGs27. Sem o apoio contínuo de profissionais capacitados, o pequeno produtor opera de forma empírica, com baixíssima produtividade e extrema fragilidade diante das flutuações ambientais25.
+
+### **2.2. A Ameaça Climática Extrema e a Tragédia do Desperdício de Alimentos**
+
+A agricultura familiar é intrinsecamente vulnerável às mudanças climáticas34. Portanto, eventos extremos, como secas e enchentes, têm o poder de dizimar a subsistência do núcleo familiar, forçando o endividamento e o êxodo rural35. A ausência de acesso a informações agrometeorológicas impede qualquer planejamento preventivo37.  
+Estima-se que o Brasil desperdice mais de 55 milhões de toneladas de alimentos anualmente38. Aproximadamente 30% de todo o alimento cultivado se perde ou é desperdiçado, e uma grande parcela dessas perdas ocorre nas primeiras etapas da cadeia produtiva39.
+
+### **2.3. A Falha de Comercialização e a Dependência de Intermediários**
+
+As dificuldades no campo são exacerbadas quando o produto tenta acessar o mercado. O pequeno produtor sofre de assimetria de informações mercadológicas, desconhecendo a demanda real. O intermediário adquire a safra por frações ínfimas do valor final, capturando a margem de lucro e repassando ineficiências logísticas para a ponta do consumidor43. Pesquisas do Ipea destacam que a dificuldade de acessar mercados é um dos principais gargalos que travam a ascensão da agricultura familiar46.
+
+## **3\. Habitantes de Áreas de Risco e Favelas: Impactos Sistêmicos de Desastres**
+
+O padrão de urbanização brasileiro no século XX e XXI caracterizou-se pela expulsão das populações de baixa renda para margens de rios e encostas com alta declividade48. A combinação de déficit habitacional crônico, falta de ordenamento territorial e a intensificação dos extremos climáticos conformou um cenário de ameaça existencial.
+
+### **3.1. A Geografia do Risco e as Falhas Organizacionais**
+
+Estima-se que mais de 9,5 milhões de brasileiros habitem áreas expostas a riscos geo-hidrológicos51. Apenas no município de São Paulo, o mapeamento identificou 485 áreas de risco crítico para deslizamentos de encostas e solapamentos31. Municípios da Região Metropolitana, como Osasco, enfrentam desafios idênticos, elaborando Planos Municipais de Redução de Riscos que demonstram a correlação direta entre o nível de precariedade habitacional e a probabilidade de desastres53.  
+Entretanto, as ferramentas de alerta esbarram nas realidades institucionais locais. Um estudo do Cemaden/IBGE revelou lacunas críticas na gestão de riscos de desastres: cerca de 30% dos municípios analisados sequer possuem planos de contingência aptos a responder prontamente à crise55. Soluções de notificação via SMS mostram-se insuficientes. Em uma favela, o recebimento de um alerta via SMS tem utilidade reduzida se o morador não possui rotas de evasão traçadas ou abrigos seguros48. A tecnologia *top-down* falha sem o acompanhamento de base.
+
+### **3.2. Os Impactos Macroeconômicos**
+
+Uma pesquisa da FEA-USP estimou que as enchentes na cidade de São Paulo causam um prejuízo anual superior a R\$ 762 milhões para a economia brasileira57. O modelo revelou que cada um dos 749 pontos de alagamento acarreta, diariamente, uma perda de aproximadamente R\$ 1 milhão57. Para o habitante da área precarizada, a perda material nas chuvas anuais destrói os pequenos avanços econômicos, mergulhando a família novamente na linha de subsistência e anulando gerações de esforço50.
+
+## **4\. A Exclusão Digital na Sociedade da Informação**
+
+No limiar da digitalização governamental (e-gov), a premissa tacitamente aceita é a de que a infraestrutura suporta a inclusão tecnológica universal61. No entanto, a barreira deixou de ser apenas a falta de equipamento, transformando-se em uma exclusão algorítmica e de letramento63.
+
+### **4.1. O Paradoxo do Acesso: "Uso Exclusivo do Celular"**
+
+A pesquisa anual *TIC Domicílios* indica uma taxa de domicílios conectados na faixa de 83% a 84%65. Contudo, 60% a 65% dos internautas acessam a rede **exclusivamente** através de um telefone celular (smartphone)65. Esta exclusividade não se distribui igualitariamente: ela dispara para assombrosos 85% entre as pessoas das classes sociais D e E68.  
+A dependência exclusiva do celular está ligada a planos pré-pagos e franquias restritivas66. Neste modelo (*Zero-Rating*), a operadora restringe o sinal a redes sociais e, durante os dias de bloqueio, o cidadão não consegue acessar resultados de exames ou serviços da prefeitura71. A rapidez com que se processam os avanços tecnológicos é outro impeditivo para que a população se integre, gerando uma desigualdade acentuada62.
+
+### **4.2. As Barreiras do Governo Digital**
+
+A automação ergue barreiras invisíveis entre o cidadão e a máquina pública62. A Prefeitura de Osasco lançou aplicativos como o "Saúde+Osasco" para agilizar consultas74. Porém, plataformas médicas que exigem o consumo de dados pesados são inacessíveis a um cidadão sem franquia74. O acesso irrestrito às TICs e à informação é o primeiro e mais básico pilar da cidadania digital81.
+
+## **PARTE II: O ECOSSISTEMA "FALA CIDADÃO" (SOLUÇÃO GERAL)**
+
+*(Página Síntese da Solução)*  
+A solução desenvolvida pelo grupo, denominada provisoriamente **"Fala Cidadão"** (ou "GuiaVoz"), é um ecossistema digital criado para garantir a cidadania digital universal e a inclusão social. O projeto reconhece que a presença das tecnologias digitais nas esferas da vida social exige promover mais do que o simples acesso: é necessário garantir a facilidade de uso para quem sofre com o baixo letramento digital63.  
+A arquitetura do projeto atende diretamente aos requisitos do desafio *Global Solution (CitizenTech)*, centralizando-se em idosos e Pessoas com Deficiência (PCDs). Ela integra as disciplinas do curso por meio de dois motores conectados a um aplicativo Mobile:  
+**1\. O Aplicativo (Front-End Mobile)**
+
+* Desenvolvido em React Native, o aplicativo possui uma interface ultra-minimalista, contendo botões amplos, suporte de alto contraste e um botão de microfone sempre visível. O usuário não precisa navegar por submenus; toda a ação começa com o comando de voz.
+
+**2\. A Base Estrutural e de Negócios (Microsserviço em .NET)**
+
+* Esta API atua como o sistema rígido de proteção do cidadão. Ela armazena, no banco relacional Oracle, o Cadastro do Usuário, valida o sistema de Login (JWT), gerencia perfis (Cidadão vs. Cuidador) e processa o registro formal de tickets (como marcação de consultas ou protocolo da Defesa Civil). Implementa limite de requisições para evitar colapsos.
+
+**3\. O Cérebro de Inteligência e Acessibilidade (Microsserviço em Java)**
+
+* Esta API flexível processa os dados não estruturados (voz e coordenadas espaciais) e conecta o usuário à rede de serviços.
+
+**O ecossistema resolve problemas estruturais através de 4 Módulos de Cidadania:**
+
+> 1. **Letramento Digital:** Função Anti-Desinformação e "Modo Baixo Consumo". O app percebe redes lentas e otimiza o tráfego de dados para não esgotar a franquia do idoso, garantindo o funcionamento perene das TICs para essa população vulnerável81. O enfrentamento da desinformação exige essas ferramentas ativas de proteção e resposta64.  
+> 2. **Cidades e Clima:** Zeladoria Cidadã (reportar buracos em calçadas por voz) e Alerta Climático Simplificado com Rotas de Fuga seguras, focando na mobilidade de cadeirantes.  
+> 3. **Saúde Preventiva:** Uma interface por áudio que unifica o acesso a sistemas como o *Saúde+Osasco*, traduzindo o burocratiquês para a linguagem humana. Além disso, conta com um Botão de Emergência Assíncrono que alerta a comunidade local imediatamente.  
+> 4. **Economia Local:** Um módulo que une o desejo de compra simples (falado no microfone) diretamente ao pequeno produtor da agricultura familiar daquela região, fomentando cadeias curtas e combatendo o desperdício alimentar.
+
+## **PARTE III: APROFUNDAMENTO TÉCNICO \- MICROSSERVIÇO JAVA ADVANCED**
+
+*(Especificação Técnica de Backend)*  
+O papel da API construída na disciplina de Java Advanced é o de **Motor de Inteligência e Interface de Voz**. Enquanto o .NET gerencia a burocracia governamental estruturada, o Java garante que o cidadão de baixo letramento digital consiga extrair o benefício real da tecnologia.  
+Abaixo estão detalhados os requisitos, integrações e modelagens de dados que implementam a solução proposta.
+
+### **1\. Spring AI e a Classificação de Intenção (Sem Chatbot Genérico)**
+
+Cumprindo a exigência de integração profunda de IA no fluxo, o *Spring AI* não operará como um robô conversacional de texto livre.
+
+* **O Fluxo Técnico:** O Mobile captura a voz do idoso (ex: *"Tem um buraco gigante na minha calçada e não passo com a cadeira"*), transcreve em texto e envia ao endpoint Java.  
+* **RAG e Intenção:** Utilizando a técnica de *Retrieval-Augmented Generation* (RAG), o modelo LLM do Spring classifica a "intenção" do cidadão (neste caso, ZELADORIA\_REPORT). A IA extrai a localização e a gravidade, e devolve para o celular um objeto JSON padronizado ({"acao": "ABRIR\_PROTOCOLO", "urgencia": "ALTA"}) que muda a tela do aplicativo instantaneamente, removendo barreiras de toque.
+
+### **2\. Spring Data MongoDB e Modelagem Espacial (GeoJSON)**
+
+Os dados gerados pelas interações flexíveis e pela zeladoria colaborativa serão gerenciados no MongoDB (banco não relacional).
+
+* **Armazenamento Flexível:** Collections que armazenam as Obstructions (buracos, falta de rampas) e a Network (voluntários de saúde ou abrigos).  
+* **Índices e Queries Especiais:** Como a mobilidade dos idosos exige precisão, as entidades usarão o padrão espacial GeoJSON. Se o botão "Socorro" for acionado ou se uma rota for requisitada, o Spring Data fará queries nativas espaciais (como o \$near ou \$geoWithin) para encontrar, em milissegundos, caminhos de fuga seguros ou o posto de apoio mais próximo da coordenada do aparelho celular.
+
+### **3\. Arquitetura Distribuída e Assincronismo (RabbitMQ/Kafka e OpenFeign)**
+
+A aplicação respeitará os padrões de arquitetura distribuída para conectar-se ao Módulo Core (API em .NET) e gerenciar emergências.
+
+* **Comunicação Síncrona Segura:** Será implementado o *Spring Cloud OpenFeign* (ou *RestClient*). Quando o módulo de "Saúde" traduzir a fala do usuário sobre exames, o Java consultará imediatamente a API de regras de negócio em C\# .NET, recuperando o agendamento salvo no Oracle.  
+* **Ação Assíncrona e Resiliência (Mensageria):** O *RabbitMQ* será o orquestrador para cenários de crise (Módulo Cidades e Clima). Se o alerta do Cemaden indicar enchente crítica, o evento entra na fila. O Java consome esse evento sem travar a thread principal e converte em alertas sonoros (*push notifications* amigáveis) direcionados aos idosos nas áreas delimitadas no MongoDB, avisando-os sobre a necessidade de evasão.
+
+### **4\. Gestão do Acesso, Tratamento de Erros e Controle Anti-Exclusão**
+
+O desenvolvimento aplicará camadas avançadas de proteção para assegurar o uso ininterrupto.
+
+* **Tráfego Otimizado:** A anotação @RestControllerAdvice não lidará apenas com exceções comuns. Visando a cidadania digital em um cenário de pacotes pré-pagos e latência na periferia62, se o serviço de *timeout* for atingido na conexão, a camada devolverá DTOs compactos em cache.  
+* **Security (JWT e RBAC):** O *Spring Security* decodificará o token de identidade emitido pelo .NET, isolando as rotas da anotação @PreAuthorize("hasRole('CUIDADOR')") para os familiares alterarem perfis de emergência, e a hasRole('CIDADAO') limitando a ação ao consumo dos dados de suporte.
+
+## **7\. Modelo de Negócio e Monetização**
+
+O ecossistema "Fala Cidadão" posiciona-se no lucrativo e crescente setor de *GovTech* e *HealthTech*. A sustentabilidade financeira é embasada em três modelos de licenciamento (SaaS / DaaS):
+
+> 1. **Modelo B2G (Business-to-Government):** Foco em Prefeituras e Secretarias Municipais. O software (motor IA e banco estrutural) é licenciado mediante assinatura. O retorno de investimento para a Prefeitura vem da drástica redução de filas no CRAS, agilização de atendimentos na ouvidoria e do direcionamento proativo em calamidades.  
+> 2. **Modelo B2B (Business-to-Business):** Clínicas e Planos de Saúde. A plataforma cria uma ponte B2B2C onde a operadora de saúde arca com a assinatura para plugar o assistente de voz a seus clientes da terceira idade, reduzindo o alto custo humano e de infraestrutura de central de agendamentos (*call centers*).  
+> 3. **Modelo DaaS (Data as a Service):** Os dados de zeladoria e comportamento de mobilidade (PCDs) armazenados no MongoDB geram relatórios espaciais valiosos (totalmente anonimizados pela LGPD). Esses "mapas de calor" de obstáculos podem ser comercializados para construtoras, concessionárias de transporte e planejamento urbano.
+
+## **8\. Síntese e Conclusão**
+
+A exclusão no Brasil apresenta naturezas multifacetadas: a topografia da desigualdade em áreas de risco, o confinamento de PCDs em cidades intransitáveis, a perda produtiva na agricultura e as barreiras de um Governo Eletrônico que, paradoxalmente, exige alto letramento digital para salvar vidas.  
+A formulação de um ecossistema *CitizenTech* integrado (unindo o processamento rigoroso do .NET com a capacidade adaptativa, assíncrona e empática da Inteligência Artificial em Java) prova que inovar exige descentralizar a solução tecnológica do "usuário padrão conectado" para focar naquele que está às margens da sociedade. A integração de arquiteturas complexas só atinge sua validação ética e comercial quando traduz as interações burocráticas mais densas em uma interface simples, ativada por um comando humano de voz. A tecnologia deve atuar, primordialmente, como um acelerador e garantidor do direito à cidade e à vida.
+
+#### **Referências citadas**
+
+> 1. 2TDS Fevereiro \- Global Solution 2026-2.pdf  
+> 2. Quase 120 milhões moram em ruas sem acessibilidade, aponta IBGE, [https\://www\.mobilize.org.br/noticias/14301/quase-120-milhoes-moram-em-ruas-sem-acessibilidade-aponta-ibge.html](https://www.mobilize.org.br/noticias/14301/quase-120-milhoes-moram-em-ruas-sem-acessibilidade-aponta-ibge.html)  
+> 3. Mobilidade urbana no Brasil: crise e desafios para as políticas, [https\://www\.observatoriodasmetropoles.net.br/wp-content/uploads/2020/05/Mobilidade-urbana\_Juciano-Rodrigues.pdf](https://www.observatoriodasmetropoles.net.br/wp-content/uploads/2020/05/Mobilidade-urbana_Juciano-Rodrigues.pdf)  
+> 4. Tendências e desigualdades da mobilidade urbana no Brasil III, [https\://repositorio.ipea.gov.br/items/cf09eff9-9cae-4f86-b6fc-9ecd2ef45765](https://repositorio.ipea.gov.br/items/cf09eff9-9cae-4f86-b6fc-9ecd2ef45765)  
+> 5. Censo Demográfico 2022 \- Biblioteca do IBGE, [https\://biblioteca.ibge.gov.br/visualizacao/livros/liv102038.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv102038.pdf)  
+> 6. Censo 2022: número de pessoas com 65 anos ou mais de idade, [https\://agenciadenoticias.ibge.gov.br/agencia-noticias/2012-agencia-de-noticias/noticias/38186-censo-2022-numero-de-pessoas-com-65-anos-ou-mais-de-idade-cresceu-57-4-em-12-anos](https://agenciadenoticias.ibge.gov.br/agencia-noticias/2012-agencia-de-noticias/noticias/38186-censo-2022-numero-de-pessoas-com-65-anos-ou-mais-de-idade-cresceu-57-4-em-12-anos)  
+> 7. Estudos de Geografia Urbana alertam para estruturas excludentes, [https\://operobal.uel.br/sociedade/2026/09/09/estudos-geografia-urbana-alertam-estruturas-excludentes-autonomia-idosos/](https://operobal.uel.br/sociedade/2026/09/09/estudos-geografia-urbana-alertam-estruturas-excludentes-autonomia-idosos/)  
+> 8. estudo de vulnerabilidades sociais do município de osasco, [https\://osasco.sp.gov.br/site/wp-content/uploads/2025/02/estudo-de-vulnerabilidades-sociais-do-municpio-de-osasco-verso-final-reimpresso-2025-26-2-2025.pdf](https://osasco.sp.gov.br/site/wp-content/uploads/2025/02/estudo-de-vulnerabilidades-sociais-do-municpio-de-osasco-verso-final-reimpresso-2025-26-2-2025.pdf)  
+> 9. ANÁLISE DA POPULAÇÃO IDOSA DO MUNICÍPIO PARA FINS DE, [https\://osasco.sp.gov.br/wp-content/uploads/2021/08/2020\_12\_anlise-da-populao-idosa.pdf](https://osasco.sp.gov.br/wp-content/uploads/2021/08/2020_12_anlise-da-populao-idosa.pdf)  
+> 10. IBGE divulga censo sobre pessoas com deficiência no Brasil, [https\://www\.gov.br/mdh/pt-br/assuntos/noticias/2025/maio/pela-primeira-vez-ibge-divulga-dados-sobre-pessoas-com-deficiencia-no-brasil](https://www.gov.br/mdh/pt-br/assuntos/noticias/2025/maio/pela-primeira-vez-ibge-divulga-dados-sobre-pessoas-com-deficiencia-no-brasil)  
+> 11. Pessoas com Deficiência e as Desigualdades Sociais no Brasil, [https\://biblioteca.ibge.gov.br/visualizacao/livros/liv102317\_informativo.pdf](https://biblioteca.ibge.gov.br/visualizacao/livros/liv102317_informativo.pdf)  
+> 12. IBGE divulga dados sobre desigualdades sociais enfrentadas por, [https\://site.mppr.mp.br/idoso-pcd/Noticia/IBGE-divulga-dados-sobre-desigualdades-sociais-enfrentadas-por-pessoas-com](https://site.mppr.mp.br/idoso-pcd/Noticia/IBGE-divulga-dados-sobre-desigualdades-sociais-enfrentadas-por-pessoas-com)  
+> 13. IBGE aponta as cidades com calçadas menos acessíveis no Brasil, [https\://dcomercio.com.br/publicacao/s/ibge-aponta-as-cidades-com-calcadas-menos-acessiveis-no-brasil](https://dcomercio.com.br/publicacao/s/ibge-aponta-as-cidades-com-calcadas-menos-acessiveis-no-brasil)  
+> 14. Pesquisa revela o ranking das piores calçadas do Brasil \- YouTube, [https\://www\.youtube.com/watch?v=AbVxoQWm\_7o](https://www.youtube.com/watch?v=AbVxoQWm_7o)  
+> 15. Estudo comprova situação ruim de calçadas das capitais brasileiras, [https\://www12.senado.leg.br/noticias/materias/2019/12/06/estudo-comprova-situacao-ruim-de-calcadas-das-capitais-brasileiras](https://www12.senado.leg.br/noticias/materias/2019/12/06/estudo-comprova-situacao-ruim-de-calcadas-das-capitais-brasileiras)  
+> 16. panorama da acessibilidade em calçadas e vias públicas em 5, [https\://revista.unifatecie.edu.br/calugaae/article/download/172/245/1060](https://revista.unifatecie.edu.br/calugaae/article/download/172/245/1060)  
+> 17. Acessibilidade nas calçadas: um estudo exploratório. \- ANTP, [https\://files.antp.org.br/2019/10/7/acessibilidade-nas-calcadas-um-estudo-exploratorio.pdf](https://files.antp.org.br/2019/10/7/acessibilidade-nas-calcadas-um-estudo-exploratorio.pdf)  
+> 18. perspectivas críticas sobre mobilidade urbana e acessibilidade na, [https\://www\.observatoriodasmetropoles.net.br/revista-cadernos-metropole-n-66-envelhecimento-em-movimento-perspectivas-criticas-sobre-mobilidade-urbana-e-acessibilidade-na-america-latina/](https://www.observatoriodasmetropoles.net.br/revista-cadernos-metropole-n-66-envelhecimento-em-movimento-perspectivas-criticas-sobre-mobilidade-urbana-e-acessibilidade-na-america-latina/)  
+> 19. Estimativas de acessibilidade a empregos e serviços públicos via, [https\://www\.ipea.gov.br/acessooportunidades/publication/2022\_td2800\_aop\_dados\_acessibilidade/](https://www.ipea.gov.br/acessooportunidades/publication/2022_td2800_aop_dados_acessibilidade/)  
+> 20. ITDP Brasil e Ipea lançam estudo sobre a desigualdade de acesso, [https\://itdpbrasil.org/itdp-brasil-e-ipea-lancam-estudo-sobre-a-desigualdade-de-acesso-as-oportunidades-brasileiras/](https://itdpbrasil.org/itdp-brasil-e-ipea-lancam-estudo-sobre-a-desigualdade-de-acesso-as-oportunidades-brasileiras/)  
+> 21. Urban mobility impacts social inequality, study by IPEA shows, [https\://www\.youtube.com/watch?v=onWHhV6p1Vk](https://www.youtube.com/watch?v=onWHhV6p1Vk)  
+> 22. Ipea destaca desigualdade como característica das grandes, [https\://www\.camara.leg.br/noticias/414398-ipea-destaca-desigualdade-como-caracteristica-das-grandes-metropoles/](https://www.camara.leg.br/noticias/414398-ipea-destaca-desigualdade-como-caracteristica-das-grandes-metropoles/)  
+> 23. Desigualdades socioespaciais de acesso a oportunidades nas, [https\://www\.ipea.gov.br/acessooportunidades/publication/2019\_td2535\_aop\_primeiro/](https://www.ipea.gov.br/acessooportunidades/publication/2019_td2535_aop_primeiro/)  
+> 24. Transporte urbano e inclusão social: elementos para políticas públicas, [https\://repositorio.ipea.gov.br/entities/publication/998bd46b-8a12-44e2-b53c-3d2542fcd831](https://repositorio.ipea.gov.br/entities/publication/998bd46b-8a12-44e2-b53c-3d2542fcd831)  
+> 25. Sobre o tema \- Portal Embrapa, [https\://www\.embrapa.br/tema-agricultura-familiar/sobre-o-tema](https://www.embrapa.br/tema-agricultura-familiar/sobre-o-tema)  
+> 26. AGRICULTURA FAMILIAR \- IBGE, [https\://www\.ibge.gov.br/apps/atlasrural/pdfs/11\_00\_texto.pdf](https://www.ibge.gov.br/apps/atlasrural/pdfs/11_00_texto.pdf)  
+> 27. Censo agropecuário de 2017 indica baixas taxas de assistência, [https\://www\.embrapa.br/busca-de-publicacoes/-/publicacao/1115513/censo-agropecuario-de-2017-indica-baixas-taxas-de-assistencia-tecnica-no-campo](https://www.embrapa.br/busca-de-publicacoes/-/publicacao/1115513/censo-agropecuario-de-2017-indica-baixas-taxas-de-assistencia-tecnica-no-campo)  
+> 28. Confira o Anuário Estatístico da Agricultura Familiar de 2024 \- Fetaesc, [https\://www\.fetaesc.com.br/noticia/confira-o-anuario-estatistico-da-agricultura-familiar-de-2024](https://www.fetaesc.com.br/noticia/confira-o-anuario-estatistico-da-agricultura-familiar-de-2024)  
+> 29. Agricultura familiar brasileira segundo o Censo de 2017 \- FGV Agro, [https\://agro.fgv.br/noticia/agricultura-familiar-brasileira-segundo-o-censo-de-2017](https://agro.fgv.br/noticia/agricultura-familiar-brasileira-segundo-o-censo-de-2017)  
+> 30. a agricultura familiar nos dados do censo agropecuário 2017: uma, [https\://www\.periodicos.unc.br/index.php/drd/article/view/3904/1700](https://www.periodicos.unc.br/index.php/drd/article/view/3904/1700)  
+> 31. Município de São Paulo tem 485 áreas de risco para deslizamentos, [https\://agenciabrasil.ebc.com.br/geral/noticia/2021-01/municipio-de-sao-paulo-tem-485-areas-de-risco-para-deslizamentos](https://agenciabrasil.ebc.com.br/geral/noticia/2021-01/municipio-de-sao-paulo-tem-485-areas-de-risco-para-deslizamentos)  
+> 32. Quantidade de áreas com risco de deslizamento cresce 20% na, [https\://g1.globo.com/sp/sao-paulo/noticia/2021/10/21/numero-de-areas-com-risco-de-deslizamento-cresce-20percent-na-cidade-de-sao-paulo-em-11-anos.ghtml](https://g1.globo.com/sp/sao-paulo/noticia/2021/10/21/numero-de-areas-com-risco-de-deslizamento-cresce-20percent-na-cidade-de-sao-paulo-em-11-anos.ghtml)  
+> 33. assistência técnica e extensão rural no brasil: uma análise do censo, [https\://repositorio.ipea.gov.br/bitstreams/3122370b-8af7-4af7-867b-43ea9b422968/download](https://repositorio.ipea.gov.br/bitstreams/3122370b-8af7-4af7-867b-43ea9b422968/download)  
+> 34. Agricultura Familiar e Adaptação Climática: o futuro do campo, [https\://www\.vbio.eco/post/agricultura-familiar-e-adapta%C3%A7%C3%A3o-clim%C3%A1tica-o-futuro-do-campo](https://www.vbio.eco/post/agricultura-familiar-e-adapta%C3%A7%C3%A3o-clim%C3%A1tica-o-futuro-do-campo)  
+> 35. Clima extremo ameaça produção e permanência da agricultura, [https\://www\.brasildefato.com.br/2026/10/01/clima-extremo-ameaca-producao-e-permanencia-da-agricultura-familiar/](https://www.brasildefato.com.br/2026/10/01/clima-extremo-ameaca-producao-e-permanencia-da-agricultura-familiar/)  
+> 36. capítulo 25 – agricultura familiar e abastecimento alimentar no, [https\://repositorio.ipea.gov.br/bitstreams/66270626-e698-4f3e-8948-a67ee17e5e4a/download](https://repositorio.ipea.gov.br/bitstreams/66270626-e698-4f3e-8948-a67ee17e5e4a/download)  
+> 37. Artigo: Desperdício e clima \- Embrapa Alimentos e Territórios, [https\://www\.embrapa.br/alimentos-e-territorios/busca-de-noticias/-/noticia/93791692/artigo-desperdicio-e-clima?p\_auth=xc6iRQky](https://www.embrapa.br/alimentos-e-territorios/busca-de-noticias/-/noticia/93791692/artigo-desperdicio-e-clima?p_auth=xc6iRQky)  
+> 38. Brasil desperdiça mais de 55 milhões de toneladas de comida por ano, [https\://edicaodobrasil.com.br/geral/brasil-derperdica-mais-de-55-milhoes-de-toneladas-de-comida-por-ano/](https://edicaodobrasil.com.br/geral/brasil-derperdica-mais-de-55-milhoes-de-toneladas-de-comida-por-ano/)  
+> 39. Perdas e desperdícios de alimentos \- Blog Syngenta Digital, [https\://blog.syngentadigital.ag/perdas-desperdicios-alimentos/](https://blog.syngentadigital.ag/perdas-desperdicios-alimentos/)  
+> 40. por que há tanto desperdício de alimentos, enquanto milhões ... \- G1, [https\://g1.globo.com/economia/agronegocios/agro-de-gente-pra-gente/noticia/2026/06/04/do-campo-a-geladeira-por-que-ha-tanto-desperdicio-de-alimentos-no-brasil-enquanto-milhoes-passam-fome.ghtml](https://g1.globo.com/economia/agronegocios/agro-de-gente-pra-gente/noticia/2026/06/04/do-campo-a-geladeira-por-que-ha-tanto-desperdicio-de-alimentos-no-brasil-enquanto-milhoes-passam-fome.ghtml)  
+> 41. Hortifruti/Cepea: Como combater as perdas e o desperdício de, [https\://www\.noticiasagricolas.com.br/noticias/hortifruti/280809-hortifruticepea-como-combater-as-perdas-e-o-desperdicio-de-alimentos.html](https://www.noticiasagricolas.com.br/noticias/hortifruti/280809-hortifruticepea-como-combater-as-perdas-e-o-desperdicio-de-alimentos.html)  
+> 42. Hortifruti/Cepea: Como combater as perdas e o desperdício de, [https\://amasms.com.br/noticias/geral/hortifruti-cepea-como-combater-as-perdas-e-o-desperdicio-de-alimentos](https://amasms.com.br/noticias/geral/hortifruti-cepea-como-combater-as-perdas-e-o-desperdicio-de-alimentos)  
+> 43. perda de mercados e sinais de mudanças na pauta produtiva \- Ipea, [https\://www\.ipea.gov.br/portal/radar/temasradar/agricultura/14243-agricultura-familiar-perda-de-mercados-e-sinais-de-mudancas-na-pauta-produtiva](https://www.ipea.gov.br/portal/radar/temasradar/agricultura/14243-agricultura-familiar-perda-de-mercados-e-sinais-de-mudancas-na-pauta-produtiva)  
+> 44. (PDF) Agricultura familiar: perda de mercados e sinais de mudanças, [https\://www\.researchgate.net/publication/374113149\_AGRICULTURA\_FAMILIAR\_PERDA\_DE\_MERCADOS\_E\_SINAIS\_DE\_MUDANCAS\_NA\_PAUTA\_PRODUTIVA](https://www.researchgate.net/publication/374113149_AGRICULTURA_FAMILIAR_PERDA_DE_MERCADOS_E_SINAIS_DE_MUDANCAS_NA_PAUTA_PRODUTIVA)  
+> 45. O desperdício de alimentos e o impacto financeiro ocorrido no setor, [https\://ojs.uel.br/revistas/uel/index.php/ecoreg/article/view/35315](https://ojs.uel.br/revistas/uel/index.php/ecoreg/article/view/35315)  
+> 46. IMPACTOS DO PROGRAMA DE AQUISIÇÃO DE ALIMENTOS, [https\://repositorio.ipea.gov.br/bitstreams/dda6139d-c95f-41db-848e-8eede68d7fdb/download](https://repositorio.ipea.gov.br/bitstreams/dda6139d-c95f-41db-848e-8eede68d7fdb/download)  
+> 47. impactos do programa de aquisição de alimentos sobre a produção, [https\://repositorio.ipea.gov.br/bitstreams/62183a7c-75f0-4dbd-b3c7-3d1d30408a9e/download](https://repositorio.ipea.gov.br/bitstreams/62183a7c-75f0-4dbd-b3c7-3d1d30408a9e/download)  
+> 48. INDICADORES DE RISCOS DE DESASTRES NO BRASIL \| Georisco, [https\://georisco.ufrn.br/wp-content/uploads/2025/11/indicadores-de-riscos-de-desastres-no-Brasil.pdf](https://georisco.ufrn.br/wp-content/uploads/2025/11/indicadores-de-riscos-de-desastres-no-Brasil.pdf)  
+> 49. Urbanização de favelas no Brasil: um balanço preliminar no PAC, [https\://www\.observatoriodasmetropoles.net.br/wp-content/uploads/2019/06/Adauto-CARDOSO-e-Rosana-DENALDI-Urbaniza%C3%A7%C3%A3o-de-favelas-no-Brasil.pdf](https://www.observatoriodasmetropoles.net.br/wp-content/uploads/2019/06/Adauto-CARDOSO-e-Rosana-DENALDI-Urbaniza%C3%A7%C3%A3o-de-favelas-no-Brasil.pdf)  
+> 50. Favela rica, favela pobre: estudo mostra as desigualdades ... \- El País, [https\://brasil.elpais.com/brasil/2017/01/18/politica/1484769932\_342623.html](https://brasil.elpais.com/brasil/2017/01/18/politica/1484769932_342623.html)  
+> 51. 9,5 milhões de brasileiros moram em áreas de risco \- Agência Brasil, [https\://agenciabrasil.ebc.com.br/radioagencia-nacional/geral/audio/2022-02/95-milhoes-de-brasileiros-moram-em-areas-de-risco](https://agenciabrasil.ebc.com.br/radioagencia-nacional/geral/audio/2022-02/95-milhoes-de-brasileiros-moram-em-areas-de-risco)  
+> 52. Município de São Paulo tem 485 áreas de risco para deslizamentos, [https\://osaopaulo.org.br/sao-paulo/municipio-de-sao-paulo-tem-485-areas-de-risco-para-deslizamentos/](https://osaopaulo.org.br/sao-paulo/municipio-de-sao-paulo-tem-485-areas-de-risco-para-deslizamentos/)  
+> 53. As áreas de risco \- Prefeitura de Osasco, [https\://www\.osasco.sp.gov.br/wp-content/uploads/2020/03/osasco-areas\_risco.pdf](https://www.osasco.sp.gov.br/wp-content/uploads/2020/03/osasco-areas_risco.pdf)  
+> 54. PLANO MUNICIPAL DE REDUÇÃO DE RISCO \- Participa Osasco, [https\://participa.osasco.sp.gov.br/Upload/publicacao/plano-municipal-de-redu%C3%A7%C3%A3o-de-riscos-out-2023.pdf](https://participa.osasco.sp.gov.br/Upload/publicacao/plano-municipal-de-redu%C3%A7%C3%A3o-de-riscos-out-2023.pdf)  
+> 55. Estudo do Cemaden aponta lacunas críticas na gestão de riscos de, [https\://www\.gov.br/cemaden/pt-br/assuntos/noticias-cemaden/estudo-do-cemaden-aponta-lacunas-criticas-na-gestao-de-riscos-de-deslizamentos-e-inundacoes-nos-2-mil-municipios-prioritarios-do-brasil](https://www.gov.br/cemaden/pt-br/assuntos/noticias-cemaden/estudo-do-cemaden-aponta-lacunas-criticas-na-gestao-de-riscos-de-deslizamentos-e-inundacoes-nos-2-mil-municipios-prioritarios-do-brasil)  
+> 56. Estudo aponta lacunas críticas na gestão de risco de deslizamentos, [https\://agencia.fapesp.br/estudo-aponta-lacunas-criticas-na-gestao-de-risco-de-deslizamentos-e-inundacoes/58151](https://agencia.fapesp.br/estudo-aponta-lacunas-criticas-na-gestao-de-risco-de-deslizamentos-e-inundacoes/58151)  
+> 57. Enchentes em São Paulo dão prejuízo de R\$ 762 mi por ano, [https\://revistapesquisa.fapesp.br/enchentes-em-sao-paulo-dao-prejuizo-de-r-762-mi-por-ano/](https://revistapesquisa.fapesp.br/enchentes-em-sao-paulo-dao-prejuizo-de-r-762-mi-por-ano/)  
+> 58. Enchentes em SP causam prejuízo anual de R\$ 762 milhões, diz, [https\://g1.globo.com/sao-paulo/noticia/2013/03/enchentes-em-sp-causam-prejuizo-anual-de-r-762-milhoes-diz-pesquisa.html](https://g1.globo.com/sao-paulo/noticia/2013/03/enchentes-em-sp-causam-prejuizo-anual-de-r-762-milhoes-diz-pesquisa.html)  
+> 59. Enchentes em São Paulo causam prejuízos de R\$ 762 milhões ao, [https\://ciclovivo.com.br/planeta/meio-ambiente/enchentes-em-sao-paulo-causam-prejuizos-de-762-milhoes-ao-ano/](https://ciclovivo.com.br/planeta/meio-ambiente/enchentes-em-sao-paulo-causam-prejuizos-de-762-milhoes-ao-ano/)  
+> 60. Pesquisa da FEA quantifica custos das enchentes em São Paulo, [https\://www5.usp.br/noticias/sociedade/pesquisa-da-fea-quantifica-custos-das-enchentes-em-sao-paulo/](https://www5.usp.br/noticias/sociedade/pesquisa-da-fea-quantifica-custos-das-enchentes-em-sao-paulo/)  
+> 61. TIC Domicílios \- Cetic.br, [https\://cetic.br/pt/pesquisa/domicilios/](https://cetic.br/pt/pesquisa/domicilios/)  
+> 62. Inclusão e Cidadania Digital no Brasil, [https\://repositorio.unesp.br/bitstreams/a1cb66f5-f211-4055-8095-9319178fabc5/download](https://repositorio.unesp.br/bitstreams/a1cb66f5-f211-4055-8095-9319178fabc5/download)  
+> 63. ENTRE O ACESSO E A CIDADANIA DIGITAL: DESAFIOS DA, [https\://revistatopicos.com.br/artigos/entre-o-acesso-e-a-cidadania-digital-desafios-da-inclusao-digital-na-educacao-de-jovens-e-adultos](https://revistatopicos.com.br/artigos/entre-o-acesso-e-a-cidadania-digital-desafios-da-inclusao-digital-na-educacao-de-jovens-e-adultos)  
+> 64. Políticas públicas de inclusão digital no Brasil e os desafios no, [https\://cadernosdolegislativo.almg.gov.br/cadernos-ele/article/view/547](https://cadernosdolegislativo.almg.gov.br/cadernos-ele/article/view/547)  
+> 65. TIC Domicílios 2024 \- Cetic.br, [https\://cetic.br/media/docs/publicacoes/2/20250512120132/tic\_domicilios\_2024\_livro\_eletronico.pdf](https://cetic.br/media/docs/publicacoes/2/20250512120132/tic_domicilios_2024_livro_eletronico.pdf)  
+> 66. TIC Domicílios 2023 \- Cetic.br, [https\://cetic.br/pt/pesquisa/domicilios/indicadores/](https://cetic.br/pt/pesquisa/domicilios/indicadores/)  
+> 67. TIC Domicílios 2025 \- Coletiva de imprensa \- Cetic.br, [https\://cetic.br/media/analises/tic\_domicilios\_2025\_principais\_resultados.pdf](https://cetic.br/media/analises/tic_domicilios_2025_principais_resultados.pdf)  
+> 68. TIC DOMICÍLIOS — — ICT HOUSEHOLDS \- Cetic.br, [https\://cetic.br/media/docs/publicacoes/2/20201123121817/tic\_dom\_2019\_livro\_eletronico.pdf](https://cetic.br/media/docs/publicacoes/2/20201123121817/tic_dom_2019_livro_eletronico.pdf)  
+> 69. TIC Domicílios 2025 \- Cetic.br, [https\://cetic.br/pt/tics/domicilios/2025/individuos/C16A/](https://cetic.br/pt/tics/domicilios/2025/individuos/C16A/)  
+> 70. TIC DOMICÍLIOS — — ICT HOUSEHOLDS \- CGI.br, [https\://www\.cgi.br/media/docs/publicacoes/2/20211124201233/tic\_domicilios\_2020\_livro\_eletronico.pdf](https://www.cgi.br/media/docs/publicacoes/2/20211124201233/tic_domicilios_2020_livro_eletronico.pdf)  
+> 71. Defesa Civil de SP emite 49 alertas via SMS desde sábado (5) para, [https\://www\.agenciasp.sp.gov.br/defesa-civil/defesa-civil-de-sp-monitora-chuvas-neste-domingo-6-em-todo-estado/](https://www.agenciasp.sp.gov.br/defesa-civil/defesa-civil-de-sp-monitora-chuvas-neste-domingo-6-em-todo-estado/)  
+> 72. Defesa Civil emitiu mais de 800 alertas de desastres naturais em 2025, [https\://agenciabrasil.ebc.com.br/radioagencia-nacional/seguranca/audio/2026-01/defesa-civil-emitiu-mais-de-800-alertas-de-desastres-naturais-em-2025](https://agenciabrasil.ebc.com.br/radioagencia-nacional/seguranca/audio/2026-01/defesa-civil-emitiu-mais-de-800-alertas-de-desastres-naturais-em-2025)  
+> 73. Desafios para a inclusão digital no Brasil \- SciELO, [https\://www\.scielo.br/j/pci/a/YCTSyKmxjY4FQcDZRWZXxLc/?lang=pt](https://www.scielo.br/j/pci/a/YCTSyKmxjY4FQcDZRWZXxLc/?lang=pt)  
+> 74. Prefeitura lança aplicativo “Saúde+Osasco” para agilizar, [https\://osasco.sp.gov.br/prefeitura-lanca-aplicativo-saudeosasco-para-agilizar-atendimento-na-rede-municipal/](https://osasco.sp.gov.br/prefeitura-lanca-aplicativo-saudeosasco-para-agilizar-atendimento-na-rede-municipal/)  
+> 75. Prefeitura lança aplicativo Saúde+Osasco, [https\://osasco.sp.gov.br/prefeitura-lanca-aplicativo-saudeosasco/](https://osasco.sp.gov.br/prefeitura-lanca-aplicativo-saudeosasco/)  
+> 76. Prefeitura de Osasco lança aplicativo “Saúde+Osasco ... \- Portal A+, [https\://portalamais.com/prefeitura-de-osasco-lanca-aplicativo-saudeosasco-para-modernizar-o-acesso-aos-servicos-de-saude/](https://portalamais.com/prefeitura-de-osasco-lanca-aplicativo-saudeosasco-para-modernizar-o-acesso-aos-servicos-de-saude/)  
+> 77. Saúde \+ Osasco – Apps no Google Play, [https\://play.google.com/store/apps/details?id=br.com.sissonline.siss.osasco\&hl=pt\_BR](https://play.google.com/store/apps/details?id=br.com.sissonline.siss.osasco&hl=pt_BR)  
+> 78. Saúde \+ Osasco \- App Store \- Apple, [https\://apps.apple.com/br/app/sa%C3%BAde-osasco/id1620591300](https://apps.apple.com/br/app/sa%C3%BAde-osasco/id1620591300)  
+> 79. Saúde \+ Osasco – Apps no Google Play, [https\://play.google.com/store/apps/details?id=br.com.sissonline.siss.osasco\&hl=pt](https://play.google.com/store/apps/details?id=br.com.sissonline.siss.osasco&hl=pt)  
+> 80. Osasco Digital, [https\://osascodigital.osasco.sp.gov.br/](https://osascodigital.osasco.sp.gov.br/)  
+> 81. Universalização da Cidadania Digital, [https\://books-sol.sbc.org.br/index.php/sbc/catalog/download/168/758/1440?inline=1](https://books-sol.sbc.org.br/index.php/sbc/catalog/download/168/758/1440?inline=1)

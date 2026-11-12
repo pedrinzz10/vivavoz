@@ -1,0 +1,22 @@
+#!/bin/sh
+# Bloqueia commits com segredos (requer gitleaks instalado localmente).
+# A verificação definitiva acontece no CI; este hook é a primeira barreira.
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --config .gitleaks.toml --redact --no-banner || {
+    echo ""
+    echo "[pre-commit] Possível segredo detectado. Commit bloqueado."
+    echo "Remova o segredo e use variáveis de ambiente (veja .env.example)."
+    exit 1
+  }
+else
+  echo "[pre-commit] AVISO: gitleaks não instalado. Instale com: winget install gitleaks"
+fi
+
+# Bloqueia arquivos sensíveis mesmo sem gitleaks.
+bloqueados=$(git diff --cached --name-only --diff-filter=ACM | grep -E '(^|/)\.env$|\.(pem|key|p12|jks|pfx)$|application-(local|secret)\.(properties|ya?ml)$')
+if [ -n "$bloqueados" ]; then
+  echo "[pre-commit] Arquivos sensíveis não podem ser commitados:"
+  echo "$bloqueados"
+  exit 1
+fi

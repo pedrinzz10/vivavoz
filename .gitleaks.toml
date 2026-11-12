@@ -1,0 +1,40 @@
+title = "VozViva - configuração do Gitleaks"
+
+[extend]
+useDefault = true
+
+# Regras extras para os segredos usados por este projeto.
+[[rules]]
+id = "anthropic-api-key"
+description = "Chave de API da Anthropic"
+regex = '''sk-ant-[a-zA-Z0-9_\-]{20,}'''
+keywords = ["sk-ant-"]
+
+[[rules]]
+id = "mongodb-uri-com-senha"
+description = "URI do MongoDB com usuário e senha embutidos"
+regex = '''mongodb(\+srv)?://[^:\s/]+:[^@\s]+@'''
+keywords = ["mongodb://", "mongodb+srv://"]
+
+[[rules]]
+id = "amqp-uri-com-senha"
+description = "URI do RabbitMQ com usuário e senha embutidos"
+regex = '''amqps?://[^:\s/]+:[^@\s]+@'''
+keywords = ["amqp://", "amqps://"]
+
+[[rules]]
+id = "jwt-secret-em-properties"
+description = "Segredo JWT definido diretamente em arquivo de configuração"
+regex = '''(?i)jwt[._-]?secret\s*[=:]\s*['"]?[^\s'"$]{16,}'''
+keywords = ["jwt"]
+
+[allowlist]
+description = "Arquivos de exemplo e saídas de build"
+paths = [
+  '''\.env\.example$''',
+  '''build/''',
+  '''\.gradle/''',
+  '''gradle/wrapper/gradle-wrapper\.jar$''',
+]
+# Placeholders do tipo ${VARIAVEL} não são segredos.
+regexes = ['''\$\{[A-Z0-9_]+(:[^}]*)?\}''']

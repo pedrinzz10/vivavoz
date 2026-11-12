@@ -1,0 +1,10 @@
+#!/bin/sh
+# Roda os testes antes de qualquer push. Evita esperar o CI para descobrir que algo quebrou.
+# Para pular em emergência: git push --no-verify (o CI e a proteção da main continuam valendo).
+
+echo "[pre-push] Executando testes..."
+./gradlew test --quiet || {
+  echo ""
+  echo "[pre-push] Testes falharam. Push cancelado."
+  exit 1
+}
