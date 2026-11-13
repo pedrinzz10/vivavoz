@@ -1,0 +1,16 @@
+# Perfil de testes: nenhum serviço externo é necessário.
+# MongoDB e RabbitMQ reais são fornecidos pelo Testcontainers apenas nos testes de integração.
+spring:
+  mongodb:
+    uri: mongodb://localhost:27017/vozviva-test
+  rabbitmq:
+    host: localhost
+    username: test
+    password: test
+  ai:
+    model:
+      chat: none
+
+eureka:
+  client:
+    enabled: false

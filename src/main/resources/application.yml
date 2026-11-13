@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: vozviva
+  profiles:
+    default: dev
+  mongodb:
+    uri: ${MONGODB_URI}
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+  ai:
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          model: ${ANTHROPIC_MODEL:claude-sonnet-5}
+
+server:
+  port: ${PORT:8080}
+
+eureka:
+  client:
+    enabled: ${EUREKA_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never

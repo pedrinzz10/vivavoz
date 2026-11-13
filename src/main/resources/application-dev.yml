@@ -1,0 +1,16 @@
+# Perfil de desenvolvimento local: valores padrão compatíveis com o docker-compose.yml.
+# Variáveis definidas no arquivo .env (raiz do projeto) têm precedência.
+# A senha do RabbitMQ não tem valor padrão: defina RABBITMQ_PASSWORD no .env.
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/vozviva}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    username: ${RABBITMQ_USERNAME:vozviva}
+    password: ${RABBITMQ_PASSWORD}
+
+logging:
+  level:
+    br.com.fiap.vozviva: DEBUG
