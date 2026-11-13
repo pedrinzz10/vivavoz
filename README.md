@@ -24,7 +24,7 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 
 ```bash
 # 1. Variáveis de ambiente (o perfil dev lê o .env automaticamente)
-cp .env.example .env        # preencha ANTHROPIC_API_KEY e RABBITMQ_PASSWORD (qualquer senha local)
+cp .env.example .env        # preencha RABBITMQ_PASSWORD, JWT_SECRET e ANTHROPIC_API_KEY
 
 # 2. Infraestrutura (MongoDB + RabbitMQ)
 docker compose up -d --wait
@@ -58,9 +58,40 @@ Selecione com `SPRING_PROFILES_ACTIVE=prod`.
 | `MONGODB_URI` | URI de conexão do MongoDB |
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` | Endereço do RabbitMQ |
 | `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | Credenciais do RabbitMQ |
+| `JWT_SECRET` | Segredo compartilhado com a API .NET para validar o JWT (mínimo de 32 caracteres). Obrigatório, exceto se `JWT_JWKS_URI` for usado |
+| `JWT_ISSUER` | Emissor esperado no token (claim `iss`). Recomendado |
+| `JWT_AUDIENCE` | Audiência esperada no token (claim `aud`). Opcional |
+| `JWT_ALGORITMO` | `HS256` (padrão), `HS384` ou `HS512` |
+| `JWT_JWKS_URI` | Alternativa ao segredo: endpoint JWKS publicado pelo .NET |
 | `DOTNET_API_URL` | URL da API .NET Core (a partir da SPEC-011) |
-| `JWT_ISSUER` / `JWT_SECRET` | Validação do JWT emitido pelo .NET (a partir da SPEC-002) |
 | `EUREKA_ENABLED` | Ativa o registro no Eureka (padrão `false`) |
+
+## Segurança
+
+A API Java não emite tokens: ela valida o **JWT emitido pela API .NET** (Resource Server) e aplica
+controle de acesso por papel. Envie o token em todas as chamadas:
+
+```
+Authorization: Bearer <token do login .NET>
+```
+
+O token precisa ter assinatura válida, `exp` (tokens sem expiração são recusados), o `iss` configurado
+e um papel. Os papéis são lidos das claims `roles`, `role` ou da claim de papel padrão do ASP.NET, como
+lista ou texto. Valores desconhecidos são ignorados. O identificador do usuário vem de `sub`, `nameid`
+ou da claim `NameIdentifier` do ASP.NET.
+
+### Matriz de acesso
+
+| Rota | Acesso |
+|---|---|
+| `GET /actuator/health`, `GET /actuator/info` | Público |
+| `GET /v3/api-docs/**`, `GET /swagger-ui/**` | Público |
+| Consumo de dados de suporte (rede, alertas, agendamentos...) | `CIDADAO` ou `CUIDADOR` |
+| Alteração de perfil de emergência | `CUIDADOR` (vinculado ao cidadão) |
+| Qualquer outra rota | Token válido |
+
+As regras por papel ficam nos endpoints com `@PreAuthorize`. Respostas 401 e 403 seguem o formato de
+erro padrão da API, com `mensagemFalada` e `traceId`.
 
 ## Testes
 
@@ -71,6 +102,10 @@ Selecione com `SPRING_PROFILES_ACTIVE=prod`.
 
 Os testes de integração sobem MongoDB e RabbitMQ reais com Testcontainers. Sem Docker, eles são ignorados
 automaticamente e os demais testes continuam rodando.
+
+Nos testes, o segredo JWT é gerado aleatoriamente a cada execução (`SegredoJwtDeTeste`), e
+`TokenDeTeste` assina tokens no formato do .NET, como em `TokenDeTeste.cuidador("42").bearer()`.
+Nenhum segredo fica no repositório.
 
 ## Estrutura de pacotes
 

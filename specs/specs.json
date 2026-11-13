@@ -63,7 +63,7 @@
       "modulo": "Segurança",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "O Spring Security atua como Resource Server: valida o token JWT emitido pela API .NET (sem emitir tokens próprios) e aplica controle de acesso por papel (CIDADAO e CUIDADOR) com @PreAuthorize.",
       "oQueFaz": [
         "Valida a assinatura, a expiração e o emissor (issuer) do JWT usando chave/segredo compartilhado ou JWKS da API .NET.",

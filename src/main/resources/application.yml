@@ -37,6 +37,17 @@ eureka:
   client:
     enabled: ${EUREKA_ENABLED:false}
 
+vozviva:
+  seguranca:
+    jwt:
+      # Mesmo segredo usado pela API .NET para assinar os tokens (mínimo de 32 caracteres).
+      secret: ${JWT_SECRET:}
+      # Alternativa ao segredo, se o .NET publicar as chaves via JWKS.
+      jwks-uri: ${JWT_JWKS_URI:}
+      algoritmo: ${JWT_ALGORITMO:HS256}
+      issuer: ${JWT_ISSUER:}
+      audience: ${JWT_AUDIENCE:}
+
 management:
   endpoints:
     web:
