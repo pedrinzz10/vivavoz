@@ -24,7 +24,9 @@ class CodigoErroTest {
 
 	@Test
 	void paraLogRemoveQuebrasDeLinha() {
-		assertThat(GlobalExceptionHandler.paraLog("/api\r\n2026-01-01 ERROR falso")).isEqualTo("/api__2026-01-01 ERROR falso");
+		assertThat(GlobalExceptionHandler.paraLog("/api\r\n2026-01-01 ERROR falso")).isEqualTo("/api_2026-01-01 ERROR falso");
+		assertThat(GlobalExceptionHandler.paraLog("a\nb\rc d")).isEqualTo("a_b_c_d");
+		assertThat(GlobalExceptionHandler.paraLog("Obstrução não encontrada")).isEqualTo("Obstrução não encontrada");
 		assertThat(GlobalExceptionHandler.paraLog(null)).isNull();
 	}
 

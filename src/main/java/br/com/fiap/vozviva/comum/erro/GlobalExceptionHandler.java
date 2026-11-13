@@ -131,7 +131,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	 * impedindo a criação de linhas falsas (log injection).
 	 */
 	static String paraLog(String valor) {
-		return valor == null ? null : valor.replaceAll("[\r\n]", "_");
+		// \R cobre qualquer quebra de linha (\n, \r\n,  ...) e é reconhecido pelo CodeQL.
+		return valor == null ? null : valor.replaceAll("\\R", "_");
 	}
 
 	private static String caminho(WebRequest request) {
