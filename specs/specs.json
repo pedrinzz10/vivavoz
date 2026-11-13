@@ -21,7 +21,7 @@
       "modulo": "Núcleo",
       "prioridade": "ALTA",
       "dependencias": [],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Estrutura inicial do microsserviço: pacotes, perfis de configuração, conexão com MongoDB, RabbitMQ e provedor de LLM (Anthropic via Spring AI), além de ambiente local reproduzível com Docker Compose.",
       "oQueFaz": [
         "Define a estrutura de pacotes por domínio (voz, zeladoria, rede, emergencia, clima, saude, economia, perfil, notificacao, dados, integracao, seguranca, comum).",

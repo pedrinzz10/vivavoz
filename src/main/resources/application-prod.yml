@@ -1,0 +1,10 @@
+# Perfil de produção: sem valores padrão para conexões e credenciais.
+# A aplicação não inicia se MONGODB_URI, RABBITMQ_HOST, RABBITMQ_USERNAME ou RABBITMQ_PASSWORD estiverem ausentes.
+logging:
+  level:
+    root: INFO
+
+server:
+  error:
+    include-stacktrace: never
+    include-message: never
