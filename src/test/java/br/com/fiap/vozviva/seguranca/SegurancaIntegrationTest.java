@@ -118,7 +118,9 @@ class SegurancaIntegrationTest {
 	@Test
 	void cuidadorEditaPerfilSemCsrf200() throws Exception {
 		mvc.perform(put("/teste-seguranca/perfis/42").header(HttpHeaders.AUTHORIZATION, TokenDeTeste.cuidador("c1").bearer()))
-			.andExpect(status().isOk());
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.cidadaoId").value("42"));
 	}
 
 	@Test

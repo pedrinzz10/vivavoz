@@ -31,14 +31,14 @@ class SegurancaTesteController {
 
 	@GetMapping("/suporte")
 	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
-	String suporte() {
-		return "dados de suporte";
+	Map<String, String> suporte() {
+		return Map.of("dados", "suporte");
 	}
 
 	@PutMapping("/perfis/{cidadaoId}")
 	@PreAuthorize("hasRole('CUIDADOR')")
-	String editarPerfil(@PathVariable String cidadaoId) {
-		return "perfil " + cidadaoId + " atualizado";
+	Map<String, String> editarPerfil(@PathVariable String cidadaoId) {
+		return Map.of("cidadaoId", cidadaoId, "situacao", "atualizado");
 	}
 
 }
