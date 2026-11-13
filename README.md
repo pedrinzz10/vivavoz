@@ -24,7 +24,7 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 
 ```bash
 # 1. Variáveis de ambiente (o perfil dev lê o .env automaticamente)
-cp .env.example .env        # preencha ANTHROPIC_API_KEY
+cp .env.example .env        # preencha ANTHROPIC_API_KEY e RABBITMQ_PASSWORD (qualquer senha local)
 
 # 2. Infraestrutura (MongoDB + RabbitMQ)
 docker compose up -d --wait
@@ -35,7 +35,7 @@ docker compose up -d --wait
 
 - API: http://localhost:8080
 - Health check: http://localhost:8080/actuator/health
-- Painel do RabbitMQ: http://localhost:15672 (usuário e senha definidos no `.env`, padrão `vozviva` / `vozviva`)
+- Painel do RabbitMQ: http://localhost:15672 (usuário `vozviva` e a senha definida em `RABBITMQ_PASSWORD`)
 
 Para parar a infraestrutura: `docker compose down` (adicione `-v` para apagar os dados).
 
@@ -43,7 +43,7 @@ Para parar a infraestrutura: `docker compose down` (adicione `-v` para apagar os
 
 | Perfil | Uso | Conexões |
 |---|---|---|
-| `dev` (padrão) | Desenvolvimento local | Valores padrão compatíveis com o `docker-compose.yml`; lê o `.env` |
+| `dev` (padrão) | Desenvolvimento local | Host, porta e usuário padrão compatíveis com o `docker-compose.yml`; senha vem do `.env` |
 | `test` | Testes automatizados | Testcontainers nos testes de integração; nenhum serviço externo necessário |
 | `prod` | Produção | Sem valores padrão: falha ao iniciar se faltar `MONGODB_URI` ou as credenciais do RabbitMQ |
 

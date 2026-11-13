@@ -19,7 +19,7 @@ services:
     container_name: vozviva-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-vozviva}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-vozviva}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Defina RABBITMQ_PASSWORD no arquivo .env}
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
