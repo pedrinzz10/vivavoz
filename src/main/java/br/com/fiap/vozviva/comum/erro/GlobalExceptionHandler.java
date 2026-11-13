@@ -44,10 +44,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	ResponseEntity<ProblemDetail> tratarDominio(VozVivaException ex, HttpServletRequest request) {
 		CodigoErro codigo = ex.getCodigo();
 		if (codigo.status().is5xxServerError()) {
-			log.warn("{}: {}", codigo, ex.getMessage(), ex);
+			log.warn("{}: {}", codigo, paraLog(ex.getMessage()), ex);
 		}
 		else {
-			log.info("{}: {}", codigo, ex.getMessage());
+			log.info("{}: {}", codigo, paraLog(ex.getMessage()));
 		}
 		return responder(problemas.criar(codigo, ex.getMessage(), request.getRequestURI()));
 	}
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	@ExceptionHandler(Exception.class)
 	ResponseEntity<ProblemDetail> tratarInesperado(Exception ex, HttpServletRequest request) {
-		log.error("Erro inesperado em {} {}", request.getMethod(), request.getRequestURI(), ex);
+		log.error("Erro inesperado em {} {}", paraLog(request.getMethod()), paraLog(request.getRequestURI()), ex);
 		return responder(problemas.criar(CodigoErro.ERRO_INTERNO,
 				"Ocorreu um erro inesperado. Informe o traceId ao suporte.", request.getRequestURI()));
 	}
@@ -124,6 +124,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	private static ResponseEntity<ProblemDetail> responder(ProblemDetail problema) {
 		return ResponseEntity.status(problema.getStatus()).body(problema);
+	}
+
+	/**
+	 * Remove quebras de linha de valores vindos do cliente antes de registrá-los no log,
+	 * impedindo a criação de linhas falsas (log injection).
+	 */
+	static String paraLog(String valor) {
+		return valor == null ? null : valor.replaceAll("[\r\n]", "_");
 	}
 
 	private static String caminho(WebRequest request) {

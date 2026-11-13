@@ -1,5 +1,6 @@
 package br.com.fiap.vozviva.comum.erro;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -19,6 +20,12 @@ class CodigoErroTest {
 	@EnumSource(CodigoErro.class)
 	void mensagemFaladaSemSiglasTecnicas(CodigoErro codigo) {
 		assertThat(codigo.mensagemFalada()).doesNotContainPattern("\\b(HTTP|API|JSON|JWT|ID|URL)\\b");
+	}
+
+	@Test
+	void paraLogRemoveQuebrasDeLinha() {
+		assertThat(GlobalExceptionHandler.paraLog("/api\r\n2026-01-01 ERROR falso")).isEqualTo("/api__2026-01-01 ERROR falso");
+		assertThat(GlobalExceptionHandler.paraLog(null)).isNull();
 	}
 
 	@ParameterizedTest
