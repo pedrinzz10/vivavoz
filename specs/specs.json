@@ -579,7 +579,7 @@
       "modulo": "Núcleo",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "@RestControllerAdvice central que padroniza as respostas de erro (Problem Details, RFC 9457) com uma mensagem técnica e uma mensagem simples para ser lida em voz alta ao cidadão.",
       "oQueFaz": [
         "Trata validação (400), autenticação (401), autorização (403), não encontrado (404), conflito (409), indisponibilidade/timeout (503) e erros inesperados (500).",
