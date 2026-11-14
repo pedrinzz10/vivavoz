@@ -1,6 +1,6 @@
 package br.com.fiap.vozviva;
 
-import com.netflix.discovery.EurekaClient;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,8 +22,12 @@ class VozvivaApplicationTests {
 	}
 
 	@Test
-	void eurekaDesativadoPorPadrao() {
-		assertThat(context.getBeanNamesForType(EurekaClient.class)).isEmpty();
+	void flywayConfiguradoParaAsMigracoesDoProjeto() {
+		Flyway flyway = context.getBean(Flyway.class);
+
+		assertThat(flyway.getConfiguration().getLocations())
+			.extracting(Object::toString)
+			.containsExactly("classpath:db/migration");
 	}
 
 }

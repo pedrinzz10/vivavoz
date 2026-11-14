@@ -1,6 +1,6 @@
 package br.com.fiap.exemplosarquitetura.ruim;
 
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.Entity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,7 +29,7 @@ class ControllerForaDoPadrao {
 	void recebeEntidade(@RequestBody EntidadeExposta entidade) {
 	}
 
-	@Document
+	@Entity
 	static class EntidadeExposta {
 	}
 

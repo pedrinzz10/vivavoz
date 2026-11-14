@@ -1,0 +1,2 @@
+-- VozViva - DDL do banco relacional (Azure SQL / SQL Server)
+-- Gerado por ./gradlew gerarScriptBd a partir de src/main/resources/db/migration. Não edite à mão.
