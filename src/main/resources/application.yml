@@ -47,11 +47,26 @@ spring:
           multiplier: 2
         default-requeue-rejected: false
   ai:
-    anthropic:
-      api-key: ${ANTHROPIC_API_KEY:}
+    model:
+      # Só o chat é usado; embeddings, imagem, áudio e moderação ficam desligados.
+      embedding: none
+      image: none
+      audio:
+        speech: none
+        transcription: none
+      moderation: none
+    # OCI Generative AI pelo endpoint compatível com a API da OpenAI (o Spring AI usa o SDK oficial da OpenAI).
+    # A chave é uma "API key" do OCI Generative AI, criada na mesma região do modelo.
+    openai:
+      base-url: ${OCI_GENAI_BASE_URL:https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/openai/v1}
+      api-key: ${OCI_GENAI_API_KEY:}
+      # Sem resposta da IA em 30 s, o assistente responde só com as regras determinísticas.
+      timeout: ${OCI_GENAI_TIMEOUT:30s}
+      max-retries: 1
       chat:
-        options:
-          model: ${ANTHROPIC_MODEL:claude-sonnet-5}
+        model: ${OCI_GENAI_MODEL:openai.gpt-oss-120b}
+        # A resposta é um JSON curto; o restante do limite fica para o raciocínio do modelo.
+        max-completion-tokens: ${OCI_GENAI_MAX_TOKENS:4000}
   web:
     # Mensagens de validação sempre em português, independente do idioma do aparelho.
     locale: pt_BR

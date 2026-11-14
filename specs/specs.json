@@ -8,7 +8,7 @@
   "escopo": "Microsserviço Java (Spring Boot 4 / Java 21) do ecossistema Fala Cidadão. Funcionalidades da entrega: (1) rede de apoio no socorro: perfil de emergência com contatos (CRUD paginado, Spring Data JPA / Azure SQL) e botão de emergência assíncrono via RabbitMQ; (2) assistente contra desinformação com Spring AI + RAG; (3) atendimento acessível mais próximo com rota no app de navegação (dados do OpenStreetMap). A zeladoria cidadã fica com a API .NET ou no roadmap. A classificação de intenção de voz (Spring AI) encaminha a fala para essas funcionalidades. Deploy na Azure (disciplina de DevOps). Público-alvo: idosos e pessoas com deficiência (PcD) com baixo letramento digital.",
   "arquitetura": {
     "microsservicos": {
-      "api-java (este repositório)": "Spring Boot; Azure SQL via Spring Data JPA (perfis de emergência, contatos, emergências, obstruções, estatísticas de golpes e interações de voz); RabbitMQ para eventos de emergência; Spring AI (provedor configurável: OCI Generative AI ou Ollama na OCI, com Anthropic como alternativa). Dona dos usuários: cadastro, login e emissão do JWT.",
+      "api-java (este repositório)": "Spring Boot; Azure SQL via Spring Data JPA (perfis de emergência, contatos, emergências, obstruções, estatísticas de golpes e interações de voz); RabbitMQ para eventos de emergência; Spring AI (provedor configurável: OCI Generative AI pelo endpoint compatível com OpenAI, com Ollama na OCI como alternativa). Dona dos usuários: cadastro, login e emissão do JWT.",
       "api-dotnet (outro repositório)": "ASP.NET Core Minimal API; Oracle com PL/SQL; valida o JWT emitido pela API Java; cadastros oficiais e protocolos."
     },
     "autenticacao": "Um único emissor de identidade: a API Java cadastra os usuários e emite o JWT (SPEC-023); a API .NET apenas valida, com o mesmo JWT_SECRET (HS256), o mesmo JWT_ISSUER e as claims sub (id do usuário), role (CIDADAO ou CUIDADOR) e exp. Evita dois cadastros para a mesma pessoa.",
@@ -62,10 +62,10 @@
       "prioridade": "ALTA",
       "dependencias": [],
       "status": "CONCLUIDA",
-      "descricao": "Estrutura inicial do microsserviço: pacotes, perfis de configuração, conexão com MongoDB, RabbitMQ e provedor de LLM (Anthropic via Spring AI), além de ambiente local reproduzível com Docker Compose.",
+      "descricao": "Estrutura inicial do microsserviço: pacotes, perfis de configuração, conexão com MongoDB, RabbitMQ e provedor de LLM (OCI Generative AI via Spring AI), além de ambiente local reproduzível com Docker Compose.",
       "oQueFaz": [
         "Define a estrutura de pacotes por domínio (voz, zeladoria, rede, emergencia, clima, saude, economia, perfil, notificacao, dados, integracao, seguranca, comum).",
-        "Configura perfis dev, test e prod em application.yml, com segredos lidos de variáveis de ambiente (ANTHROPIC_API_KEY, MONGODB_URI, RABBITMQ_*, DOTNET_API_URL, JWT_*).",
+        "Configura perfis dev, test e prod em application.yml, com segredos lidos de variáveis de ambiente (OCI_GENAI_API_KEY, MONGODB_URI, RABBITMQ_*, DOTNET_API_URL, JWT_*).",
         "Disponibiliza docker-compose.yml com MongoDB e RabbitMQ (com painel de gerenciamento).",
         "Desativa o Eureka client por padrão (eureka.client.enabled=false) e permite habilitá-lo por perfil.",
         "Remove ou isola dependências não usadas pelo escopo Java (JPA/H2), já que o banco relacional (Oracle) pertence à API .NET."
@@ -75,7 +75,7 @@
         {
           "titulo": "Desenvolvedor sobe o ambiente local",
           "ator": "Desenvolvedor",
-          "fluxo": "Clona o repositório, define ANTHROPIC_API_KEY, executa docker compose up e ./gradlew bootRun; a API responde na porta configurada."
+          "fluxo": "Clona o repositório, define OCI_GENAI_API_KEY, executa docker compose up e ./gradlew bootRun; a API responde na porta configurada."
         },
         {
           "titulo": "Execução da suíte de testes em CI",
@@ -203,11 +203,11 @@
       "modulo": "Voz / IA",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-003"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Base de conhecimento usada como contexto (Retrieval-Augmented Generation): golpes comuns contra idosos e canais oficiais para o assistente contra desinformação (SPEC-015), exemplos de frases por intenção para a classificação (SPEC-003) e as frases de busca de atendimento (SPEC-007). Cada documento registra a fonte (gov.br, INSS, Procon, Febraban, Polícia Civil), atendendo ao requisito de documentar fontes e preparação dos dados da disciplina de IA.",
       "oQueFaz": [
         "Mantém documentos de conhecimento em arquivos versionados (ex.: resources/knowledge/*.md ou *.json).",
-        "Carrega e indexa os documentos na inicialização em um VectorStore em memória (SimpleVectorStore), com embeddings do provedor configurado; Oracle 23ai Vector Search fica como evolução.",
+        "Carrega e indexa os documentos na inicialização com TF-IDF (relevância de palavras, sem modelo de embeddings: o endpoint compatível com OpenAI da OCI não expõe um); busca vetorial (embeddings da OCI ou Oracle 23ai Vector Search) fica como evolução.",
         "Recupera os trechos mais relevantes (top-k configurável) para o texto do usuário e os injeta no prompt via advisor do Spring AI.",
         "Permite recarregar a base sem alterar código."
       ],
@@ -694,7 +694,7 @@
       "modulo": "Letramento Digital",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-002", "SPEC-003", "SPEC-004", "SPEC-022"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Idosos e pessoas com baixo letramento digital são os alvos mais frequentes de golpes (falso benefício do INSS, cobrança de vacina, PIX urgente). O cidadão dita ou cola a mensagem suspeita; a IA (Spring AI + RAG com uma base curada de golpes comuns e canais oficiais) classifica o risco, explica os sinais em linguagem simples e diz o que fazer, em uma frase pronta para ser lida em voz alta.",
       "oQueFaz": [
         "POST /api/v1/verificacoes (CIDADAO ou CUIDADOR) com VerificacaoRequest { texto, canal? (WHATSAPP, SMS, LIGACAO, EMAIL, OUTRO) }.",
@@ -953,7 +953,7 @@
       "descricao": "Padrões transversais de testes para garantir a confiabilidade de um sistema que atende pessoas vulneráveis em situações críticas.",
       "oQueFaz": [
         "Define as camadas: unitários (JUnit 5 + Mockito), integração (Spring Boot Test + Testcontainers MongoDB/RabbitMQ + WireMock) e testes com LLM real isolados pela tag 'llm'.",
-        "Mocka o ChatModel nos testes padrão, para que o build não dependa da API Anthropic.",
+        "Mocka o ChatModel nos testes padrão, para que o build não dependa da API da OCI.",
         "Usa @ParameterizedTest para frases de intenção e casos de borda geográficos.",
         "Configura JaCoCo com relatório de cobertura.",
         "Fornece fixtures/seed de dados geográficos (região de Osasco/SP) para testes e demonstração."
@@ -972,7 +972,7 @@
         }
       ],
       "testes": [
-        { "tipo": "meta", "nome": "buildSemRede", "descricao": "./gradlew test passa sem ANTHROPIC_API_KEY definida." },
+        { "tipo": "meta", "nome": "buildSemRede", "descricao": "./gradlew test passa sem OCI_GENAI_API_KEY definida." },
         { "tipo": "meta", "nome": "coberturaMinima", "descricao": "O relatório JaCoCo mostra cobertura de linhas de pelo menos 70% nas camadas de serviço." }
       ],
       "criteriosDeAceite": [
