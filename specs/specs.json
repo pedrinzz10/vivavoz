@@ -1032,7 +1032,7 @@
       "modulo": "Segurança",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-002", "SPEC-022"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "A API Java é a única dona da identidade do ecossistema: cadastra cidadãos e cuidadores e emite o JWT. A API .NET não tem cadastro próprio; valida o mesmo token (segredo e emissor compartilhados), evitando duas contas para a mesma pessoa.",
       "oQueFaz": [
         "Entidade Usuario (JPA): id, nome, email (único), senhaHash (BCrypt), papel (CIDADAO ou CUIDADOR), ativo, criadoEm.",
@@ -1040,7 +1040,7 @@
         "POST /api/v1/auth/login (público): valida as credenciais e devolve TokenResponse { accessToken, tokenType: 'Bearer', expiraEm, usuario }.",
         "Emite o JWT HS256 com sub (id do usuário), role, iss (JWT_ISSUER), iat e exp (JWT_EXPIRACAO, padrão 2 h), assinado com JWT_SECRET.",
         "GET /api/v1/auth/eu: dados do usuário autenticado.",
-        "Mensagens de erro de login genéricas (não revelam se o e-mail existe); limite simples de tentativas por e-mail e IP.",
+        "Mensagens de erro de login genéricas (não revelam se o e-mail existe, nem pelo tempo de resposta); bloqueio de 15 minutos (429) após 5 falhas seguidas no mesmo e-mail.",
         "Usuários de teste (um CIDADAO e um CUIDADOR) criados só no perfil dev, com senhas definidas no .env, para o README e a demonstração."
       ],
       "resultadoEsperado": "O app Mobile faz cadastro e login na API Java e usa o mesmo token nas duas APIs.",

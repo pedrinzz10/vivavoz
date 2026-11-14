@@ -24,7 +24,7 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 
 ```bash
 # 1. Variáveis de ambiente (o perfil dev lê o .env automaticamente)
-cp .env.example .env        # preencha DB_PASSWORD, RABBITMQ_PASSWORD, JWT_SECRET e ANTHROPIC_API_KEY
+cp .env.example .env        # preencha DB_PASSWORD, RABBITMQ_PASSWORD, JWT_SECRET, USUARIOS_TESTE_SENHA e ANTHROPIC_API_KEY
 
 # 2. Infraestrutura (SQL Server + RabbitMQ); o banco "vozviva" é criado na primeira subida
 docker compose up -d --wait
@@ -63,7 +63,9 @@ Selecione com `SPRING_PROFILES_ACTIVE=prod`.
 | `JWT_ISSUER` | Emissor esperado no token (claim `iss`). Recomendado |
 | `JWT_AUDIENCE` | Audiência esperada no token (claim `aud`). Opcional |
 | `JWT_ALGORITMO` | `HS256` (padrão), `HS384` ou `HS512` |
-| `JWT_JWKS_URI` | Alternativa ao segredo: validar com chaves publicadas via JWKS |
+| `JWT_EXPIRACAO` | Validade do token emitido no login (padrão `2h`) |
+| `USUARIOS_TESTE_HABILITADO` | Cria os usuários de teste ao iniciar (padrão `true` no dev e `false` no prod) |
+| `USUARIOS_TESTE_SENHA` | Senha dos usuários de teste; sem ela, nada é criado |
 
 ## Padrão DTO
 
@@ -84,24 +86,54 @@ violação quebra o build. O contrato de erro também é um DTO: `comum.dto.Erro
 
 ## Segurança
 
-A API Java é a dona da identidade do ecossistema: cadastra os usuários e emite o JWT (cadastro e login
-chegam na SPEC-023). Ela valida o token em todas as chamadas (Resource Server) e aplica controle de acesso
-por papel. A API .NET valida o mesmo token, com o mesmo segredo e emissor.
+A API Java é a dona da identidade do ecossistema: cadastra os usuários e emite o JWT. Ela valida o token
+em todas as chamadas (Resource Server) e aplica controle de acesso por papel. A API .NET valida o mesmo
+token, com o mesmo segredo e emissor.
+
+| Endpoint | Acesso | O que faz |
+|---|---|---|
+| `POST /api/v1/auth/cadastro` | Público | Cria a conta (`nome`, `email`, `senha`, `papel`: `CIDADAO` ou `CUIDADOR`) |
+| `POST /api/v1/auth/login` | Público | Devolve `accessToken`, `tokenType`, `expiraEm` e os dados do usuário |
+| `GET /api/v1/auth/eu` | Token | Dados do usuário autenticado |
+
+Use o token em todas as outras chamadas:
 
 ```
-Authorization: Bearer <token>
+Authorization: Bearer <accessToken>
 ```
 
-O token precisa ter assinatura válida, `exp` (tokens sem expiração são recusados), o `iss` configurado
-e um papel. Os papéis são lidos das claims `roles`, `role` ou da claim de papel padrão do ASP.NET, como
-lista ou texto. Valores desconhecidos são ignorados. O identificador do usuário vem de `sub`, `nameid`
-ou da claim `NameIdentifier` do ASP.NET.
+**Usuários de teste** (criados no perfil dev, ou em produção com `USUARIOS_TESTE_HABILITADO=true`), com a
+senha definida em `USUARIOS_TESTE_SENHA`:
+
+| E-mail | Papel |
+|---|---|
+| `cidadao.teste@vozviva.dev` | `CIDADAO` |
+| `cuidador.teste@vozviva.dev` | `CUIDADOR` |
+
+Proteções do login: senha com BCrypt (mínimo de 8 caracteres, com letra e número); a mesma resposta para
+e-mail inexistente e senha errada, inclusive no tempo de resposta; bloqueio de 15 minutos (HTTP 429) depois
+de 5 erros seguidos no mesmo e-mail.
+
+### Contrato do token (para a API .NET validar)
+
+| Item | Valor |
+|---|---|
+| Algoritmo | HS256, com o mesmo `JWT_SECRET` (mínimo de 32 caracteres) |
+| `iss` | Valor de `JWT_ISSUER` |
+| `sub` | Id do usuário |
+| `role` | `CIDADAO` ou `CUIDADOR` |
+| `name` | Nome do usuário |
+| `iat` / `exp` | Emissão e expiração (validade de `JWT_EXPIRACAO`) |
+
+Na validação, o token precisa ter assinatura válida, `exp` (tokens sem expiração são recusados), o `iss`
+configurado e um papel conhecido; valores desconhecidos nunca dão acesso.
 
 ### Matriz de acesso
 
 | Rota | Acesso |
 |---|---|
 | `GET /actuator/health`, `GET /actuator/info` | Público |
+| `POST /api/v1/auth/cadastro`, `POST /api/v1/auth/login` | Público |
 | `GET /v3/api-docs/**`, `GET /swagger-ui/**` | Público |
 | Consumo de dados de suporte (atendimentos próximos, verificação de golpes...) | `CIDADAO` ou `CUIDADOR` |
 | Alteração de perfil de emergência | `CUIDADOR` (vinculado ao cidadão) |
@@ -147,6 +179,7 @@ Nenhum segredo fica no repositório.
 
 ```
 br.com.fiap.vozviva
+├── usuario      cadastro, login e emissão do JWT
 ├── voz          classificação de intenção por voz (Spring AI)
 ├── perfil       perfil de emergência e contatos (cuidador)
 ├── emergencia   botão de emergência assíncrono (RabbitMQ)
@@ -154,7 +187,7 @@ br.com.fiap.vozviva
 └── comum        erros, DTOs compartilhados e utilitários
 ```
 
-Os módulos de usuários, assistente contra golpes e atendimento mais próximo entram com as suas specs.
+Os módulos do assistente contra golpes e do atendimento mais próximo entram com as suas specs.
 
 Dentro de cada módulo: `dto` (records de entrada e saída), controller, serviço, mapper, entidade e
 repositório.

@@ -1,6 +1,7 @@
 package br.com.fiap.vozviva.seguranca;
 
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,10 +18,23 @@ import java.util.Set;
 public class UsuarioAutenticado {
 
 	/**
-	 * Identificador do usuário no cadastro da API .NET (claim sub ou equivalente).
+	 * Identificador do usuário (claim sub ou equivalente).
 	 */
 	public String id() {
 		return autenticacao().getName();
+	}
+
+	/**
+	 * Identificador numérico do usuário (tokens emitidos por esta API). Um token com {@code sub}
+	 * não numérico é tratado como credencial inválida (401).
+	 */
+	public Long idNumerico() {
+		try {
+			return Long.valueOf(id());
+		}
+		catch (NumberFormatException ex) {
+			throw new BadCredentialsException("Identificador de usuário inválido no token.");
+		}
 	}
 
 	public Set<Papel> papeis() {
