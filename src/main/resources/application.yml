@@ -84,6 +84,15 @@ logging:
     # traceId da requisição (TraceIdFilter) em cada linha de log.
     correlation: "[%X{traceId:-}] "
 
+springdoc:
+  # Só a API pública entra no contrato (Swagger em /swagger-ui.html, JSON em /v3/api-docs).
+  paths-to-match: /api/**
+  default-produces-media-type: application/json
+  swagger-ui:
+    operations-sorter: method
+    try-it-out-enabled: true
+    persist-authorization: true
+
 vozviva:
   voz:
     # Abaixo desta confiança a resposta da IA não decide sozinha: valem as regras ou o app pede para repetir.

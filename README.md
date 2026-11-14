@@ -49,6 +49,26 @@ Para parar a infraestrutura: `docker compose down` (adicione `-v` para apagar os
 
 Selecione com `SPRING_PROFILES_ACTIVE=prod`.
 
+## Documentação da API (Swagger)
+
+Com a aplicação no ar:
+
+- **Swagger UI:** http://localhost:8080/swagger-ui.html
+- **Contrato OpenAPI (JSON):** http://localhost:8080/v3/api-docs. O build também salva uma cópia em
+  `build/openapi/openapi.json`, para o time mobile e o time .NET.
+
+Para testar pelo Swagger:
+1. Chame `POST /api/v1/auth/login`. No perfil dev existem `cidadao.teste@vozviva.dev` e
+   `cuidador.teste@vozviva.dev`, com a senha de `USUARIOS_TESTE_SENHA`.
+2. Copie o `token` da resposta e clique em **Authorize**.
+3. Experimente os endpoints. O token fica guardado entre recarregamentos da página.
+
+Os endpoints estão agrupados por módulo: Autenticação, Voz, Botão de emergência, Perfil de emergência, Contatos
+de emergência, Assistente contra golpes e Atendimento acessível. Cada operação tem descrição e exemplos de
+requisição. As respostas de erro documentadas são as que a operação pode devolver (400, 401, 403, 404, 409,
+429, 500), com o formato `ErroResponse` e um exemplo com `mensagemFalada`. O teste `OpenApiDocumentacaoTest`
+quebra o build se um endpoint ficar fora do contrato ou sem descrição.
+
 ## Variáveis de ambiente
 
 | Variável | Descrição |
