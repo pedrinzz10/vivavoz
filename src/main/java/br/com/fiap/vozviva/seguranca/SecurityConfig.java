@@ -54,7 +54,7 @@ public class SecurityConfig {
 	};
 
 	@Bean
-	SecurityFilterChain securityFilterChain(HttpSecurity http, ProblemDetailSecurityHandler erros,
+	SecurityFilterChain securityFilterChain(HttpSecurity http, ErroSegurancaHandler erros,
 			JwtProperties propriedades) throws Exception {
 		http
 			// CSRF só explora credenciais enviadas automaticamente pelo navegador (cookies).

@@ -1,6 +1,6 @@
 package br.com.fiap.vozviva.seguranca;
 
-import br.com.fiap.vozviva.comum.erro.ProblemDetailFactory;
+import br.com.fiap.vozviva.comum.erro.ErroResponseFactory;
 import br.com.fiap.vozviva.comum.rastreio.TraceIdFilter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,10 +22,10 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ProblemDetailSecurityHandlerTest {
+class ErroSegurancaHandlerTest {
 
 	private final JsonMapper json = JsonMapper.builder().build();
-	private final ProblemDetailSecurityHandler handler = new ProblemDetailSecurityHandler(new ProblemDetailFactory(), json);
+	private final ErroSegurancaHandler handler = new ErroSegurancaHandler(new ErroResponseFactory(), json);
 
 	private final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/perfis-emergencia/42");
 	private final MockHttpServletResponse response = new MockHttpServletResponse();

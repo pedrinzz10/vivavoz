@@ -12,7 +12,21 @@
     "intencoes": ["ZELADORIA_REPORT", "SOCORRO", "ROTA_FUGA", "ALERTA_CLIMA_CONSULTA", "SAUDE_AGENDAMENTO", "VERIFICAR_INFORMACAO", "COMPRA_PRODUTOR_LOCAL", "DESCONHECIDA"],
     "acoes": ["ABRIR_PROTOCOLO", "ACIONAR_SOCORRO", "MOSTRAR_ROTA", "MOSTRAR_ALERTAS", "MOSTRAR_AGENDAMENTO", "MOSTRAR_VERIFICACAO", "MOSTRAR_PRODUTORES", "PEDIR_REPETICAO"],
     "urgencias": ["BAIXA", "MEDIA", "ALTA", "CRITICA"],
-    "coordenadas": "GeoJSON padrão [longitude, latitude] (WGS84)"
+    "coordenadas": "GeoJSON padrão [longitude, latitude] (WGS84)",
+    "padraoDto": {
+      "descricao": "Toda entrada e saída da API é um DTO; entidades, Map e Object nunca são expostos pelos controllers.",
+      "regras": [
+        "DTOs ficam no subpacote dto do módulo (ex.: zeladoria.dto)",
+        "DTOs são records imutáveis",
+        "Entrada termina em Request e saída em Response",
+        "Endpoints recebem DTO no @RequestBody e devolvem DTO, ResponseEntity de DTO ou List de DTO",
+        "Controllers não acessam entidades (@Document) nem repositórios; o fluxo é controller -> service -> repository",
+        "DTOs não dependem de entidades; a conversão fica em um mapper do módulo",
+        "Validações (Bean Validation) ficam no DTO de entrada",
+        "Erros usam o DTO comum.dto.ErroResponse"
+      ],
+      "verificacao": "Testes de arquitetura com ArchUnit (ArquiteturaDtoTest) quebram o build em caso de violação"
+    }
   },
   "specs": [
     {

@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -24,21 +23,29 @@ class SegurancaTesteController {
 	}
 
 	@GetMapping("/eu")
-	Map<String, Object> eu() {
-		Set<Papel> papeis = usuario.papeis();
-		return Map.of("id", usuario.id(), "papeis", papeis);
+	UsuarioResponse eu() {
+		return new UsuarioResponse(usuario.id(), usuario.papeis());
 	}
 
 	@GetMapping("/suporte")
 	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
-	Map<String, String> suporte() {
-		return Map.of("dados", "suporte");
+	SuporteResponse suporte() {
+		return new SuporteResponse("suporte");
 	}
 
 	@PutMapping("/perfis/{cidadaoId}")
 	@PreAuthorize("hasRole('CUIDADOR')")
-	Map<String, String> editarPerfil(@PathVariable String cidadaoId) {
-		return Map.of("cidadaoId", cidadaoId, "situacao", "atualizado");
+	PerfilAtualizadoResponse editarPerfil(@PathVariable String cidadaoId) {
+		return new PerfilAtualizadoResponse(cidadaoId, "atualizado");
+	}
+
+	record UsuarioResponse(String id, Set<Papel> papeis) {
+	}
+
+	record SuporteResponse(String dados) {
+	}
+
+	record PerfilAtualizadoResponse(String cidadaoId, String situacao) {
 	}
 
 }

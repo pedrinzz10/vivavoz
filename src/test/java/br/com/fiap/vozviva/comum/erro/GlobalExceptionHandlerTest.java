@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * SPEC-014: formato padronizado de erros.
  */
 @WebMvcTest(ErroTesteController.class)
-@Import(ProblemDetailFactory.class)
+@Import(ErroResponseFactory.class)
 @ActiveProfiles("test")
 @WithMockUser
 @ExtendWith(OutputCaptureExtension.class)
@@ -84,7 +84,8 @@ class GlobalExceptionHandlerTest {
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.codigo").value("RECURSO_NAO_ENCONTRADO"))
 			.andExpect(jsonPath("$.title").value("Recurso não encontrado"))
-			.andExpect(jsonPath("$.detail").value("Obstrução 123 não encontrada."));
+			.andExpect(jsonPath("$.detail").value("Obstrução 123 não encontrada."))
+			.andExpect(jsonPath("$.campos").doesNotExist());
 	}
 
 	@Test

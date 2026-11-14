@@ -66,6 +66,23 @@ Selecione com `SPRING_PROFILES_ACTIVE=prod`.
 | `DOTNET_API_URL` | URL da API .NET Core (a partir da SPEC-011) |
 | `EUREKA_ENABLED` | Ativa o registro no Eureka (padrão `false`) |
 
+## Padrão DTO
+
+Os controllers nunca expõem entidades, `Map` ou `Object`: tudo que entra e sai da API é um **DTO**.
+
+| Regra | Exemplo |
+|---|---|
+| DTOs ficam no subpacote `dto` do módulo | `zeladoria.dto.ObstrucaoRequest` |
+| DTOs são `record` (imutáveis) | `public record ObstrucaoResponse(String id, String tipo) {}` |
+| Entrada termina em `Request`, saída em `Response` | `ObstrucaoRequest`, `ObstrucaoResponse` |
+| Endpoints recebem DTO no `@RequestBody` e devolvem DTO (ou `ResponseEntity`/`List` de DTO) | `ResponseEntity<ObstrucaoResponse> criar(@RequestBody @Valid ObstrucaoRequest r)` |
+| Controllers não acessam entidades (`@Document`) nem repositórios: passam por um serviço | `controller → service → repository` |
+| DTOs não dependem de entidades; a conversão fica em um mapper do módulo | `ObstrucaoMapper.paraResponse(obstrucao)` |
+| Validação (`@NotBlank`, `@Valid`...) fica no DTO de entrada | `record ObstrucaoRequest(@NotBlank String tipo, ...)` |
+
+Essas regras são verificadas por testes de arquitetura com ArchUnit (`ArquiteturaDtoTest`): uma
+violação quebra o build. O contrato de erro também é um DTO: `comum.dto.ErroResponse`.
+
 ## Segurança
 
 A API Java não emite tokens: ela valida o **JWT emitido pela API .NET** (Resource Server) e aplica
@@ -132,8 +149,11 @@ br.com.fiap.vozviva
 ├── dados        relatórios anonimizados
 ├── integracao   clientes da API .NET
 ├── seguranca    JWT e controle de acesso
-└── comum        erros, DTOs base e utilitários
+└── comum        erros, DTOs compartilhados e utilitários
 ```
+
+Dentro de cada módulo: `dto` (records de entrada e saída), controller, serviço, mapper, entidade e
+repositório.
 
 ## Fluxo de contribuição
 
