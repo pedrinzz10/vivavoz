@@ -1,0 +1,118 @@
+{
+  "descricao": "Base de conhecimento do assistente contra golpes (RAG). Curada a partir das orientações públicas dos órgãos citados em 'fonte'. Cada item descreve um golpe comum contra idosos, como reconhecê-lo e o canal oficial para confirmar.",
+  "versao": "2026-11-14",
+  "documentos": [
+    {
+      "id": "inss-bloqueio-beneficio",
+      "titulo": "Falso aviso de bloqueio ou suspensão de benefício do INSS",
+      "tipoGolpe": "FALSO_BENEFICIO",
+      "conteudo": "Mensagens dizendo que a aposentadoria ou o benefício do INSS será bloqueado, suspenso ou cancelado se a pessoa não clicar num link, atualizar o cadastro, fazer prova de vida pelo link ou informar senha. O INSS não pede senha nem dados bancários por mensagem, e-mail ou telefone, e não envia links para desbloqueio. A prova de vida e a consulta ao benefício são feitas pelo aplicativo ou site oficial Meu INSS, pela Central 135 ou numa agência.",
+      "canalOficial": "Central 135 ou aplicativo Meu INSS",
+      "fonte": { "orgao": "INSS", "url": "https://www.gov.br/inss" }
+    },
+    {
+      "id": "inss-revisao-valores-atrasados",
+      "titulo": "Falsa revisão de aposentadoria ou valores atrasados a receber",
+      "tipoGolpe": "FALSO_BENEFICIO",
+      "conteudo": "Golpistas se apresentam como advogados, despachantes ou funcionários do INSS dizendo que a pessoa tem valores atrasados ou uma revisão aprovada e que precisa pagar uma taxa, honorários ou um imposto antecipado para liberar o dinheiro. Nenhuma liberação de valores do INSS exige pagamento antecipado por Pix ou boleto. Confirme sempre pelo Meu INSS ou pela Central 135.",
+      "canalOficial": "Central 135 ou aplicativo Meu INSS",
+      "fonte": { "orgao": "INSS", "url": "https://www.gov.br/inss" }
+    },
+    {
+      "id": "banco-falsa-central",
+      "titulo": "Falsa central de atendimento do banco",
+      "tipoGolpe": "FALSA_CENTRAL_BANCO",
+      "conteudo": "Alguém liga ou manda mensagem dizendo ser da central do banco ou do cartão, avisa sobre uma compra suspeita ou um bloqueio e pede senha, código recebido por SMS, token, número completo do cartão ou que a pessoa faça um Pix ou instale um aplicativo para 'proteger a conta'. Banco não pede senha, código nem transferência para cancelar compra. O certo é desligar e ligar você mesmo para o número que está no verso do cartão ou no aplicativo oficial do banco.",
+      "canalOficial": "Número que está no verso do cartão ou no aplicativo oficial do banco",
+      "fonte": { "orgao": "Febraban", "url": "https://portal.febraban.org.br" }
+    },
+    {
+      "id": "banco-motoboy",
+      "titulo": "Golpe do motoboy que busca o cartão",
+      "tipoGolpe": "FALSA_CENTRAL_BANCO",
+      "conteudo": "Depois de uma ligação de falsa central, a pessoa é orientada a cortar o cartão e entregá-lo a um motoboy enviado 'pelo banco'. Bancos não recolhem cartões na casa do cliente. Nunca entregue cartão, senha ou documentos a portadores.",
+      "canalOficial": "Número que está no verso do cartão ou no aplicativo oficial do banco",
+      "fonte": { "orgao": "Febraban", "url": "https://portal.febraban.org.br" }
+    },
+    {
+      "id": "falso-parente-numero-novo",
+      "titulo": "Golpe do falso parente com número novo no WhatsApp",
+      "tipoGolpe": "FALSO_PARENTE",
+      "conteudo": "Mensagem de número desconhecido do tipo 'Oi mãe, troquei de número, salva esse' ou 'Vó, sou eu, perdi meu celular'. Pouco depois o suposto filho ou neto pede um Pix urgente para pagar uma conta ou emergência. Antes de qualquer pagamento, ligue para o número antigo do parente ou faça uma pergunta que só ele saberia responder.",
+      "canalOficial": "Ligar para o número antigo e conhecido do parente",
+      "fonte": { "orgao": "Polícia Civil de São Paulo", "url": "https://www.policiacivil.sp.gov.br" }
+    },
+    {
+      "id": "pix-devolucao-med",
+      "titulo": "O que fazer depois de cair num golpe com Pix",
+      "tipoGolpe": "FALSA_COBRANCA",
+      "conteudo": "Quem fez um Pix para golpista deve avisar o próprio banco o quanto antes pelos canais oficiais e pedir o uso do Mecanismo Especial de Devolução (MED) do Pix, além de registrar boletim de ocorrência. Quanto mais rápido o aviso, maior a chance de recuperar o dinheiro.",
+      "canalOficial": "Canais oficiais do seu banco e boletim de ocorrência",
+      "fonte": { "orgao": "Banco Central do Brasil", "url": "https://www.bcb.gov.br" }
+    },
+    {
+      "id": "cobranca-falsa-boleto",
+      "titulo": "Cobrança falsa e boleto adulterado",
+      "tipoGolpe": "FALSA_COBRANCA",
+      "conteudo": "Mensagens cobrando uma dívida, conta atrasada ou multa com desconto se pagar hoje, enviando boleto ou chave Pix. Antes de pagar, confira se a dívida existe no site ou aplicativo oficial da empresa e se o nome do recebedor do Pix ou do boleto é o da empresa.",
+      "canalOficial": "Site ou aplicativo oficial da empresa; Procon (151 em São Paulo)",
+      "fonte": { "orgao": "Procon-SP", "url": "https://www.procon.sp.gov.br" }
+    },
+    {
+      "id": "premio-sorteio",
+      "titulo": "Falso prêmio ou sorteio",
+      "tipoGolpe": "PREMIO_FALSO",
+      "conteudo": "Aviso de que a pessoa ganhou um prêmio, carro, dinheiro ou sorteio do qual não participou, pedindo uma taxa para liberar o prêmio ou dados pessoais e bancários. Prêmio verdadeiro não exige pagamento antecipado.",
+      "canalOficial": "Site oficial da empresa que supostamente fez o sorteio; Procon",
+      "fonte": { "orgao": "Procon-SP", "url": "https://www.procon.sp.gov.br" }
+    },
+    {
+      "id": "entrega-taxa-correios",
+      "titulo": "Falsa taxa de entrega de encomenda",
+      "tipoGolpe": "FALSA_ENTREGA",
+      "conteudo": "SMS ou WhatsApp dizendo que uma encomenda está retida e só será entregue após pagar uma taxa por um link. Desconfie de links recebidos por mensagem: consulte a encomenda apenas no site ou aplicativo oficial dos Correios ou da transportadora, digitando o endereço você mesmo.",
+      "canalOficial": "Site ou aplicativo oficial dos Correios",
+      "fonte": { "orgao": "Correios", "url": "https://www.correios.com.br" }
+    },
+    {
+      "id": "saude-vacina-cobrada",
+      "titulo": "Falsa cobrança ou agendamento pago de vacina e consulta do SUS",
+      "tipoGolpe": "FALSO_SERVICO_SAUDE",
+      "conteudo": "Mensagens oferecendo vacina, exame ou consulta do SUS mediante pagamento, ou pedindo dados e um código para 'confirmar o agendamento'. As vacinas e os atendimentos do SUS são gratuitos. Confirme datas e locais na unidade de saúde (UBS) ou no aplicativo oficial Meu SUS Digital.",
+      "canalOficial": "Unidade de saúde (UBS) ou aplicativo Meu SUS Digital",
+      "fonte": { "orgao": "Ministério da Saúde", "url": "https://www.gov.br/saude" }
+    },
+    {
+      "id": "receita-regularizacao",
+      "titulo": "Falsa pendência na Receita Federal ou CPF irregular",
+      "tipoGolpe": "FALSO_BENEFICIO",
+      "conteudo": "Mensagens dizendo que o CPF está irregular, que há restituição a receber ou multa a pagar, com link para regularizar. A situação do CPF e as declarações devem ser consultadas apenas no site oficial gov.br da Receita Federal, digitando o endereço você mesmo.",
+      "canalOficial": "Site oficial da Receita Federal (gov.br)",
+      "fonte": { "orgao": "Receita Federal", "url": "https://www.gov.br/receitafederal" }
+    },
+    {
+      "id": "link-malicioso-geral",
+      "titulo": "Links encurtados e páginas falsas",
+      "tipoGolpe": "LINK_MALICIOSO",
+      "conteudo": "Links encurtados ou com endereços parecidos com os oficiais levam a páginas falsas que copiam bancos e órgãos públicos para roubar senhas e dados. Não clique em links recebidos por mensagem: abra o aplicativo oficial ou digite o endereço do site você mesmo.",
+      "canalOficial": "Aplicativo oficial ou endereço digitado por você",
+      "fonte": { "orgao": "Febraban", "url": "https://portal.febraban.org.br" }
+    },
+    {
+      "id": "violencia-financeira-idoso",
+      "titulo": "Abuso financeiro contra a pessoa idosa",
+      "tipoGolpe": "OUTRO",
+      "conteudo": "Pressão de terceiros para fazer empréstimo consignado, emprestar o cartão ou transferir dinheiro também é uma forma de violência contra a pessoa idosa. Denúncias podem ser feitas pelo Disque 100, de forma gratuita.",
+      "canalOficial": "Disque 100",
+      "fonte": { "orgao": "Ministério dos Direitos Humanos e da Cidadania", "url": "https://www.gov.br/mdh" }
+    },
+    {
+      "id": "mensagem-legitima-sinais",
+      "titulo": "Como reconhecer uma mensagem que tende a ser legítima",
+      "tipoGolpe": "NENHUM",
+      "conteudo": "Mensagens legítimas costumam apenas informar (um lembrete de consulta, uma campanha de vacinação, um aviso de entrega já paga) sem pedir senha, código, pagamento ou clique urgente. Mesmo assim, na dúvida, confirme pelo canal oficial que você já conhece.",
+      "canalOficial": "Canal oficial que você já conhece",
+      "fonte": { "orgao": "Febraban", "url": "https://portal.febraban.org.br" }
+    }
+  ]
+}

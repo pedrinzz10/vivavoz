@@ -203,11 +203,11 @@
       "modulo": "Voz / IA",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-003"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Base de conhecimento usada como contexto (Retrieval-Augmented Generation): golpes comuns contra idosos e canais oficiais para o assistente contra desinformação (SPEC-015), exemplos de frases por intenção para a classificação (SPEC-003) e as frases de busca de atendimento (SPEC-007). Cada documento registra a fonte (gov.br, INSS, Procon, Febraban, Polícia Civil), atendendo ao requisito de documentar fontes e preparação dos dados da disciplina de IA.",
       "oQueFaz": [
         "Mantém documentos de conhecimento em arquivos versionados (ex.: resources/knowledge/*.md ou *.json).",
-        "Carrega e indexa os documentos na inicialização em um VectorStore em memória (SimpleVectorStore), com embeddings do provedor configurado; Oracle 23ai Vector Search fica como evolução.",
+        "Carrega e indexa os documentos na inicialização com TF-IDF (relevância de palavras, sem modelo de embeddings: a Anthropic não oferece um); busca vetorial (embeddings da OCI ou Oracle 23ai Vector Search) fica como evolução.",
         "Recupera os trechos mais relevantes (top-k configurável) para o texto do usuário e os injeta no prompt via advisor do Spring AI.",
         "Permite recarregar a base sem alterar código."
       ],
@@ -694,7 +694,7 @@
       "modulo": "Letramento Digital",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-002", "SPEC-003", "SPEC-004", "SPEC-022"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Idosos e pessoas com baixo letramento digital são os alvos mais frequentes de golpes (falso benefício do INSS, cobrança de vacina, PIX urgente). O cidadão dita ou cola a mensagem suspeita; a IA (Spring AI + RAG com uma base curada de golpes comuns e canais oficiais) classifica o risco, explica os sinais em linguagem simples e diz o que fazer, em uma frase pronta para ser lida em voz alta.",
       "oQueFaz": [
         "POST /api/v1/verificacoes (CIDADAO ou CUIDADOR) com VerificacaoRequest { texto, canal? (WHATSAPP, SMS, LIGACAO, EMAIL, OUTRO) }.",

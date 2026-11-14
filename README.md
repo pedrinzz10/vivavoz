@@ -207,6 +207,57 @@ Garantias:
   aviso no log com o telefone mascarado.
 
 O painel do RabbitMQ (http://localhost:15672) mostra as filas e as mensagens em JSON.
+## Assistente contra golpes (Spring AI + RAG)
+
+O cidadão cola ou dita uma mensagem suspeita e recebe, em linguagem simples, se parece golpe e o que fazer.
+
+```
+mensagem ──▶ 1. Regras determinísticas (senha, Pix com pressa, link, "troquei de número"...)  ─┐
+         ──▶ 2. Recuperação (RAG): orientações oficiais mais parecidas, por TF-IDF              │
+         ──▶ 3. IA generativa (Spring AI): analisa a mensagem com as orientações e devolve       │
+                JSON estruturado (classificação, tipo, sinais, orientação, canal, frase falada)  │
+                                                                                                ▼
+                                 resposta = maior risco entre IA e regras  +  fontes oficiais usadas
+```
+
+| Endpoint | Acesso | O que faz |
+|---|---|---|
+| `POST /api/v1/verificacoes` | `CIDADAO` / `CUIDADOR` | Analisa `{ "texto": "...", "canal": "WHATSAPP" }` |
+| `GET /api/v1/verificacoes/estatisticas?dias=30` | `CIDADAO` / `CUIDADOR` | Golpes mais frequentes no período (anonimizado) |
+
+- **Base de conhecimento:** `src/main/resources/conhecimento/golpes.json`, com 14 orientações curadas, cada
+  uma com o órgão de origem (INSS, Febraban, Banco Central, Procon-SP, Polícia Civil-SP, Ministério da Saúde,
+  Receita Federal, Correios, MDHC) e o canal oficial para confirmar.
+- **Por que TF-IDF e não busca vetorial:** a base é pequena e curada, a busca fica determinística e testável e
+  não depende de um modelo de embeddings (a Anthropic não oferece um). A evolução natural é a busca vetorial
+  (embeddings da OCI ou Oracle 23ai Vector Search).
+- **Segurança da IA:** a mensagem recebida vai delimitada e é tratada pelo modelo como dado, não como
+  instrução (proteção contra *prompt injection*); as regras garantem que um pedido de senha nunca sai como
+  "sem risco", mesmo que o modelo erre; sem IA (fora do ar, sem chave ou timeout de 30 s), as regras
+  respondem sozinhas.
+- **LGPD:** o texto da mensagem e o usuário nunca são gravados; só tipo, classificação, canal e data.
+- **Modelo:** configurável por `ANTHROPIC_MODEL` (padrão `claude-opus-5`). O Spring AI permite trocar de
+  provedor (ex.: OCI) só pela configuração.
+
+### Avaliação
+
+Conjunto versionado de 30 mensagens rotuladas (18 golpes, 12 legítimas) em
+`src/test/resources/avaliacao/mensagens-rotuladas.json`, com golpes sem palavras óbvias e mensagens legítimas
+de banco e saúde. "Golpe detectado" = `PROVAVEL_GOLPE` ou `SUSPEITA`.
+
+| Configuração | Acurácia | Recall | Precisão | Falsos alarmes | Como rodar |
+|---|---|---|---|---|---|
+| Só regras (linha de base) | 83,3% | 72,2% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-golpes/somente-regras.md`) |
+| IA + regras | meta ≥ 80% | meta ≥ 90% | — | — | `./gradlew avaliarIa` (exige `ANTHROPIC_API_KEY`; usa a API paga) |
+
+Os golpes que as regras não pegam são os semânticos (falso advogado, motoboy, "vaga de emprego"), que é
+onde a IA agrega. As regras foram ajustadas com padrões gerais conhecidos ("somente hoje", "perdi meu
+celular", "dados bancários"), não com as frases do conjunto; por ser pequeno, ele indica tendência, não
+garante desempenho.
+
+**Limitações:** o modelo pode errar golpes novos ou muito bem escritos (por isso a resposta nunca afirma
+certeza e sempre indica o canal oficial); a base cobre os golpes mais comuns, não todos; a classificação não
+substitui a confirmação no canal oficial.
 ## Banco de dados
 
 O esquema é versionado com **Flyway** em `src/main/resources/db/migration` (`V1__descricao.sql`, `V2__...`).
@@ -236,6 +287,7 @@ Nenhum segredo fica no repositório.
 ```
 br.com.fiap.vozviva
 ├── usuario      cadastro, login e emissão do JWT
+├── golpe        assistente contra golpes (regras + RAG + Spring AI)
 ├── voz          classificação de intenção por voz (Spring AI)
 ├── perfil       perfil de emergência e contatos (cuidador)
 ├── emergencia   botão de emergência assíncrono (RabbitMQ: publicador, consumidor, DLQ e reenvio)
@@ -243,7 +295,7 @@ br.com.fiap.vozviva
 └── comum        erros, DTOs compartilhados e utilitários
 ```
 
-Os módulos do assistente contra golpes e do atendimento mais próximo entram com as suas specs.
+O módulo do atendimento mais próximo entra com a sua spec.
 
 Dentro de cada módulo: `dto` (records de entrada e saída), controller, serviço, mapper, entidade e
 repositório.
