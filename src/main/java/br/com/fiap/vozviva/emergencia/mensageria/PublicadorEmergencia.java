@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -12,7 +13,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * Publica no RabbitMQ somente depois que a emergência foi gravada no banco (após o commit).
  * Assim o consumidor nunca procura uma emergência que ainda não existe.
  * <p>
- * Se o broker estiver fora do ar, a emergência continua gravada como ACIONADA e o
+ * A publicação roda em outra thread ({@code @Async}): o 202 ao cidadão não espera o broker, nem
+ * quando ele está lento ou fora do ar. Nesse caso a emergência continua gravada como ACIONADA e o
  * {@link ReenvioEmergencias} tenta publicar de novo: o cidadão não recebe erro por isso.
  */
 @Component
@@ -26,6 +28,7 @@ public class PublicadorEmergencia {
 		this.rabbit = rabbit;
 	}
 
+	@Async
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
 	public void aoAcionar(EmergenciaAcionadaEvento evento) {
 		publicar(evento);

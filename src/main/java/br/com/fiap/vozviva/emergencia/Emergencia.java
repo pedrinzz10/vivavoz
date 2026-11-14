@@ -49,6 +49,10 @@ public class Emergencia {
 	@Column(name = "contatos_notificados", nullable = false)
 	private Integer contatosNotificados = 0;
 
+	/** Quantas vezes o reenvio automático já publicou esta emergência de novo. */
+	@Column(nullable = false)
+	private Integer reenvios = 0;
+
 	@Column(name = "acionada_em", nullable = false, updatable = false)
 	private Instant acionadaEm;
 
@@ -124,6 +128,10 @@ public class Emergencia {
 
 	public String getTextoOriginal() {
 		return textoOriginal;
+	}
+
+	public Integer getReenvios() {
+		return reenvios;
 	}
 
 	public Integer getContatosNotificados() {

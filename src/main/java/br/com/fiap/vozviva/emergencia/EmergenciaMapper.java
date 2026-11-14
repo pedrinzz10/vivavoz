@@ -12,6 +12,7 @@ final class EmergenciaMapper {
 	private static final Map<StatusEmergencia, String> MENSAGENS = Map.of(
 			StatusEmergencia.ACIONADA, "Pedido de ajuda enviado. Estamos avisando seus contatos.",
 			StatusEmergencia.NOTIFICADA, "Seus contatos foram avisados. Fique onde está, se puder.",
+			StatusEmergencia.FALHA_NO_AVISO, "Não conseguimos avisar seus contatos. Ligue 192 agora.",
 			StatusEmergencia.ATENDIDA, "Seu pedido de ajuda foi atendido.",
 			StatusEmergencia.CANCELADA, "Pedido de ajuda cancelado.");
 

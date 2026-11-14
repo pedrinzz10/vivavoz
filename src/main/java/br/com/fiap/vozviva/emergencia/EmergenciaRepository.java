@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -27,6 +28,11 @@ public interface EmergenciaRepository extends JpaRepository<Emergencia, Long> {
 	@Query("select e from Emergencia e join fetch e.perfil p join fetch p.cidadao where e.id = :id")
 	Optional<Emergencia> findParaProcessarById(@Param("id") Long id);
 
+	/** Para cancelar ou atender: trava a linha, assim duas alterações simultâneas não se sobrescrevem. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select e from Emergencia e join fetch e.perfil p join fetch p.cidadao join fetch p.cuidador where e.id = :id")
+	Optional<Emergencia> findParaAlterarById(@Param("id") Long id);
+
 	@EntityGraph(attributePaths = { "perfil", "perfil.cidadao" })
 	Page<Emergencia> findByPerfilCidadaoId(Long cidadaoId, Pageable pageable);
 
@@ -39,5 +45,19 @@ public interface EmergenciaRepository extends JpaRepository<Emergencia, Long> {
 
 	/** Emergências que ficaram sem processar (ex.: o broker estava fora do ar na hora). */
 	List<Emergencia> findTop50ByStatusAndAcionadaEmBeforeOrderByAcionadaEmAsc(StatusEmergencia status, Instant antesDe);
+
+	/**
+	 * Conta um reenvio. Atualização condicional e atômica: não sobrescreve o status que o consumidor
+	 * possa ter acabado de gravar.
+	 */
+	@Modifying
+	@Query("update Emergencia e set e.reenvios = e.reenvios + 1 where e.id = :id and e.status = :acionada")
+	int contarReenvio(@Param("id") Long id, @Param("acionada") StatusEmergencia acionada);
+
+	/** Esgotados os reenvios, marca a falha no aviso (só se a emergência ainda estiver ACIONADA). */
+	@Modifying
+	@Query("update Emergencia e set e.status = :falha where e.id = :id and e.status = :acionada")
+	int marcarFalhaNoAviso(@Param("id") Long id, @Param("acionada") StatusEmergencia acionada,
+			@Param("falha") StatusEmergencia falha);
 
 }

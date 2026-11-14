@@ -57,8 +57,11 @@ public class EmergenciaService {
 			throw new RequisicaoInvalidaException("Informe latitude e longitude juntas, ou nenhuma delas.");
 		}
 		PerfilEmergencia perfil = perfis.findByCidadaoId(cidadaoId)
+			.flatMap(p -> perfis.findParaAlterarById(p.getId()))
 			.orElseThrow(() -> new RequisicaoInvalidaException(
 					"Você ainda não tem perfil de emergência. Peça ao seu cuidador para cadastrar os contatos."));
+		// Com o perfil travado, dois toques simultâneos ficam em fila: o segundo encontra a emergência
+		// que o primeiro acabou de abrir, em vez de criar outra.
 
 		Instant agora = Instant.now();
 		Optional<Emergencia> aberta = emergencias.findFirstByPerfilIdAndStatusInAndAcionadaEmAfterOrderByAcionadaEmDesc(
@@ -97,7 +100,7 @@ public class EmergenciaService {
 
 	@Transactional
 	public EmergenciaResponse cancelar(Long id, Long cidadaoId) {
-		Emergencia emergencia = carregar(id);
+		Emergencia emergencia = carregarParaAlterar(id);
 		if (!emergencia.getPerfil().pertenceAo(cidadaoId)) {
 			throw new AccessDeniedException("Só o próprio cidadão cancela a emergência.");
 		}
@@ -107,7 +110,7 @@ public class EmergenciaService {
 
 	@Transactional
 	public EmergenciaResponse atender(Long id, Long cuidadorId) {
-		Emergencia emergencia = carregar(id);
+		Emergencia emergencia = carregarParaAlterar(id);
 		if (!emergencia.getPerfil().ehGerenciadoPor(cuidadorId)) {
 			throw new AccessDeniedException("Só o cuidador responsável marca a emergência como atendida.");
 		}
@@ -117,6 +120,11 @@ public class EmergenciaService {
 
 	private Emergencia carregar(Long id) {
 		return emergencias.findWithPerfilById(id)
+			.orElseThrow(() -> new RecursoNaoEncontradoException("Emergência não encontrada."));
+	}
+
+	private Emergencia carregarParaAlterar(Long id) {
+		return emergencias.findParaAlterarById(id)
 			.orElseThrow(() -> new RecursoNaoEncontradoException("Emergência não encontrada."));
 	}
 
