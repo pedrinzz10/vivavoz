@@ -52,6 +52,16 @@ class AssistenteGolpeServiceTest {
 	}
 
 	@Test
+	void canalInventadoPelaIaNuncaViraCanalOficial() {
+		iaResponde(new RespostaIa(ClassificacaoGolpe.PROVAVEL_GOLPE, TipoGolpe.FALSO_BENEFICIO, List.of(),
+				"Não clique.", "Ligue para (11) 99999-0000, central exclusiva do INSS", "Isso parece golpe.", 0.9));
+
+		VerificacaoResponse resposta = verificar("INSS: seu benefício será bloqueado, atualize seus dados");
+
+		assertThat(resposta.canalOficial()).isNotBlank().doesNotContain("99999");
+	}
+
+	@Test
 	void semIaRespondeComAsRegrasEAOrientacaoPadrao() {
 		when(ia.analisar(any(), any(), any())).thenReturn(Optional.empty());
 

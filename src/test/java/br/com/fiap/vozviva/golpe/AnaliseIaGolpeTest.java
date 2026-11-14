@@ -21,6 +21,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -114,14 +115,24 @@ class AnaliseIaGolpeTest {
 		@SuppressWarnings("unchecked")
 		ObjectProvider<ChatModel> semModelo = mock(ObjectProvider.class);
 
-		assertThat(new AnaliseIaGolpe(semModelo).analisar("qualquer", CanalMensagem.OUTRO, List.of())).isEmpty();
+		assertThat(new AnaliseIaGolpe(semModelo, "chave").analisar("qualquer", CanalMensagem.OUTRO, List.of())).isEmpty();
+	}
+
+	@Test
+	void semChaveNaoChamaOModeloMesmoQueEleExista() {
+		assertThat(new AnaliseIaGolpe(provedor(), "").analisar("qualquer", CanalMensagem.OUTRO, List.of())).isEmpty();
+		verify(modelo, never()).call(any(Prompt.class));
 	}
 
 	private AnaliseIaGolpe ia() {
+		return new AnaliseIaGolpe(provedor(), "chave-de-teste");
+	}
+
+	private ObjectProvider<ChatModel> provedor() {
 		@SuppressWarnings("unchecked")
 		ObjectProvider<ChatModel> provedor = mock(ObjectProvider.class);
 		when(provedor.getIfAvailable()).thenReturn(modelo);
-		return new AnaliseIaGolpe(provedor);
+		return provedor;
 	}
 
 	private void responder(String texto) {

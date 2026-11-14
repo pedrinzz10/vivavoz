@@ -96,8 +96,7 @@ public class AssistenteGolpeService {
 				? FRASES_PADRAO.get(classificacao) : limitar(respostaIa.mensagemFalada());
 		String orientacao = regrasElevaramORisco || !StringUtils.hasText(respostaIa.orientacao())
 				? ORIENTACAO_PADRAO : respostaIa.orientacao();
-		String canalOficial = StringUtils.hasText(respostaIa.canalOficial()) ? respostaIa.canalOficial()
-				: canalDasOrientacoes(orientacoes);
+		String canalOficial = canalConfiavel(respostaIa.canalOficial(), orientacoes);
 
 		Set<String> sinais = new LinkedHashSet<>();
 		if (respostaIa.sinais() != null) {
@@ -113,6 +112,24 @@ public class AssistenteGolpeService {
 		ClassificacaoGolpe classificacao = regras.piso() != null ? regras.piso() : ClassificacaoGolpe.NAO_E_POSSIVEL_AVALIAR;
 		return new VerificacaoResponse(classificacao, regras.tipoProvavel(), regras.descricoes(), ORIENTACAO_PADRAO,
 				canalDasOrientacoes(orientacoes), FRASES_PADRAO.get(classificacao), fontes(orientacoes), "REGRAS", null);
+	}
+
+	/**
+	 * O canal oficial sempre vem da base curada, nunca do texto do modelo: um contato inventado (ou
+	 * injetado na mensagem analisada) nunca é recomendado como oficial. A sugestão do modelo só ajuda a
+	 * escolher qual das orientações recuperadas usar.
+	 */
+	static String canalConfiavel(String sugeridoPelaIa, List<DocumentoConhecimento> orientacoes) {
+		if (StringUtils.hasText(sugeridoPelaIa)) {
+			String sugerido = RegrasGolpe.normalizar(sugeridoPelaIa).strip();
+			for (DocumentoConhecimento orientacao : orientacoes) {
+				String canal = RegrasGolpe.normalizar(orientacao.canalOficial()).strip();
+				if (canal.contains(sugerido) || sugerido.contains(canal)) {
+					return orientacao.canalOficial();
+				}
+			}
+		}
+		return canalDasOrientacoes(orientacoes);
 	}
 
 	private static String canalDasOrientacoes(List<DocumentoConhecimento> orientacoes) {
