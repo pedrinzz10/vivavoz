@@ -89,6 +89,7 @@ public class EmergenciaController {
 	}
 
 	@PatchMapping("/{id}/cancelar")
+	@ApiResponse(responseCode = "200", description = "Emergência cancelada")
 	@ApiResponse(responseCode = "409", description = "A emergência já foi encerrada")
 	@PreAuthorize("hasRole('CIDADAO')")
 	@Operation(summary = "Cancelar emergência", description = "Só o próprio cidadão, enquanto estiver aberta (409 se já encerrada).")
@@ -97,6 +98,7 @@ public class EmergenciaController {
 	}
 
 	@PatchMapping("/{id}/atender")
+	@ApiResponse(responseCode = "200", description = "Emergência marcada como atendida")
 	@ApiResponse(responseCode = "409", description = "A emergência já foi encerrada")
 	@PreAuthorize("hasRole('CUIDADOR')")
 	@Operation(summary = "Marcar como atendida", description = "Só o cuidador responsável, enquanto estiver aberta.")
