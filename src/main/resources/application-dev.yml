@@ -13,6 +13,10 @@ spring:
     username: ${RABBITMQ_USERNAME:vozviva}
     password: ${RABBITMQ_PASSWORD}
 
+vozviva:
+  usuarios-teste:
+    habilitado: ${USUARIOS_TESTE_HABILITADO:true}
+
 logging:
   level:
     br.com.fiap.vozviva: DEBUG

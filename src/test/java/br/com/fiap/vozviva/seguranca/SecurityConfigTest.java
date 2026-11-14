@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class SecurityConfigTest {
 
 	@Test
-	void falhaAoIniciarSemSecretNemJwks() {
+	void falhaAoIniciarSemSecret() {
 		assertThatThrownBy(() -> SecurityConfig.criarDecoder(propriedades(null, null, null)))
 			.isInstanceOf(IllegalStateException.class)
 			.hasMessageContaining("JWT_SECRET");
@@ -26,7 +26,7 @@ class SecurityConfigTest {
 
 	@Test
 	void falhaComAlgoritmoNaoSuportado() {
-		JwtProperties props = new JwtProperties(SegredoJwtDeTeste.SECRET, null, "RS256", null, null, null, null, null);
+		JwtProperties props = new JwtProperties(SegredoJwtDeTeste.SECRET, "RS256", null, null, null, null, null, null);
 
 		assertThatThrownBy(() -> SecurityConfig.criarDecoder(props))
 			.isInstanceOf(IllegalStateException.class)
@@ -60,7 +60,7 @@ class SecurityConfigTest {
 	}
 
 	private static JwtProperties propriedades(String secret, String issuer, String audience) {
-		return new JwtProperties(secret, null, null, issuer, audience, null, null, null);
+		return new JwtProperties(secret, null, issuer, audience, null, null, null, null);
 	}
 
 }

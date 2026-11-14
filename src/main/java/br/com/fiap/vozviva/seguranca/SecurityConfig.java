@@ -20,12 +20,17 @@ import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher;
 import org.springframework.util.StringUtils;
 
+import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -33,9 +38,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A API Java é um Resource Server: valida o JWT emitido pela API .NET, sem emitir tokens.
+ * A API Java é a dona da identidade: emite o JWT no login ({@link EmissorToken}) e valida o token em
+ * todas as chamadas (Resource Server). A API .NET valida o mesmo token com o mesmo segredo.
  * <p>
- * Matriz de acesso: health/info e documentação são públicos; todo o resto exige token válido.
+ * Matriz de acesso: health/info, documentação, cadastro e login são públicos; todo o resto exige token válido.
  * Regras por papel ficam nos endpoints com {@code @PreAuthorize} (ex.: {@code hasRole('CUIDADOR')}).
  */
 @Configuration
@@ -53,6 +59,9 @@ public class SecurityConfig {
 			"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"
 	};
 
+	/** Cadastro e login: públicos e sem CSRF (devolvem o token no corpo, que outro site não consegue ler). */
+	static final String[] ROTAS_AUTENTICACAO = { "/api/v1/auth/cadastro", "/api/v1/auth/login" };
+
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http, ErroSegurancaHandler erros,
 			JwtProperties propriedades) throws Exception {
@@ -63,6 +72,7 @@ public class SecurityConfig {
 			// login por cookie no futuro. O token fica em cookie para a API seguir sem sessão.
 			.csrf(csrf -> csrf
 				.ignoringRequestMatchers(new RequestHeaderRequestMatcher(HttpHeaders.AUTHORIZATION))
+				.ignoringRequestMatchers(ROTAS_AUTENTICACAO)
 				.csrfTokenRepository(repositorioCsrf()))
 			.sessionManagement(sessao -> sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.httpBasic(AbstractHttpConfigurer::disable)
@@ -70,6 +80,7 @@ public class SecurityConfig {
 			.logout(AbstractHttpConfigurer::disable)
 			.authorizeHttpRequests(rotas -> rotas
 				.requestMatchers(HttpMethod.GET, ROTAS_PUBLICAS).permitAll()
+				.requestMatchers(HttpMethod.POST, ROTAS_AUTENTICACAO).permitAll()
 				.anyRequest().authenticated())
 			.oauth2ResourceServer(recurso -> recurso
 				.jwt(jwt -> jwt.jwtAuthenticationConverter(new PapeisJwtConverter(propriedades)))
@@ -92,32 +103,53 @@ public class SecurityConfig {
 		return criarDecoder(propriedades);
 	}
 
+	@Bean
+	JwtEncoder jwtEncoder(JwtProperties propriedades) {
+		return criarEncoder(propriedades);
+	}
+
+	/**
+	 * Senhas com BCrypt. O formato delegado ({bcrypt}...) permite trocar o algoritmo no futuro
+	 * sem invalidar as senhas já cadastradas.
+	 */
+	@Bean
+	PasswordEncoder passwordEncoder() {
+		return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+	}
+
 	static JwtDecoder criarDecoder(JwtProperties propriedades) {
-		NimbusJwtDecoder decoder;
-		if (propriedades.usaJwks()) {
-			decoder = NimbusJwtDecoder.withJwkSetUri(propriedades.jwksUri()).build();
-		}
-		else if (propriedades.temSecret()) {
-			byte[] chave = propriedades.secret().getBytes(StandardCharsets.UTF_8);
-			if (chave.length < TAMANHO_MINIMO_SECRET) {
-				throw new IllegalStateException("JWT_SECRET deve ter pelo menos " + TAMANHO_MINIMO_SECRET
-						+ " bytes (256 bits). Use o mesmo segredo configurado na API .NET.");
-			}
-			MacAlgorithm algoritmo = MacAlgorithm.from(propriedades.algoritmo());
-			if (algoritmo == null) {
-				throw new IllegalStateException("Algoritmo JWT não suportado: " + propriedades.algoritmo()
-						+ ". Use HS256, HS384 ou HS512.");
-			}
-			decoder = NimbusJwtDecoder.withSecretKey(new SecretKeySpec(chave, algoritmo.getName()))
-				.macAlgorithm(algoritmo)
-				.build();
-		}
-		else {
-			throw new IllegalStateException(
-					"Configure JWT_SECRET (segredo compartilhado com a API .NET) ou JWT_JWKS_URI.");
-		}
+		MacAlgorithm algoritmo = algoritmo(propriedades);
+		NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(chave(propriedades, algoritmo))
+			.macAlgorithm(algoritmo)
+			.build();
 		decoder.setJwtValidator(validador(propriedades));
 		return decoder;
+	}
+
+	static JwtEncoder criarEncoder(JwtProperties propriedades) {
+		MacAlgorithm algoritmo = algoritmo(propriedades);
+		return NimbusJwtEncoder.withSecretKey(chave(propriedades, algoritmo)).algorithm(algoritmo).build();
+	}
+
+	private static MacAlgorithm algoritmo(JwtProperties propriedades) {
+		MacAlgorithm algoritmo = MacAlgorithm.from(propriedades.algoritmo());
+		if (algoritmo == null) {
+			throw new IllegalStateException("Algoritmo JWT não suportado: " + propriedades.algoritmo()
+					+ ". Use HS256, HS384 ou HS512.");
+		}
+		return algoritmo;
+	}
+
+	private static SecretKey chave(JwtProperties propriedades, MacAlgorithm algoritmo) {
+		if (!StringUtils.hasText(propriedades.secret())) {
+			throw new IllegalStateException("Configure JWT_SECRET: segredo usado para assinar e validar os tokens.");
+		}
+		byte[] bytes = propriedades.secret().getBytes(StandardCharsets.UTF_8);
+		if (bytes.length < TAMANHO_MINIMO_SECRET) {
+			throw new IllegalStateException("JWT_SECRET deve ter pelo menos " + TAMANHO_MINIMO_SECRET
+					+ " bytes (256 bits). A API .NET deve usar o mesmo segredo.");
+		}
+		return new SecretKeySpec(bytes, algoritmo.getName());
 	}
 
 	private static OAuth2TokenValidator<Jwt> validador(JwtProperties propriedades) {

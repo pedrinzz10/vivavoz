@@ -7,13 +7,14 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * Configuração da validação do JWT emitido pela API .NET.
+ * Configuração do JWT. A API Java emite e valida os tokens com um segredo HMAC compartilhado
+ * com a API .NET, que valida o mesmo token.
  *
- * @param secret            segredo compartilhado com o .NET (HMAC); mínimo de 32 bytes
- * @param jwksUri           alternativa ao segredo: endpoint JWKS do .NET (chave assimétrica)
- * @param algoritmo         algoritmo HMAC usado com o segredo (HS256, HS384 ou HS512)
- * @param issuer            emissor esperado (claim iss); vazio desativa a verificação
- * @param audience          audiência esperada (claim aud); vazio desativa a verificação
+ * @param secret            segredo HMAC; mínimo de 32 bytes
+ * @param algoritmo         algoritmo HMAC (HS256, HS384 ou HS512)
+ * @param issuer            emissor gravado e exigido no token (claim iss); vazio desativa a verificação
+ * @param audience          audiência exigida no token (claim aud); vazio desativa a verificação
+ * @param expiracao         validade dos tokens emitidos no login
  * @param claimsPapel       claims onde procurar os papéis, em ordem de prioridade
  * @param claimsUsuario     claims onde procurar o identificador do usuário, em ordem de prioridade
  * @param toleranciaRelogio diferença de relógio aceita entre os servidores
@@ -21,10 +22,10 @@ import java.util.List;
 @ConfigurationProperties("vozviva.seguranca.jwt")
 public record JwtProperties(
 		String secret,
-		String jwksUri,
 		String algoritmo,
 		String issuer,
 		String audience,
+		Duration expiracao,
 		List<String> claimsPapel,
 		List<String> claimsUsuario,
 		Duration toleranciaRelogio) {
@@ -37,19 +38,12 @@ public record JwtProperties(
 
 	public JwtProperties {
 		algoritmo = StringUtils.hasText(algoritmo) ? algoritmo : "HS256";
+		expiracao = expiracao == null ? Duration.ofHours(2) : expiracao;
 		claimsPapel = claimsPapel == null || claimsPapel.isEmpty()
 				? List.of("roles", "role", CLAIM_PAPEL_DOTNET) : List.copyOf(claimsPapel);
 		claimsUsuario = claimsUsuario == null || claimsUsuario.isEmpty()
 				? List.of("sub", "nameid", CLAIM_USUARIO_DOTNET) : List.copyOf(claimsUsuario);
 		toleranciaRelogio = toleranciaRelogio == null ? Duration.ofSeconds(30) : toleranciaRelogio;
-	}
-
-	public boolean usaJwks() {
-		return StringUtils.hasText(jwksUri);
-	}
-
-	public boolean temSecret() {
-		return StringUtils.hasText(secret);
 	}
 
 }
