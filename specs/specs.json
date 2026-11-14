@@ -1,18 +1,58 @@
 {
   "projeto": "VozViva - Motor de Inteligência e Interface de Voz (Ecossistema Fala Cidadão / CitizenTech)",
-  "versao": "0.1.0",
+  "versao": "0.2.0",
   "dataCriacao": "2026-11-12",
-  "fonte": "Dores Dos Grupos CitizenTech.md",
-  "escopo": "Microsserviço Java (Spring Boot 4 / Java 21) responsável por classificar intenções de voz com Spring AI, gerenciar dados geoespaciais no MongoDB, integrar-se à API .NET (Oracle) via OpenFeign e processar eventos de crise via RabbitMQ. Público-alvo: idosos e pessoas com deficiência (PcD) com baixo letramento digital.",
+  "dataRevisao": "2026-11-14",
+  "fonte": ["Dores Dos Grupos CitizenTech.md", "requisitos-global-solution-2026-2.md"],
+  "prazoEntrega": "2026-11-19T23:55-03:00",
+  "escopo": "Microsserviço Java (Spring Boot 4 / Java 21) do ecossistema Fala Cidadão. Funcionalidades da entrega: (1) rede de apoio no socorro: perfil de emergência com contatos (CRUD paginado, Spring Data JPA / Azure SQL) e botão de emergência assíncrono via RabbitMQ; (2) assistente contra desinformação com Spring AI + RAG; (3) atendimento acessível mais próximo com rota no app de navegação (dados do OpenStreetMap). A zeladoria cidadã fica com a API .NET ou no roadmap. A classificação de intenção de voz (Spring AI) encaminha a fala para essas funcionalidades. Deploy na Azure (disciplina de DevOps). Público-alvo: idosos e pessoas com deficiência (PcD) com baixo letramento digital.",
+  "arquitetura": {
+    "microsservicos": {
+      "api-java (este repositório)": "Spring Boot; Azure SQL via Spring Data JPA (perfis de emergência, contatos, emergências, obstruções, estatísticas de golpes e interações de voz); RabbitMQ para eventos de emergência; Spring AI (provedor configurável: OCI Generative AI ou Ollama na OCI, com Anthropic como alternativa). Dona dos usuários: cadastro, login e emissão do JWT.",
+      "api-dotnet (outro repositório)": "ASP.NET Core Minimal API; Oracle com PL/SQL; valida o JWT emitido pela API Java; cadastros oficiais e protocolos."
+    },
+    "autenticacao": "Um único emissor de identidade: a API Java cadastra os usuários e emite o JWT (SPEC-023); a API .NET apenas valida, com o mesmo JWT_SECRET (HS256), o mesmo JWT_ISSUER e as claims sub (id do usuário), role (CIDADAO ou CUIDADOR) e exp. Evita dois cadastros para a mesma pessoa.",
+    "ia": "A API Java chama o modelo via Spring AI; o modelo pode rodar fora da Azure (créditos da Oracle OCI). Caminho preferido: OCI Generative AI por API compatível com OpenAI (a confirmar); reserva: Ollama em VM da OCI.",
+    "arquiteturaDistribuidaJava": "Opção A do requisito 5 de Java Advanced: evento publicado e consumido de forma assíncrona com RabbitMQ.",
+    "bancosDeDados": "Um banco por microsserviço: Oracle (PL/SQL) na API .NET e Azure SQL (JPA) na API Java. O MongoDB não roda na aplicação: aparece apenas nos scripts da disciplina de Banco de Dados (que não exige integração automática), modelando os mesmos dados como documentos."
+  },
+  "mapaRequisitosGS": {
+    "Java Advanced 1 - API REST do domínio (3 entidades, CRUD JPA, paginação)": ["SPEC-022", "SPEC-023", "SPEC-017", "SPEC-008"],
+    "Java Advanced 2 - Validação e erros": ["SPEC-014"],
+    "Java Advanced 3 - Spring Security + JWT com papéis": ["SPEC-023", "SPEC-002"],
+    "Java Advanced 4 - Spring AI": ["SPEC-015", "SPEC-004", "SPEC-003"],
+    "Mobile - funcionalidade de geolocalização (atendimento mais próximo)": ["SPEC-007"],
+    "IA (Disruptive Architectures) - IA generativa + RAG + avaliação": ["SPEC-015", "SPEC-004", "SPEC-003"],
+    "Java Advanced 5 - Arquitetura distribuída (opção A, RabbitMQ)": ["SPEC-008"],
+    "Java Advanced 6 - Swagger, README e integração com Mobile": ["SPEC-020", "SPEC-025"],
+    "DevOps - deploy da API Java na Azure": ["SPEC-024"],
+    "Regra geral - declaração de uso de IA no README": ["SPEC-025"]
+  },
   "convencoes": {
-    "statusPossiveis": ["PENDENTE", "EM_ANDAMENTO", "CONCLUIDA"],
+    "statusPossiveis": ["PENDENTE", "EM_ANDAMENTO", "CONCLUIDA", "BACKLOG"],
+    "statusBacklog": "Fora do escopo da entrega de 19/11/2026; mantida como evolução futura. Specs com o campo roadmap foram removidas da solução e só aparecem como próximas fases.",
     "prioridades": ["ALTA", "MEDIA", "BAIXA"],
     "prefixoApi": "/api/v1",
     "papeis": ["CIDADAO", "CUIDADOR"],
-    "intencoes": ["ZELADORIA_REPORT", "SOCORRO", "ROTA_FUGA", "ALERTA_CLIMA_CONSULTA", "SAUDE_AGENDAMENTO", "VERIFICAR_INFORMACAO", "COMPRA_PRODUTOR_LOCAL", "DESCONHECIDA"],
-    "acoes": ["ABRIR_PROTOCOLO", "ACIONAR_SOCORRO", "MOSTRAR_ROTA", "MOSTRAR_ALERTAS", "MOSTRAR_AGENDAMENTO", "MOSTRAR_VERIFICACAO", "MOSTRAR_PRODUTORES", "PEDIR_REPETICAO"],
+    "intencoes": ["SOCORRO", "BUSCAR_ATENDIMENTO", "VERIFICAR_INFORMACAO", "ZELADORIA_REPORT", "DESCONHECIDA"],
+    "acoes": ["ACIONAR_SOCORRO", "MOSTRAR_ATENDIMENTOS", "MOSTRAR_VERIFICACAO", "ABRIR_ZELADORIA_DOTNET", "PEDIR_REPETICAO"],
+    "intencoesRoadmap": ["ROTA_FUGA", "ALERTA_CLIMA_CONSULTA", "SAUDE_AGENDAMENTO", "COMPRA_PRODUTOR_LOCAL"],
     "urgencias": ["BAIXA", "MEDIA", "ALTA", "CRITICA"],
-    "coordenadas": "GeoJSON padrão [longitude, latitude] (WGS84)"
+    "coordenadas": "GeoJSON padrão [longitude, latitude] (WGS84)",
+    "padraoDto": {
+      "descricao": "Toda entrada e saída da API é um DTO; entidades, Map e Object nunca são expostos pelos controllers.",
+      "regras": [
+        "DTOs ficam no subpacote dto do módulo (ex.: zeladoria.dto)",
+        "DTOs são records imutáveis",
+        "Entrada termina em Request e saída em Response",
+        "Endpoints recebem DTO no @RequestBody e devolvem DTO, ResponseEntity de DTO ou List de DTO",
+        "Controllers não acessam entidades (@Entity/@Document) nem repositórios; o fluxo é controller -> service -> repository",
+        "DTOs não dependem de entidades; a conversão fica em um mapper do módulo",
+        "Validações (Bean Validation) ficam no DTO de entrada",
+        "Erros usam o DTO comum.dto.ErroResponse"
+      ],
+      "verificacao": "Testes de arquitetura com ArchUnit (ArquiteturaDtoTest) quebram o build em caso de violação"
+    }
   },
   "specs": [
     {
@@ -59,12 +99,12 @@
     },
     {
       "id": "SPEC-002",
-      "nome": "Segurança: Validação de JWT emitido pelo .NET e RBAC",
+      "nome": "Segurança: Validação de JWT e Controle de Acesso por Papel (RBAC)",
       "modulo": "Segurança",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
-      "status": "PENDENTE",
-      "descricao": "O Spring Security atua como Resource Server: valida o token JWT emitido pela API .NET (sem emitir tokens próprios) e aplica controle de acesso por papel (CIDADAO e CUIDADOR) com @PreAuthorize.",
+      "status": "CONCLUIDA",
+      "descricao": "O Spring Security atua como Resource Server: valida o token JWT emitido pela própria API Java (SPEC-023) e aplica controle de acesso por papel (CIDADAO e CUIDADOR) com @PreAuthorize. O mesmo formato de token é validado pela API .NET.",
       "oQueFaz": [
         "Valida a assinatura, a expiração e o emissor (issuer) do JWT usando chave/segredo compartilhado ou JWKS da API .NET.",
         "Converte as claims de papel do token em authorities ROLE_CIDADAO e ROLE_CUIDADOR.",
@@ -121,7 +161,8 @@
         "Usa a saída estruturada do Spring AI (BeanOutputConverter/entity()) para mapear a resposta em um record IntencaoResponse.",
         "Retorna { intencao, acao, urgencia, entidades: {...}, mensagemFalada, confianca }.",
         "Quando a confiança for menor que o limite configurado ou a intenção for DESCONHECIDA, retorna acao=PEDIR_REPETICAO com uma pergunta curta e simples.",
-        "Valida o texto de entrada (não vazio, tamanho máximo) e nunca executa ações sozinho: apenas classifica e orienta o app."
+        "Valida o texto de entrada (não vazio, tamanho máximo) e nunca executa ações sozinho: apenas classifica e orienta o app.",
+        "Registra cada interação na tabela 'interacoes_voz' (Azure SQL) (usuarioId, texto, intencao, acao, urgencia, confianca, latencia, data) e expõe GET /api/v1/voz/interacoes paginado para o próprio usuário (histórico e avaliação da IA)."
       ],
       "resultadoEsperado": "Para 'Tem um buraco gigante na minha calçada e não passo com a cadeira', a API retorna intencao=ZELADORIA_REPORT, acao=ABRIR_PROTOCOLO, urgencia=ALTA, com entidades {tipo: BURACO, impedeCadeirante: true} e uma mensagem falada curta.",
       "casosDeUso": [
@@ -158,15 +199,15 @@
     },
     {
       "id": "SPEC-004",
-      "nome": "Base de Conhecimento RAG para Classificação",
+      "nome": "Base de Conhecimento RAG",
       "modulo": "Voz / IA",
-      "prioridade": "MEDIA",
+      "prioridade": "ALTA",
       "dependencias": ["SPEC-003"],
       "status": "PENDENTE",
-      "descricao": "Base de conhecimento usada como contexto (Retrieval-Augmented Generation) para melhorar a classificação de intenções e a tradução de 'burocratiquês': catálogo de serviços municipais, exemplos de frases por intenção e glossário de termos públicos/médicos.",
+      "descricao": "Base de conhecimento usada como contexto (Retrieval-Augmented Generation): golpes comuns contra idosos e canais oficiais para o assistente contra desinformação (SPEC-015), exemplos de frases por intenção para a classificação (SPEC-003) e as frases de busca de atendimento (SPEC-007). Cada documento registra a fonte (gov.br, INSS, Procon, Febraban, Polícia Civil), atendendo ao requisito de documentar fontes e preparação dos dados da disciplina de IA.",
       "oQueFaz": [
         "Mantém documentos de conhecimento em arquivos versionados (ex.: resources/knowledge/*.md ou *.json).",
-        "Carrega e indexa os documentos na inicialização em um VectorStore (SimpleVectorStore em dev; MongoDB Atlas Vector Search opcional em prod).",
+        "Carrega e indexa os documentos na inicialização em um VectorStore em memória (SimpleVectorStore), com embeddings do provedor configurado; Oracle 23ai Vector Search fica como evolução.",
         "Recupera os trechos mais relevantes (top-k configurável) para o texto do usuário e os injeta no prompt via advisor do Spring AI.",
         "Permite recarregar a base sem alterar código."
       ],
@@ -201,7 +242,7 @@
       "modulo": "Dados Geoespaciais",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
       "descricao": "Coleções MongoDB com campos GeoJSON e índices 2dsphere para suportar buscas espaciais rápidas ($near, $geoWithin) em obstruções, rede de apoio, áreas de risco, produtores e localização de cidadãos.",
       "oQueFaz": [
         "Cria os documentos: Obstrucao (Point), PontoRede (Point; tipos ABRIGO, POSTO_SAUDE, VOLUNTARIO), AreaRisco (Polygon), Produtor (Point) e LocalizacaoCidadao (Point, última posição conhecida com consentimento).",
@@ -238,92 +279,117 @@
     },
     {
       "id": "SPEC-006",
-      "nome": "Zeladoria Cidadã: Registro de Obstruções",
-      "modulo": "Cidades e Clima",
+      "nome": "Zeladoria Cidadã por Voz",
+      "modulo": "Cidades",
       "prioridade": "ALTA",
-      "dependencias": ["SPEC-002", "SPEC-003", "SPEC-005", "SPEC-011"],
-      "status": "PENDENTE",
-      "descricao": "Permite registrar obstruções de mobilidade (buracos, falta de rampa, calçada quebrada, ocupação irregular, desnível) a partir da intenção de voz classificada, armazenando no MongoDB e abrindo um protocolo formal na API .NET.",
+      "dependencias": ["SPEC-002", "SPEC-003", "SPEC-022"],
+      "status": "BACKLOG",
+      "roadmap": "Removida da API Java por decisão do grupo (2026-11-14). Se a API .NET implementar a zeladoria (protocolo no Oracle com idempotência), a classificação de intenção da API Java apenas reconhece ZELADORIA_REPORT e o app abre a tela da API .NET; caso contrário, fica como próxima fase.",
+      "descricao": "68,8% dos moradores urbanos vivem em ruas sem rampa, e denunciar o problema exige formulários complexos. O cidadão relata por voz um buraco, calçada quebrada ou falta de rampa; a IA extrai tipo, gravidade e se impede a passagem de cadeirantes, e a API grava a obstrução com as coordenadas no Azure SQL. A geração de protocolo formal na API .NET fica como evolução.",
       "oQueFaz": [
-        "Expõe POST /api/v1/obstrucoes com { tipo, descricao, gravidade, localizacao, impedeCadeirante, textoOriginal }.",
-        "Verifica se já existe obstrução do mesmo tipo em um raio de 15 m; se existir, incrementa 'confirmacoes' em vez de duplicar.",
-        "Solicita o protocolo à API .NET via Feign (SPEC-011) e grava o numeroProtocolo no documento.",
-        "Se o .NET estiver indisponível, salva com status PENDENTE_PROTOCOLO e reenvia depois (fila ou job agendado).",
-        "Expõe GET /api/v1/obstrucoes/proximas?lon&lat&raio para listar obstruções próximas.",
-        "Expõe PATCH /api/v1/obstrucoes/{id}/status para marcar como RESOLVIDA."
+        "Entidade Obstrucao (JPA): id, autorId (sub do token), tipo (BURACO, CALCADA_QUEBRADA, SEM_RAMPA, DESNIVEL, OBSTACULO, OUTRO), gravidade (BAIXA, MEDIA, ALTA), impedeCadeirante, descricao, latitude, longitude, status (ABERTA, EM_ANALISE, RESOLVIDA), confirmacoes, criadaEm, atualizadaEm.",
+        "POST /api/v1/obstrucoes/voz com { texto, latitude, longitude }: o Spring AI extrai tipo, gravidade, impedeCadeirante e uma descrição curta (saída estruturada) e devolve uma prévia para o app confirmar.",
+        "POST /api/v1/obstrucoes com ObstrucaoRequest (dados confirmados ou preenchidos manualmente): se já existe obstrução aberta do mesmo tipo a até 20 m, incrementa confirmacoes em vez de duplicar; responde 201 com ObstrucaoResponse e mensagemFalada.",
+        "GET /api/v1/obstrucoes paginado com filtros (status, tipo, minhas) e GET /api/v1/obstrucoes/{id}.",
+        "GET /api/v1/obstrucoes/proximas?latitude&longitude&raioMetros: busca por proximidade com consulta de distância (bounding box + Haversine) no Azure SQL.",
+        "PATCH /api/v1/obstrucoes/{id}/status (CUIDADOR ou autor) e DELETE pelo autor enquanto ABERTA.",
+        "Evolução (backlog): enviar a obstrução à API .NET para gerar protocolo formal (canal 156)."
       ],
-      "resultadoEsperado": "O cidadão recebe um número de protocolo e uma mensagem simples confirmando o registro; a obstrução aparece nas buscas por proximidade.",
+      "resultadoEsperado": "'Tem um buraco gigante na minha calçada e não passo com a cadeira' vira uma prévia com tipo BURACO, gravidade ALTA e impedeCadeirante=true; após a confirmação, a obstrução fica registrada com as coordenadas e aparece nas buscas por proximidade.",
       "casosDeUso": [
         {
-          "titulo": "Primeiro registro de buraco",
+          "titulo": "Cadeirante relata buraco por voz",
           "ator": "Cidadão cadeirante",
-          "fluxo": "Após a classificação por voz, o app confirma e envia o registro; a API cria a obstrução e devolve o protocolo .NET."
+          "fluxo": "Fala o problema; o app envia o texto e a localização, mostra e lê a prévia, o cidadão confirma e recebe 'Recebemos seu aviso sobre o buraco.'"
         },
         {
-          "titulo": "Registro duplicado",
-          "ator": "Outro cidadão",
-          "fluxo": "Reporta o mesmo buraco a 5 m do primeiro; a API incrementa as confirmações e devolve o protocolo existente."
+          "titulo": "Mesmo buraco relatado de novo",
+          "ator": "Vizinho",
+          "fluxo": "Relata o mesmo buraco a 8 m do primeiro registro; a API soma uma confirmação em vez de criar outro."
         },
         {
-          "titulo": "API .NET fora do ar",
-          "ator": "Cidadão",
-          "fluxo": "O registro é salvo como PENDENTE_PROTOCOLO e o cidadão recebe 'Recebemos seu aviso, o protocolo chega em breve'."
+          "titulo": "Consulta de obstáculos no caminho",
+          "ator": "Cuidador",
+          "fluxo": "Consulta as obstruções abertas a até 500 m da casa do pai antes de um passeio."
         }
       ],
       "testes": [
-        { "tipo": "unitario", "nome": "deduplicacaoPorRaio", "descricao": "Obstrução do mesmo tipo dentro de 15 m incrementa confirmações." },
-        { "tipo": "unitario", "nome": "fallbackSemProtocolo", "descricao": "Falha no cliente Feign resulta em status PENDENTE_PROTOCOLO." },
-        { "tipo": "integracao", "nome": "criarObstrucao201", "descricao": "POST válido retorna 201 com id e protocolo (com WireMock simulando o .NET)." },
-        { "tipo": "integracao", "nome": "listarProximas", "descricao": "GET proximas retorna somente obstruções dentro do raio." },
-        { "tipo": "integracao", "nome": "validacao400", "descricao": "Tipo inválido ou localização ausente retorna 400." }
+        { "tipo": "unitario", "nome": "extracaoPorVoz", "descricao": "Com ChatModel mockado, o texto vira a prévia com tipo, gravidade e impedeCadeirante corretos." },
+        { "tipo": "unitario", "nome": "calculoDistancia", "descricao": "Haversine calcula distâncias conhecidas com erro menor que 1%." },
+        { "tipo": "integracao", "nome": "deduplicacao", "descricao": "Obstrução do mesmo tipo a até 20 m incrementa confirmacoes; a 50 m cria uma nova." },
+        { "tipo": "integracao", "nome": "crudEPaginacao", "descricao": "Criar, listar paginado com filtros, alterar status e excluir." },
+        { "tipo": "integracao", "nome": "proximas", "descricao": "Retorna apenas obstruções dentro do raio, ordenadas por distância." },
+        { "tipo": "integracao", "nome": "validacao400", "descricao": "Tipo inválido ou coordenadas fora da faixa retornam 400." }
       ],
       "criteriosDeAceite": [
-        "Registro, listagem e atualização de status funcionam ponta a ponta.",
-        "Não há duplicação de obstruções do mesmo tipo dentro do raio configurado.",
-        "A falha do .NET não perde o registro.",
-        "A resposta inclui uma mensagemFalada curta para leitura por voz.",
-        "Somente usuários autenticados registram; somente o autor ou um papel administrativo altera o status."
+        "Relato por voz gera uma prévia estruturada que o cidadão confirma antes de gravar.",
+        "Obstruções gravadas no Azure SQL com coordenadas, sem duplicar relatos do mesmo local.",
+        "Listagem paginada e busca por proximidade funcionando.",
+        "Respostas com mensagemFalada curta para leitura em voz.",
+        "Falha do LLM não impede o registro manual."
       ]
     },
     {
       "id": "SPEC-007",
-      "nome": "Busca do Ponto de Apoio Mais Próximo",
-      "modulo": "Cidades e Clima / Saúde",
+      "nome": "Atendimento Acessível Mais Próximo (Ir até lá)",
+      "modulo": "Saúde e Rede de Apoio",
       "prioridade": "ALTA",
-      "dependencias": ["SPEC-005"],
+      "dependencias": ["SPEC-002", "SPEC-022"],
       "status": "PENDENTE",
-      "descricao": "Encontra em milissegundos o abrigo, posto de saúde ou voluntário mais próximo da coordenada do celular, com filtro de acessibilidade para cadeirantes.",
+      "descricao": "Com um toque (ou por voz), o idoso ou a PcD encontra o atendimento do tipo desejado mais próximo de onde está, de preferência com acessibilidade, e abre a rota no Google Maps, Waze ou outro app de navegação. Os locais vêm de uma importação de dados abertos do OpenStreetMap (região de Osasco/SP) gravada no Azure SQL.",
       "oQueFaz": [
-        "Expõe GET /api/v1/rede/proximos?lon&lat&tipo&raio&acessivel&limite.",
-        "Executa $near no MongoDB com distância máxima e retorna os itens ordenados por distância em metros.",
-        "Filtra por 'acessivel=true' (rampa, elevador, banheiro adaptado) quando solicitado.",
-        "Retorna DTO compacto: { id, nome, tipo, distanciaMetros, endereco, telefone, acessivel }.",
-        "Expõe um CRUD administrativo para cadastrar pontos da rede."
+        "Entidade PontoAtendimento (JPA, somente leitura pela API): id, osmId, nome, tipo (HOSPITAL, UPA, UBS, FARMACIA, CRAS, DELEGACIA, DEFENSORIA), endereco, telefone, latitude, longitude, acessibilidade (SIM, PARCIAL, NAO, DESCONHECIDA), banheiroAdaptado, funciona24h, fonte, atualizadoEm.",
+        "Script de importação em /scripts consulta a Overpass API do OpenStreetMap uma única vez (amenity=hospital/clinic/pharmacy/police/social_facility e healthcare=*), classifica o tipo (ex.: nome com 'UPA' ou 'Pronto Atendimento' vira UPA; 'UBS' ou 'Unidade Básica' vira UBS), converte a tag wheelchair (yes/limited/no) e gera a carga de dados versionada aplicada pelo Flyway.",
+        "GET /api/v1/atendimentos/proximos?tipo&latitude&longitude&acessivel&raioMetros&limite (CIDADAO ou CUIDADOR): pré-filtro por área (bounding box) e distância por Haversine, ordenado do mais próximo; limite padrão 3 e máximo 10; raio padrão 5 km.",
+        "Com acessivel=true, prioriza SIM e PARCIAL; se não houver nenhum no raio, devolve os mais próximos com acessibilidade DESCONHECIDA, sinalizados, e a orientação de ligar antes.",
+        "Cada item do AtendimentoProximoResponse traz distanciaMetros, acessibilidade, telefone e os links de rota prontos: Google Maps (https://www.google.com/maps/dir/?api=1&destination=LAT,LNG), Waze (https://waze.com/ul?ll=LAT,LNG&navigate=yes) e geo:LAT,LNG.",
+        "Resposta com mensagemFalada curta (ex.: 'O hospital mais perto com rampa fica a 1,2 km. Quer que eu abra o caminho?').",
+        "Para HOSPITAL e UPA, a resposta sempre inclui a orientação de emergência: em caso de urgência, ligar 192 (SAMU) em vez de ir sozinho.",
+        "GET /api/v1/atendimentos paginado e GET /api/v1/atendimentos/{id} para o app listar e detalhar os locais.",
+        "A localização do usuário é usada só na consulta e nunca é gravada (LGPD).",
+        "A classificação de intenção (SPEC-003) mapeia falas como 'me leva ao hospital' para essa busca, e a mensagem do botão de emergência (SPEC-008) pode incluir o hospital mais próximo."
       ],
-      "resultadoEsperado": "Uma lista curta (padrão 3 itens) com os pontos mais próximos, pronta para ser lida em voz alta pelo app.",
+      "resultadoEsperado": "Um toque em 'Hospital mais perto' devolve, em menos de 1 s, até 3 hospitais ordenados por distância com a acessibilidade de cada um, e um segundo toque abre a rota no app de navegação do celular.",
       "casosDeUso": [
         {
-          "titulo": "Botão Socorro",
-          "ator": "Idoso",
-          "fluxo": "Aciona o socorro; o app consulta o posto de saúde mais próximo e mostra/fala o nome e a distância."
+          "titulo": "Cadeirante procura hospital acessível",
+          "ator": "Cidadão cadeirante",
+          "fluxo": "Toca em 'Hospital mais perto' com o filtro de acessibilidade; o app ouve 'O hospital mais perto com rampa fica a 1,2 km' e abre a rota no Google Maps."
         },
         {
-          "titulo": "Cadeirante procura abrigo",
-          "ator": "Cidadão cadeirante",
-          "fluxo": "Pede abrigo; a API retorna somente abrigos acessíveis."
+          "titulo": "Idosa precisa de farmácia",
+          "ator": "Idosa",
+          "fluxo": "Diz 'onde tem uma farmácia aqui perto?'; a intenção é reconhecida e o app mostra as 3 farmácias mais próximas com o botão 'Ir até lá'."
+        },
+        {
+          "titulo": "Sem informação de acessibilidade",
+          "ator": "Cidadão com andador",
+          "fluxo": "Nenhuma UBS próxima tem acessibilidade confirmada; o app mostra a mais próxima marcada como 'acessibilidade não informada' e sugere ligar antes, com o telefone."
+        },
+        {
+          "titulo": "Urgência",
+          "ator": "Cuidador",
+          "fluxo": "Busca o hospital mais próximo para o pai passando mal; a tela destaca 'Ligar 192' antes da rota."
         }
       ],
       "testes": [
-        { "tipo": "integracao", "nome": "ordenacaoPorDistancia", "descricao": "Os resultados vêm ordenados do mais próximo para o mais distante." },
-        { "tipo": "integracao", "nome": "filtroAcessivel", "descricao": "Com acessivel=true, pontos não acessíveis são excluídos." },
-        { "tipo": "integracao", "nome": "semResultadosNoRaio", "descricao": "Sem pontos no raio, retorna lista vazia com mensagemFalada orientando a ligar 192/193." },
-        { "tipo": "desempenho", "nome": "latencia", "descricao": "Com 10.000 pontos, a consulta responde em menos de 100 ms." }
+        { "tipo": "unitario", "nome": "haversine", "descricao": "Distâncias conhecidas entre pontos de Osasco calculadas com erro menor que 1%." },
+        { "tipo": "unitario", "nome": "classificacaoOsm", "descricao": "Tags e nomes do OSM viram o tipo e a acessibilidade corretos (ex.: wheelchair=limited vira PARCIAL; 'UPA Centro' vira UPA)." },
+        { "tipo": "integracao", "nome": "ordenacaoERaio", "descricao": "Retorna só locais do tipo pedido dentro do raio, do mais próximo para o mais distante, respeitando o limite." },
+        { "tipo": "integracao", "nome": "prioridadeAcessivel", "descricao": "Com acessivel=true, um local acessível a 2 km vem antes de um sem informação a 500 m; sem nenhum acessível, devolve os desconhecidos sinalizados." },
+        { "tipo": "unitario", "nome": "linksDeRota", "descricao": "Links do Google Maps, Waze e geo: gerados com as coordenadas corretas e formato numérico com ponto decimal." },
+        { "tipo": "integracao", "nome": "orientacaoEmergencia", "descricao": "Buscas por HOSPITAL e UPA incluem a orientação do 192." },
+        { "tipo": "integracao", "nome": "validacao400", "descricao": "Latitude fora de -90..90, longitude fora de -180..180 ou tipo inválido retornam 400." },
+        { "tipo": "integracao", "nome": "localizacaoNaoPersistida", "descricao": "Após a busca, nenhuma tabela contém as coordenadas do usuário." }
       ],
       "criteriosDeAceite": [
-        "A consulta usa índice 2dsphere (verificado com explain).",
-        "O limite padrão é 3 e o máximo é 20.",
-        "A distância é retornada em metros inteiros.",
-        "A resposta vazia sempre inclui um número de emergência como alternativa."
+        "Busca por tipo e proximidade em menos de 1 s com a base importada.",
+        "Cada resultado traz distância, acessibilidade, telefone e links de rota prontos para abrir.",
+        "Locais sem informação de acessibilidade são claramente sinalizados, nunca apresentados como acessíveis.",
+        "Orientação de ligar 192 nas buscas por hospital e UPA.",
+        "Localização do usuário não armazenada.",
+        "Carga de dados reproduzível pelo script de importação; crédito '© colaboradores do OpenStreetMap' no README e no app (licença ODbL).",
+        "Limitação documentada: o destino é filtrado por acessibilidade, mas a rota calculada pelo app de navegação pode não ser acessível."
       ]
     },
     {
@@ -331,42 +397,49 @@
       "nome": "Botão de Emergência Assíncrono",
       "modulo": "Saúde Preventiva",
       "prioridade": "ALTA",
-      "dependencias": ["SPEC-002", "SPEC-005", "SPEC-007", "SPEC-017", "SPEC-018"],
+      "dependencias": ["SPEC-002", "SPEC-017", "SPEC-022"],
       "status": "PENDENTE",
-      "descricao": "Ao acionar o socorro, o evento é publicado no RabbitMQ e processado de forma assíncrona: notifica os contatos do perfil de emergência e os voluntários da comunidade próximos, sem bloquear a resposta ao cidadão.",
+      "descricao": "Ao acionar o socorro, a API registra uma Emergencia (JPA) e publica um evento no RabbitMQ; um consumidor processa o evento de forma assíncrona e avisa os contatos do perfil de emergência, sem bloquear a resposta ao cidadão. Atende a opção A (arquitetura distribuída) de Java Advanced.",
       "oQueFaz": [
-        "Expõe POST /api/v1/emergencias com { localizacao, textoOriginal? } e responde 202 Accepted imediatamente com o id da ocorrência.",
-        "Publica EmergenciaAcionadaEvent na exchange 'vozviva.emergencias'.",
-        "O consumidor busca os voluntários num raio configurável (padrão 1 km) e os contatos do perfil de emergência (SPEC-017).",
-        "Gera notificações (SPEC-018) para cada destinatário com mensagem curta e a localização.",
-        "Usa retry com backoff e dead-letter queue para falhas.",
-        "Expõe GET /api/v1/emergencias/{id} com o status (ACIONADA, NOTIFICADA, ATENDIDA, CANCELADA) e PATCH para cancelar ou marcar como atendida."
+        "Entidade Emergencia (JPA): id, perfil (N:1 PerfilEmergencia), status (ACIONADA, NOTIFICADA, ATENDIDA, CANCELADA), latitude, longitude, textoOriginal, acionadaEm, notificadaEm, encerradaEm, contatosNotificados.",
+        "POST /api/v1/emergencias (CIDADAO) com { latitude, longitude, textoOriginal? }: grava a ocorrência como ACIONADA, publica EmergenciaAcionadaEvent na exchange 'vozviva.emergencias' e responde 202 Accepted com o id.",
+        "Consumidor @RabbitListener lê os contatos do perfil (SPEC-017), registra o aviso a cada contato (mensagem curta com a localização) e muda a ocorrência para NOTIFICADA.",
+        "Retry com backoff e dead-letter queue 'vozviva.emergencias.dlq' para falhas; consumo idempotente por id da ocorrência.",
+        "GET /api/v1/emergencias/{id} (cidadão dono ou cuidador vinculado) e GET /api/v1/emergencias paginado (histórico).",
+        "PATCH /api/v1/emergencias/{id}/cancelar (CIDADAO) e PATCH /api/v1/emergencias/{id}/atender (CUIDADOR).",
+        "O envio real (SMS/push) fica atrás de uma interface NotificadorContatos; a implementação padrão registra o aviso (log e status), trocável depois."
       ],
-      "resultadoEsperado": "O cidadão recebe a confirmação em menos de 1 s e os contatos/voluntários são notificados em poucos segundos, mesmo sob falhas temporárias.",
+      "resultadoEsperado": "O cidadão recebe a confirmação imediatamente (202) e, em poucos segundos, a ocorrência fica NOTIFICADA com os contatos avisados, mesmo sob falhas temporárias.",
       "casosDeUso": [
         {
           "titulo": "Queda em casa",
           "ator": "Idosa que mora sozinha",
-          "fluxo": "Aperta o botão; a filha (contato) e 2 voluntários próximos recebem notificação com o endereço aproximado."
+          "fluxo": "Aperta o botão (ou diz 'socorro', SPEC-003); a API responde 202 e o consumidor avisa a filha e o vizinho cadastrados como contatos."
         },
         {
           "titulo": "Acionamento acidental",
           "ator": "Idoso",
-          "fluxo": "Cancela pelo app; o status muda para CANCELADA e os contatos recebem um aviso de cancelamento."
+          "fluxo": "Cancela pelo app; o status muda para CANCELADA."
+        },
+        {
+          "titulo": "Cuidador encerra a ocorrência",
+          "ator": "Cuidador",
+          "fluxo": "Após atender o idoso, marca a ocorrência como ATENDIDA."
         }
       ],
       "testes": [
-        { "tipo": "integracao", "nome": "retorna202", "descricao": "O POST retorna 202 e publica um evento na exchange." },
-        { "tipo": "integracao", "nome": "consumidorNotifica", "descricao": "Com Testcontainers RabbitMQ, o consumidor gera notificações para contatos e voluntários no raio." },
-        { "tipo": "integracao", "nome": "dlqAposFalhas", "descricao": "Após N falhas, a mensagem vai para a DLQ." },
-        { "tipo": "unitario", "nome": "cancelamento", "descricao": "Cancelar uma ocorrência gera notificação de cancelamento." }
+        { "tipo": "integracao", "nome": "retorna202EPublica", "descricao": "O POST retorna 202, grava a ocorrência ACIONADA e publica o evento na exchange." },
+        { "tipo": "integracao", "nome": "consumidorNotificaContatos", "descricao": "Com Testcontainers RabbitMQ, o consumidor avisa todos os contatos do perfil e muda o status para NOTIFICADA." },
+        { "tipo": "integracao", "nome": "dlqAposFalhas", "descricao": "Após N falhas do notificador, a mensagem vai para a DLQ." },
+        { "tipo": "unitario", "nome": "consumoIdempotente", "descricao": "O mesmo evento processado duas vezes não avisa os contatos em dobro." },
+        { "tipo": "integracao", "nome": "transicoesDeStatus", "descricao": "Cancelar e atender respeitam o papel e as transições válidas (ex.: não cancela ocorrência ATENDIDA: 409)." }
       ],
       "criteriosDeAceite": [
-        "A resposta HTTP não espera o processamento do envio de notificações.",
-        "Há DLQ configurada e testada.",
-        "Contatos do perfil e voluntários no raio são notificados.",
-        "A ocorrência tem status rastreável.",
-        "A localização é compartilhada apenas com os destinatários da emergência."
+        "A resposta HTTP não espera o processamento do aviso aos contatos.",
+        "Evento publicado e consumido de forma assíncrona via RabbitMQ, com DLQ configurada e testada.",
+        "A ocorrência tem status rastreável e histórico paginado.",
+        "A localização é compartilhada apenas com os contatos da emergência.",
+        "Fluxo demonstrável ponta a ponta com o app Mobile."
       ]
     },
     {
@@ -375,7 +448,8 @@
       "modulo": "Cidades e Clima",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-005", "SPEC-018"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
+      "roadmap": "Removida da solução da Global Solution por decisão do grupo (2026-11-14). Citada no README e no pitch apenas como próxima fase de ampliação do impacto.",
       "descricao": "Consome alertas de risco (formato inspirado no Cemaden/Defesa Civil) de uma fila RabbitMQ, identifica os cidadãos dentro da área afetada via $geoWithin e envia alertas sonoros amigáveis orientando a evacuação.",
       "oQueFaz": [
         "Consome AlertaClimaticoEvent { id, tipo (ENCHENTE, DESLIZAMENTO, TEMPESTADE), nivel (OBSERVACAO, ATENCAO, ALERTA, ALERTA_MAXIMO), area (GeoJSON Polygon), validoAte, fonte }.",
@@ -419,7 +493,8 @@
       "modulo": "Cidades e Clima",
       "prioridade": "MEDIA",
       "dependencias": ["SPEC-005", "SPEC-006", "SPEC-007", "SPEC-009"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
+      "roadmap": "Removida da solução da Global Solution por decisão do grupo (2026-11-14). Citada no README e no pitch apenas como próxima fase de ampliação do impacto.",
       "descricao": "Indica o destino seguro mais adequado (abrigo acessível fora da área de risco) e os obstáculos conhecidos no trajeto, focando a mobilidade de cadeirantes e idosos.",
       "oQueFaz": [
         "Expõe GET /api/v1/rotas-fuga?lon&lat&acessivel=true.",
@@ -454,7 +529,7 @@
       "modulo": "Integração",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001", "SPEC-002"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
       "descricao": "Clientes declarativos OpenFeign para a API Core em .NET (Oracle): consulta de agendamentos de saúde, abertura de protocolos (zeladoria/Defesa Civil) e dados de cadastro do usuário, com propagação do JWT, timeouts e fallback.",
       "oQueFaz": [
         "Define DotNetCoreClient com os métodos: buscarAgendamentos(cidadaoId), criarProtocolo(ProtocoloRequest), buscarUsuario(id).",
@@ -496,7 +571,7 @@
       "modulo": "Saúde Preventiva",
       "prioridade": "MEDIA",
       "dependencias": ["SPEC-003", "SPEC-004", "SPEC-011"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
       "descricao": "Interface de voz que unifica o acesso a informações de saúde (inspirada no Saúde+Osasco): busca os agendamentos do cidadão na API .NET e usa IA para traduzir termos técnicos e burocráticos em linguagem humana e curta.",
       "oQueFaz": [
         "Expõe GET /api/v1/saude/agendamentos (para o cidadão autenticado).",
@@ -537,7 +612,7 @@
       "modulo": "Letramento Digital / Anti-Exclusão",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001", "SPEC-014"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
       "descricao": "Otimiza o tráfego de dados para usuários com planos pré-pagos e conexões lentas: respostas compactas sob demanda, compressão, e devolução de DTOs compactos em cache quando há timeout.",
       "oQueFaz": [
         "Aceita o header 'X-Modo-Economia: true' (ou query param) e devolve DTOs compactos (somente campos essenciais, sem metadados).",
@@ -615,44 +690,60 @@
     },
     {
       "id": "SPEC-015",
-      "nome": "Função Anti-Desinformação",
+      "nome": "Assistente contra Desinformação (Golpes e Fake News)",
       "modulo": "Letramento Digital",
-      "prioridade": "MEDIA",
-      "dependencias": ["SPEC-003", "SPEC-004"],
+      "prioridade": "ALTA",
+      "dependencias": ["SPEC-002", "SPEC-003", "SPEC-004", "SPEC-022"],
       "status": "PENDENTE",
-      "descricao": "O cidadão encaminha ou dita uma mensagem suspeita (golpe, fake news, falso benefício do governo) e a IA classifica o risco, explica em linguagem simples os sinais de alerta e orienta o que fazer.",
+      "descricao": "Idosos e pessoas com baixo letramento digital são os alvos mais frequentes de golpes (falso benefício do INSS, cobrança de vacina, PIX urgente). O cidadão dita ou cola a mensagem suspeita; a IA (Spring AI + RAG com uma base curada de golpes comuns e canais oficiais) classifica o risco, explica os sinais em linguagem simples e diz o que fazer, em uma frase pronta para ser lida em voz alta.",
       "oQueFaz": [
-        "Expõe POST /api/v1/verificacoes com { texto }.",
-        "Classifica em PROVAVEL_GOLPE, SUSPEITA, SEM_SINAIS_DE_RISCO ou NAO_E_POSSIVEL_AVALIAR, usando saída estruturada.",
-        "Identifica sinais (urgência artificial, pedido de PIX/senha, link encurtado, promessa de benefício, remetente desconhecido).",
-        "Usa a base RAG com golpes comuns e canais oficiais (gov.br, 0800 do INSS, etc.).",
-        "Retorna { classificacao, sinais[], orientacao, mensagemFalada }, sem afirmar que algo é 'verdade' com certeza absoluta.",
-        "Não armazena o texto completo, apenas métricas anonimizadas (tipo de golpe e data)."
+        "POST /api/v1/verificacoes (CIDADAO ou CUIDADOR) com VerificacaoRequest { texto, canal? (WHATSAPP, SMS, LIGACAO, EMAIL, OUTRO) }.",
+        "Recupera da base RAG (SPEC-004) os golpes conhecidos e os canais oficiais mais parecidos com o texto (INSS 135, Disque 100, gov.br, Procon, bancos) e os injeta no prompt.",
+        "Usa saída estruturada do Spring AI para obter { classificacao (PROVAVEL_GOLPE, SUSPEITA, SEM_SINAIS_DE_RISCO, NAO_E_POSSIVEL_AVALIAR), tipoGolpe, sinais[], orientacao, canalOficial, mensagemFalada, confianca, fontes[] }.",
+        "Aplica regras determinísticas antes e depois do LLM (pedido de senha, código SMS, PIX com urgência, link encurtado) para nunca classificar como seguro uma mensagem com esses sinais.",
+        "Retorna VerificacaoResponse; a mensagemFalada tem até 200 caracteres, é simples e não alarmista, e nunca afirma certeza absoluta.",
+        "Não armazena o texto da mensagem (LGPD): grava apenas a estatística anonimizada (tipoGolpe, classificacao, canal, data) na tabela verificacoes_golpe.",
+        "GET /api/v1/verificacoes/estatisticas (paginado): golpes mais frequentes por período, para o cuidador e para relatórios.",
+        "Falha do LLM ou timeout: responde com a classificação das regras determinísticas e a orientação padrão ('Na dúvida, não clique e ligue para o canal oficial'), nunca com erro 500."
       ],
-      "resultadoEsperado": "'Seu benefício do INSS será bloqueado, clique no link e informe sua senha' retorna PROVAVEL_GOLPE com a orientação 'Não clique. O INSS não pede senha por mensagem. Ligue 135.'",
+      "resultadoEsperado": "Para 'Seu benefício do INSS será bloqueado, clique no link e informe sua senha', a API retorna PROVAVEL_GOLPE, tipoGolpe FALSO_BENEFICIO, sinais [pedido de senha, urgência, link] e a mensagemFalada 'Isso parece golpe. O INSS não pede senha por mensagem. Não clique e ligue 135.'",
       "casosDeUso": [
         {
           "titulo": "Mensagem de falso benefício",
           "ator": "Idoso",
-          "fluxo": "Dita a mensagem recebida no WhatsApp; ouve que é provável golpe e o que fazer."
+          "fluxo": "Recebe a mensagem no WhatsApp, abre o app, dita o conteúdo; o app envia o texto e lê em voz alta que é provável golpe e para ligar 135."
         },
         {
           "titulo": "Mensagem legítima",
           "ator": "Cidadão",
-          "fluxo": "Envia um lembrete de vacinação da UBS sem pedido de dados; recebe SEM_SINAIS_DE_RISCO com a recomendação de confirmar no canal oficial."
+          "fluxo": "Envia um lembrete de vacinação da UBS sem pedido de dados ou pagamento; recebe SEM_SINAIS_DE_RISCO com a recomendação de confirmar no canal oficial."
+        },
+        {
+          "titulo": "Cuidador acompanha os golpes mais comuns",
+          "ator": "Cuidador",
+          "fluxo": "Consulta as estatísticas e conversa com o pai sobre os golpes que mais apareceram no mês."
+        },
+        {
+          "titulo": "IA fora do ar",
+          "ator": "Idoso",
+          "fluxo": "Envia uma mensagem pedindo PIX urgente; o LLM não responde, mas as regras determinísticas marcam SUSPEITA e o app orienta a não pagar."
         }
       ],
       "testes": [
-        { "tipo": "unitario", "nome": "mapeamentoClassificacao", "descricao": "Com ChatModel mockado, a resposta é convertida no DTO correto." },
-        { "tipo": "unitario", "nome": "naoPersisteTextoCompleto", "descricao": "Após a verificação, nenhum documento contém o texto original." },
-        { "tipo": "integracao", "nome": "validacaoEntrada", "descricao": "Um texto vazio retorna 400." },
-        { "tipo": "parametrizado", "nome": "exemplosGolpes", "descricao": "Conjunto de exemplos rotulados com taxa de acerto mínima de 80% (tag 'llm')." }
+        { "tipo": "unitario", "nome": "mapeamentoSaidaEstruturada", "descricao": "Com ChatModel mockado, a resposta é convertida no VerificacaoResponse correto." },
+        { "tipo": "parametrizado", "nome": "regrasDeterministicas", "descricao": "Mensagens com pedido de senha, código SMS ou PIX urgente nunca saem como SEM_SINAIS_DE_RISCO, mesmo que o LLM diga o contrário." },
+        { "tipo": "unitario", "nome": "fallbackSemLLM", "descricao": "Timeout ou erro do LLM devolve a classificação das regras e a orientação padrão (200, sem 500)." },
+        { "tipo": "integracao", "nome": "naoPersisteTexto", "descricao": "Após a verificação, nenhuma tabela contém o texto original; só a estatística anonimizada." },
+        { "tipo": "integracao", "nome": "validacao400", "descricao": "Texto vazio ou maior que o limite retorna 400." },
+        { "tipo": "avaliacao", "nome": "conjuntoRotulado", "descricao": "Conjunto versionado de pelo menos 30 mensagens rotuladas (golpes e legítimas); relatório com acurácia, precisão e recall de PROVAVEL_GOLPE, executado com o LLM real (tag 'llm')." }
       ],
       "criteriosDeAceite": [
-        "A resposta sempre traz uma orientação prática e um canal oficial quando aplicável.",
-        "O texto do usuário não é armazenado (LGPD).",
-        "A taxa de acerto no conjunto de exemplos rotulados é de pelo menos 80%.",
-        "A linguagem da mensagemFalada é simples e não alarmista."
+        "A resposta sempre traz orientação prática e o canal oficial quando aplicável.",
+        "O texto do usuário não é armazenado (LGPD); só estatísticas anonimizadas.",
+        "Acurácia de pelo menos 80% e recall de pelo menos 90% para PROVAVEL_GOLPE no conjunto rotulado, com o relatório versionado no repositório.",
+        "Funciona de forma degradada (regras) quando o LLM está indisponível.",
+        "A mensagemFalada é simples, não alarmista e tem até 200 caracteres.",
+        "Limitações da IA documentadas no README."
       ]
     },
     {
@@ -661,7 +752,8 @@
       "modulo": "Economia Local",
       "prioridade": "MEDIA",
       "dependencias": ["SPEC-003", "SPEC-005"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
+      "roadmap": "Removida da solução da Global Solution por decisão do grupo (2026-11-14). Citada no README e no pitch apenas como próxima fase de ampliação do impacto.",
       "descricao": "Une o desejo de compra falado pelo cidadão aos pequenos produtores da agricultura familiar da região, fomentando cadeias curtas, reduzindo intermediários e combatendo o desperdício de alimentos.",
       "oQueFaz": [
         "Mantém a coleção Produtor { nome, localizacao, produtos[{nome, unidade, preco, disponivelAte}], entrega, contato, aceitaPix }.",
@@ -701,41 +793,53 @@
       "id": "SPEC-017",
       "nome": "Perfil de Emergência Gerenciado pelo Cuidador",
       "modulo": "Saúde Preventiva",
-      "prioridade": "MEDIA",
-      "dependencias": ["SPEC-002", "SPEC-005"],
+      "prioridade": "ALTA",
+      "dependencias": ["SPEC-002", "SPEC-022", "SPEC-023"],
       "status": "PENDENTE",
-      "descricao": "Perfil com informações vitais do cidadão para emergências (contatos, condições de saúde, mobilidade, medicamentos), editável apenas pelo cuidador vinculado e consultável pelo próprio cidadão.",
+      "descricao": "Perfil com as informações vitais do cidadão para emergências e seus contatos, persistidos no Azure SQL via Spring Data JPA. O cuidador vinculado faz o CRUD completo pelo app; o cidadão consulta o próprio perfil.",
       "oQueFaz": [
-        "Mantém a coleção PerfilEmergencia { cidadaoId, cuidadoresIds[], contatos[{nome, telefone, parentesco}], condicoes[], medicamentos[], mobilidade (CADEIRANTE, ANDADOR, BENGALA, DEFICIENCIA_VISUAL, NENHUMA), consentimentoLocalizacao }.",
-        "Expõe GET /api/v1/perfis-emergencia/{cidadaoId} (para o próprio CIDADAO ou um CUIDADOR vinculado).",
-        "Expõe PUT /api/v1/perfis-emergencia/{cidadaoId} com @PreAuthorize(\"hasRole('CUIDADOR')\") e verificação de vínculo.",
-        "Expõe PUT /api/v1/perfis-emergencia/me/localizacao para o app atualizar a última localização (só com consentimento).",
-        "Fornece os dados para o Botão de Emergência (SPEC-008) e para os alertas (SPEC-009)."
+        "Entidade PerfilEmergencia (JPA): id, cidadao (N:1 Usuario, único), cuidador (N:1 Usuario), mobilidade (CADEIRANTE, ANDADOR, BENGALA, DEFICIENCIA_VISUAL, NENHUMA), condicoesSaude, medicamentos, observacoes, criadoEm, atualizadoEm.",
+        "Entidade ContatoEmergencia (JPA): id, perfil (N:1 PerfilEmergencia), nome, telefone, parentesco, prioridade; relação 1:N com cascade e orphanRemoval.",
+        "CRUD de perfis em /api/v1/perfis-emergencia: POST (CUIDADOR cria para um cidadão), GET por id, GET paginado (Pageable: page, size, sort; o cuidador vê só os perfis que gerencia), PUT e DELETE (CUIDADOR vinculado).",
+        "CRUD de contatos em /api/v1/perfis-emergencia/{perfilId}/contatos: POST, GET paginado, PUT e DELETE (CUIDADOR vinculado).",
+        "GET /api/v1/perfis-emergencia/meu para o CIDADAO consultar o próprio perfil.",
+        "DTOs PerfilEmergenciaRequest/Response e ContatoEmergenciaRequest/Response com Bean Validation; respostas paginadas em PaginaResponse<T> (conteudo, pagina, tamanho, totalElementos, totalPaginas).",
+        "Fornece os contatos para o Botão de Emergência (SPEC-008)."
       ],
-      "resultadoEsperado": "O familiar mantém os dados de emergência atualizados e o sistema sabe quem avisar e quais necessidades de mobilidade considerar.",
+      "resultadoEsperado": "O cuidador mantém pelo app os dados de emergência e os contatos atualizados, com listagens paginadas, e o sistema sabe quem avisar quando o cidadão aciona a emergência.",
       "casosDeUso": [
         {
-          "titulo": "Filho cadastra contatos",
+          "titulo": "Filho cadastra o perfil e os contatos do pai",
           "ator": "Cuidador",
-          "fluxo": "Adiciona o próprio telefone e o de um vizinho como contatos de emergência do pai."
+          "fluxo": "Cria o perfil informando mobilidade e medicamentos, depois adiciona o próprio telefone e o de um vizinho como contatos; o app lista os contatos paginados."
+        },
+        {
+          "titulo": "Cidadão consulta o próprio perfil",
+          "ator": "Cidadão",
+          "fluxo": "Abre 'Meu perfil de emergência' e o app lê GET /meu."
         },
         {
           "titulo": "Cuidador sem vínculo",
           "ator": "Outro cuidador",
-          "fluxo": "Tenta editar o perfil de um idoso não vinculado e recebe 403."
+          "fluxo": "Tenta editar o perfil de um idoso que não gerencia e recebe 403."
         }
       ],
       "testes": [
-        { "tipo": "integracao", "nome": "cuidadorVinculadoEdita", "descricao": "O PUT de um cuidador vinculado retorna 200." },
-        { "tipo": "integracao", "nome": "cuidadorNaoVinculado403", "descricao": "O PUT de um cuidador sem vínculo retorna 403." },
-        { "tipo": "integracao", "nome": "cidadaoLeProprioPerfil", "descricao": "O CIDADAO consegue ler o próprio perfil, mas não o de outro cidadão." },
-        { "tipo": "unitario", "nome": "localizacaoSemConsentimento", "descricao": "A atualização de localização sem consentimento é rejeitada." }
+        { "tipo": "integracao", "nome": "crudCompletoPerfil", "descricao": "POST 201 com Location, GET 200, PUT 200, DELETE 204 e GET posterior 404." },
+        { "tipo": "integracao", "nome": "crudCompletoContato", "descricao": "Criar, listar, atualizar e remover contato de um perfil." },
+        { "tipo": "integracao", "nome": "paginacao", "descricao": "Com 25 contatos, page=1&size=10 retorna 10 itens, totalElementos=25 e totalPaginas=3; sort por nome funciona." },
+        { "tipo": "integracao", "nome": "cuidadorNaoVinculado403", "descricao": "PUT/DELETE de um cuidador que não gerencia o perfil retorna 403." },
+        { "tipo": "integracao", "nome": "cidadaoNaoEdita403", "descricao": "CIDADAO recebe 403 ao tentar criar, editar ou excluir." },
+        { "tipo": "integracao", "nome": "validacao400", "descricao": "Telefone inválido ou nome em branco retorna 400 com os campos." },
+        { "tipo": "unitario", "nome": "mapper", "descricao": "Conversão entidade <-> DTO preserva os campos e não expõe dados do usuário além do necessário." }
       ],
       "criteriosDeAceite": [
-        "Somente cuidadores vinculados editam o perfil.",
-        "A localização só é armazenada com consentimento explícito.",
-        "Os telefones são validados no formato brasileiro.",
-        "Os dados sensíveis de saúde não aparecem em logs."
+        "Usuario, PerfilEmergencia, ContatoEmergencia e Emergencia (SPEC-008) são entidades JPA relacionadas por chaves estrangeiras.",
+        "CRUD completo de perfis e contatos, com listagens paginadas (Pageable).",
+        "Somente o cuidador vinculado cria, edita e exclui; o cidadão só lê o próprio perfil.",
+        "Telefones validados no formato brasileiro; erros no formato padrão (SPEC-014).",
+        "Dados sensíveis de saúde não aparecem em logs.",
+        "Endpoints documentados no Swagger e consumíveis pelo app Mobile."
       ]
     },
     {
@@ -744,7 +848,7 @@
       "modulo": "Núcleo",
       "prioridade": "MEDIA",
       "dependencias": ["SPEC-001", "SPEC-005"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
       "descricao": "Serviço central que gera, persiste e entrega notificações curtas e prontas para leitura em voz (TTS) a cidadãos, cuidadores, voluntários e produtores.",
       "oQueFaz": [
         "Define a interface NotificacaoGateway com uma implementação de log/mock para dev e uma implementação de push (ex.: Firebase Cloud Messaging) para prod.",
@@ -779,7 +883,7 @@
       "modulo": "Modelo de Negócio / Dados",
       "prioridade": "BAIXA",
       "dependencias": ["SPEC-005", "SPEC-006"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
       "descricao": "Relatórios espaciais agregados e anonimizados (LGPD) das obstruções de mobilidade, para prefeituras (B2G), construtoras e concessionárias de transporte (DaaS).",
       "oQueFaz": [
         "Expõe GET /api/v1/dados/mapa-calor?bbox&tipo&periodo, que retorna células de grade (ex.: geohash) com a contagem e a gravidade média.",
@@ -812,7 +916,7 @@
       "id": "SPEC-020",
       "nome": "Documentação da API (OpenAPI/Swagger)",
       "modulo": "Núcleo",
-      "prioridade": "MEDIA",
+      "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
       "status": "PENDENTE",
       "descricao": "Documentação interativa e contrato OpenAPI de todos os endpoints, para integração com o app React Native e com a equipe .NET.",
@@ -876,6 +980,173 @@
         "Os testes que chamam o LLM real estão isolados e são opcionais.",
         "Existe um seed de dados para a demonstração.",
         "Nenhum teste é instável (flaky) em 3 execuções seguidas."
+      ]
+    },
+    {
+      "id": "SPEC-022",
+      "nome": "Persistência Relacional com Spring Data JPA (Azure SQL)",
+      "modulo": "Núcleo",
+      "prioridade": "ALTA",
+      "dependencias": ["SPEC-001"],
+      "status": "PENDENTE",
+      "descricao": "Reintroduz o Spring Data JPA (obrigatório em Java Advanced) com Azure SQL em produção, SQL Server no docker-compose para desenvolvimento e H2 nos testes. O esquema é versionado e também exportado como script-bd.sql para a disciplina de DevOps.",
+      "oQueFaz": [
+        "Adiciona spring-boot-starter-data-jpa, driver do SQL Server (mssql-jdbc), H2 (somente testes) e Flyway para versionar o esquema.",
+        "Configura a conexão por variáveis de ambiente (DB_URL, DB_USERNAME, DB_PASSWORD); ddl-auto=validate, o esquema vem só das migrações.",
+        "Cria as migrações das tabelas usuarios, perfis_emergencia, contatos_emergencia, emergencias, pontos_atendimento, verificacoes_golpe e interacoes_voz, com chaves estrangeiras e índices.",
+        "Remove o MongoDB da aplicação (starter, chat memory, Testcontainers e docker-compose) e as dependências não usadas (Eureka, OpenFeign), que voltam se as specs do backlog entrarem.",
+        "Mantém /scripts/script-bd.sql com o mesmo DDL das migrações (exigência de DevOps).",
+        "Adiciona SQL Server ao docker-compose (porta só em 127.0.0.1, senha obrigatória no .env).",
+        "Inclui o health check do banco no /actuator/health.",
+        "Adapta as regras de arquitetura (ArchUnit) para também barrar @Entity em controllers e DTOs."
+      ],
+      "resultadoEsperado": "A aplicação sobe com o banco relacional (local ou Azure SQL), o esquema é criado pelas migrações e o build continua rodando sem banco externo (H2 nos testes).",
+      "casosDeUso": [
+        {
+          "titulo": "Desenvolvedor sobe o ambiente local",
+          "ator": "Desenvolvedor",
+          "fluxo": "Define DB_PASSWORD no .env, executa docker compose up e ./gradlew bootRun; o Flyway cria as tabelas."
+        },
+        {
+          "titulo": "Deploy na Azure",
+          "ator": "Pipeline de release",
+          "fluxo": "A aplicação inicia com DB_URL do Azure SQL e aplica as migrações pendentes."
+        }
+      ],
+      "testes": [
+        { "tipo": "integracao", "nome": "migracoesAplicadas", "descricao": "O contexto sobe com H2 e as migrações criam todas as tabelas (ddl-auto=validate passa)." },
+        { "tipo": "integracao", "nome": "relacionamentos", "descricao": "Salvar um perfil com contatos e ocorrências e lê-los de volta respeitando as chaves estrangeiras." },
+        { "tipo": "unitario", "nome": "scriptBdEmSincronia", "descricao": "O /scripts/script-bd.sql contém todas as tabelas criadas pelas migrações." },
+        { "tipo": "integracao", "nome": "healthComBanco", "descricao": "/actuator/health inclui o componente db." }
+      ],
+      "criteriosDeAceite": [
+        "Spring Data JPA com pelo menos 3 entidades relacionadas.",
+        "Esquema versionado (Flyway) e script-bd.sql na pasta /scripts.",
+        "Nenhuma credencial de banco versionada.",
+        "Build e testes rodam sem banco externo."
+      ]
+    },
+    {
+      "id": "SPEC-023",
+      "nome": "Cadastro e Login com Emissão de JWT",
+      "modulo": "Segurança",
+      "prioridade": "ALTA",
+      "dependencias": ["SPEC-002", "SPEC-022"],
+      "status": "PENDENTE",
+      "descricao": "A API Java é a única dona da identidade do ecossistema: cadastra cidadãos e cuidadores e emite o JWT. A API .NET não tem cadastro próprio; valida o mesmo token (segredo e emissor compartilhados), evitando duas contas para a mesma pessoa.",
+      "oQueFaz": [
+        "Entidade Usuario (JPA): id, nome, email (único), senhaHash (BCrypt), papel (CIDADAO ou CUIDADOR), ativo, criadoEm.",
+        "POST /api/v1/auth/cadastro (público): valida os dados, rejeita e-mail duplicado (409) e devolve UsuarioResponse (sem a senha).",
+        "POST /api/v1/auth/login (público): valida as credenciais e devolve TokenResponse { accessToken, tokenType: 'Bearer', expiraEm, usuario }.",
+        "Emite o JWT HS256 com sub (id do usuário), role, iss (JWT_ISSUER), iat e exp (JWT_EXPIRACAO, padrão 2 h), assinado com JWT_SECRET.",
+        "GET /api/v1/auth/eu: dados do usuário autenticado.",
+        "Mensagens de erro de login genéricas (não revelam se o e-mail existe); limite simples de tentativas por e-mail e IP.",
+        "Usuários de teste (um CIDADAO e um CUIDADOR) criados só no perfil dev, com senhas definidas no .env, para o README e a demonstração."
+      ],
+      "resultadoEsperado": "O app Mobile faz cadastro e login na API Java e usa o mesmo token nas duas APIs.",
+      "casosDeUso": [
+        {
+          "titulo": "Cuidador cria conta e entra",
+          "ator": "Cuidador",
+          "fluxo": "Cadastra-se pelo app, faz login, recebe o token e passa a gerenciar o perfil de emergência do pai."
+        },
+        {
+          "titulo": "Senha errada",
+          "ator": "Cidadão",
+          "fluxo": "Erra a senha e recebe 401 com mensagem simples, sem saber se o e-mail existe."
+        },
+        {
+          "titulo": "Mesmo token na API .NET",
+          "ator": "App Mobile",
+          "fluxo": "Usa o token obtido no login da API Java para chamar a API .NET, que o aceita porque o segredo e o emissor são os mesmos."
+        }
+      ],
+      "testes": [
+        { "tipo": "integracao", "nome": "cadastro201", "descricao": "Cadastro válido retorna 201 sem expor a senha; a senha é salva com BCrypt." },
+        { "tipo": "integracao", "nome": "emailDuplicado409", "descricao": "Cadastro com e-mail existente retorna 409." },
+        { "tipo": "integracao", "nome": "login200", "descricao": "Login correto devolve um token que acessa rotas protegidas conforme o papel." },
+        { "tipo": "integracao", "nome": "loginInvalido401", "descricao": "Senha errada e e-mail inexistente retornam a mesma resposta 401." },
+        { "tipo": "unitario", "nome": "claimsDoToken", "descricao": "O token emitido tem sub, role, iss, iat e exp corretos e é aceito pelo decoder da SPEC-002." },
+        { "tipo": "integracao", "nome": "validacao400", "descricao": "E-mail inválido ou senha fraca retornam 400 com os campos." }
+      ],
+      "criteriosDeAceite": [
+        "Cadastro, login e /eu funcionando e documentados no Swagger.",
+        "Senhas apenas com hash BCrypt; nunca retornadas nem registradas em log.",
+        "Token emitido validado pelo decoder da SPEC-002; formato documentado para a API .NET (contrato do token no README).",
+        "Pelo menos 2 papéis (CIDADAO e CUIDADOR) protegendo endpoints diferentes.",
+        "Usuários de teste documentados no README, sem senhas versionadas."
+      ]
+    },
+    {
+      "id": "SPEC-024",
+      "nome": "Deploy na Azure (DevOps)",
+      "modulo": "Infraestrutura",
+      "prioridade": "ALTA",
+      "dependencias": ["SPEC-022"],
+      "status": "PENDENTE",
+      "descricao": "Artefatos para a disciplina de DevOps implantar a API Java na Azure com Azure DevOps: Dockerfile, scripts Azure CLI, script de banco e pipeline YAML de build e release.",
+      "oQueFaz": [
+        "Dockerfile multi-stage em /dockerfiles (build com Gradle, imagem final JRE 21, usuário não-root, healthcheck).",
+        "Scripts Azure CLI em /scripts para criar Resource Group, Azure SQL (servidor e banco), Container Registry e a hospedagem (App Service para containers ou ACI), além do RabbitMQ (container). O modelo de IA fica na OCI.",
+        "/scripts/script-bd.sql com o DDL (SPEC-022).",
+        "azure-pipeline.yml na raiz: build e testes a cada merge na main, publicação dos resultados de teste (JUnit) e do artefato/imagem; release automática após novo artefato.",
+        "Todas as configurações e segredos como variáveis da pipeline e do App Service; nenhum segredo nos arquivos.",
+        "Desenho macro da arquitetura no README."
+      ],
+      "resultadoEsperado": "Um merge na main dispara o build com testes e, em seguida, o deploy automático da API na Azure, conectada ao Azure SQL na nuvem.",
+      "casosDeUso": [
+        {
+          "titulo": "Vídeo da disciplina de DevOps",
+          "ator": "Equipe",
+          "fluxo": "Cria a tarefa no Boards, altera o código numa branch, faz merge via PR e mostra build, testes, release e a alteração publicada; demonstra o CRUD de 2 tabelas com SELECT no Azure SQL."
+        }
+      ],
+      "testes": [
+        { "tipo": "manual", "nome": "imagemLocal", "descricao": "docker build com o Dockerfile e docker run com as variáveis sobem a API e o health responde UP." },
+        { "tipo": "manual", "nome": "scriptsIdempotentes", "descricao": "Os scripts Azure CLI rodam do zero e informam claramente o que criaram." },
+        { "tipo": "manual", "nome": "pipelineCompleta", "descricao": "Merge na main gera build com testes publicados e release automática." }
+      ],
+      "criteriosDeAceite": [
+        "Dockerfile em /dockerfiles, scripts e script-bd.sql em /scripts, azure-pipeline.yml na raiz.",
+        "API e bancos hospedados na nuvem (nada em localhost).",
+        "Testes automáticos executados na CI da Azure.",
+        "Nenhuma senha exposta; tudo por variáveis de ambiente."
+      ]
+    },
+    {
+      "id": "SPEC-025",
+      "nome": "README de Entrega da Global Solution",
+      "modulo": "Documentação",
+      "prioridade": "ALTA",
+      "dependencias": ["SPEC-020", "SPEC-024"],
+      "status": "PENDENTE",
+      "descricao": "README completo com tudo o que as disciplinas exigem do repositório Java.",
+      "oQueFaz": [
+        "Problema, cidadão beneficiado, solução, ecossistema (Mobile, API Java, API .NET) e ODS atendidos (3, 10 e 11), com dados do relatório de dores.",
+        "Como rodar (local e Docker), usuários de teste, endpoints principais e link do Swagger e do deploy.",
+        "Opção escolhida no requisito 5 de Java Advanced (A: RabbitMQ) e explicação do fluxo do botão de emergência.",
+        "Fluxo de autenticação JWT (cadastro e login na API Java, emissão e validação, papéis CIDADAO e CUIDADOR) e contrato do token para a API .NET.",
+        "Funcionalidades de IA (assistente contra golpes com RAG e classificação de intenção por voz): fluxo, modelo e onde roda (OCI), RAG e fontes, limitações e resultados da avaliação.",
+        "Diagrama macro da arquitetura.",
+        "Integrantes (RM, nome e turma) e link do vídeo pitch.",
+        "Seção de declaração de uso de IA generativa: ferramentas usadas (incluindo Claude Code) e para quê."
+      ],
+      "resultadoEsperado": "Um avaliador consegue entender, executar e testar a API apenas seguindo o README.",
+      "casosDeUso": [
+        {
+          "titulo": "Correção pelo professor",
+          "ator": "Professor de Java Advanced",
+          "fluxo": "Segue o README, sobe a API, faz login com um usuário de teste e exercita os endpoints pelo Swagger."
+        }
+      ],
+      "testes": [
+        { "tipo": "manual", "nome": "readmeDoZero", "descricao": "Uma pessoa que não participou do projeto clona o repositório e sobe a API seguindo só o README." },
+        { "tipo": "manual", "nome": "checklistGS", "descricao": "Todos os itens de entrega de Java Advanced constam no README." }
+      ],
+      "criteriosDeAceite": [
+        "Contém: como rodar, usuários de teste, endpoints principais, opção do requisito 5, link do deploy e declaração de uso de IA.",
+        "Contém ODS, diagrama de arquitetura e integrantes.",
+        "Nenhuma credencial real no README."
       ]
     }
   ]

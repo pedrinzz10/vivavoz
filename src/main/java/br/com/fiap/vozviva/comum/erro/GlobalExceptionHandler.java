@@ -1,11 +1,14 @@
 package br.com.fiap.vozviva.comum.erro;
 
+import br.com.fiap.vozviva.comum.dto.ErroResponse;
+import br.com.fiap.vozviva.comum.dto.ErroResponse.CampoInvalido;
 import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,25 +26,26 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Tratador central de erros. Toda resposta de erro sai como Problem Details com
- * {@code mensagemFalada} e {@code traceId}, e nunca expõe stack traces ou nomes de classes.
+ * Tratador central de erros. Toda resposta de erro sai como {@link ErroResponse}
+ * (Problem Details + {@code mensagemFalada} e {@code traceId}) e nunca expõe stack traces
+ * ou nomes de classes.
  * <p>
  * Exceções do Spring MVC (400, 404, 405, 415...) são tratadas pela classe base e
- * enriquecidas em {@link #handleExceptionInternal}.
+ * convertidas em {@link #handleExceptionInternal}.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-	private final ProblemDetailFactory problemas;
+	private final ErroResponseFactory erros;
 
-	public GlobalExceptionHandler(ProblemDetailFactory problemas) {
-		this.problemas = problemas;
+	public GlobalExceptionHandler(ErroResponseFactory erros) {
+		this.erros = erros;
 	}
 
 	@ExceptionHandler(VozVivaException.class)
-	ResponseEntity<ProblemDetail> tratarDominio(VozVivaException ex, HttpServletRequest request) {
+	ResponseEntity<ErroResponse> tratarDominio(VozVivaException ex, HttpServletRequest request) {
 		CodigoErro codigo = ex.getCodigo();
 		if (codigo.status().is5xxServerError()) {
 			log.warn("{}: {}", codigo, paraLog(ex.getMessage()), ex);
@@ -49,14 +53,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		else {
 			log.info("{}: {}", codigo, paraLog(ex.getMessage()));
 		}
-		return responder(problemas.criar(codigo, ex.getMessage(), request.getRequestURI()));
+		return responder(erros.criar(codigo, ex.getMessage(), request.getRequestURI()), null);
 	}
 
 	@ExceptionHandler(TimeoutException.class)
-	ResponseEntity<ProblemDetail> tratarTimeout(TimeoutException ex, HttpServletRequest request) {
+	ResponseEntity<ErroResponse> tratarTimeout(TimeoutException ex, HttpServletRequest request) {
 		log.warn("Timeout ao acessar dependência externa", ex);
-		return responder(problemas.criar(CodigoErro.SERVICO_INDISPONIVEL,
-				"Tempo de resposta esgotado ao acessar um serviço externo.", request.getRequestURI()));
+		return responder(erros.criar(CodigoErro.SERVICO_INDISPONIVEL,
+				"Tempo de resposta esgotado ao acessar um serviço externo.", request.getRequestURI()), null);
 	}
 
 	/**
@@ -69,10 +73,10 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	}
 
 	@ExceptionHandler(Exception.class)
-	ResponseEntity<ProblemDetail> tratarInesperado(Exception ex, HttpServletRequest request) {
+	ResponseEntity<ErroResponse> tratarInesperado(Exception ex, HttpServletRequest request) {
 		log.error("Erro inesperado em {} {}", paraLog(request.getMethod()), paraLog(request.getRequestURI()), ex);
-		return responder(problemas.criar(CodigoErro.ERRO_INTERNO,
-				"Ocorreu um erro inesperado. Informe o traceId ao suporte.", request.getRequestURI()));
+		return responder(erros.criar(CodigoErro.ERRO_INTERNO,
+				"Ocorreu um erro inesperado. Informe o traceId ao suporte.", request.getRequestURI()), null);
 	}
 
 	@Override
@@ -98,32 +102,36 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	@Override
 	protected ResponseEntity<Object> handleExceptionInternal(Exception ex, @Nullable Object body,
 			HttpHeaders headers, HttpStatusCode statusCode, WebRequest request) {
-		ProblemDetail problema = body instanceof ProblemDetail existente ? existente
-				: ProblemDetail.forStatus(statusCode);
 		CodigoErro codigo = CodigoErro.porStatus(statusCode.value());
-		if (problema.getDetail() == null) {
-			problema.setDetail(codigo.titulo());
-		}
-		problemas.completar(problema, codigo, caminho(request));
+		String detalhe = body instanceof ProblemDetail problema && problema.getDetail() != null
+				? problema.getDetail() : codigo.titulo();
 		if (statusCode.is5xxServerError()) {
 			log.error("Erro {} tratado pelo Spring MVC", statusCode.value(), ex);
 		}
-		return super.handleExceptionInternal(ex, problema, headers, statusCode, request);
+		return ResponseEntity.status(statusCode)
+			.headers(headers)
+			.contentType(MediaType.APPLICATION_PROBLEM_JSON)
+			.body(erros.criar(codigo, detalhe, caminho(request)));
 	}
 
 	private ResponseEntity<Object> validacao(List<CampoInvalido> campos, HttpHeaders headers, WebRequest request) {
-		ProblemDetail problema = problemas.criar(CodigoErro.VALIDACAO,
-				"Um ou mais campos são inválidos.", caminho(request));
-		problema.setProperty("campos", campos);
-		return ResponseEntity.status(problema.getStatus()).headers(headers).body(problema);
+		ErroResponse erro = erros.criar(CodigoErro.VALIDACAO, "Um ou mais campos são inválidos.",
+				caminho(request), campos);
+		return ResponseEntity.status(erro.status())
+			.headers(headers)
+			.contentType(MediaType.APPLICATION_PROBLEM_JSON)
+			.body(erro);
 	}
 
 	private static CampoInvalido campoInvalido(FieldError erro) {
 		return new CampoInvalido(erro.getField(), erro.getDefaultMessage());
 	}
 
-	private static ResponseEntity<ProblemDetail> responder(ProblemDetail problema) {
-		return ResponseEntity.status(problema.getStatus()).body(problema);
+	private static ResponseEntity<ErroResponse> responder(ErroResponse erro, @Nullable HttpHeaders headers) {
+		return ResponseEntity.status(erro.status())
+			.headers(headers)
+			.contentType(MediaType.APPLICATION_PROBLEM_JSON)
+			.body(erro);
 	}
 
 	/**
@@ -131,15 +139,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	 * impedindo a criação de linhas falsas (log injection).
 	 */
 	static String paraLog(String valor) {
-		// \R cobre qualquer quebra de linha (\n, \r\n,  ...) e é reconhecido pelo CodeQL.
+		// \R cobre qualquer quebra de linha (inclusive separadores Unicode) e é reconhecido pelo CodeQL.
 		return valor == null ? null : valor.replaceAll("\\R", "_");
 	}
 
 	private static String caminho(WebRequest request) {
 		return request instanceof ServletWebRequest servlet ? servlet.getRequest().getRequestURI() : null;
-	}
-
-	public record CampoInvalido(String campo, String mensagem) {
 	}
 
 }

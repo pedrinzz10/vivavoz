@@ -23,7 +23,7 @@ import java.util.concurrent.TimeoutException;
 class ErroTesteController {
 
 	@PostMapping("/validacao")
-	String validacao(@Valid @RequestBody Pedido pedido) {
+	String validacao(@Valid @RequestBody PedidoRequest pedido) {
 		return "ok";
 	}
 
@@ -62,7 +62,7 @@ class ErroTesteController {
 		throw new AccessDeniedException("sem papel CUIDADOR");
 	}
 
-	record Pedido(@NotBlank String nome, @PositiveOrZero int idade) {
+	record PedidoRequest(@NotBlank String nome, @PositiveOrZero int idade) {
 	}
 
 }
