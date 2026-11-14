@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class AutenticacaoService {
@@ -38,7 +39,8 @@ public class AutenticacaoService {
 		this.senhas = senhas;
 		this.emissor = emissor;
 		this.limitador = limitador;
-		this.hashFicticio = senhas.encode("senha-ficticia-para-tempo-constante");
+		// Valor aleatório a cada inicialização: não existe texto fixo que corresponda a esse hash.
+		this.hashFicticio = senhas.encode(UUID.randomUUID().toString());
 	}
 
 	@Transactional
