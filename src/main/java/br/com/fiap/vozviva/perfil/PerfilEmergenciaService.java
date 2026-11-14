@@ -13,6 +13,7 @@ import br.com.fiap.vozviva.perfil.dto.PerfilEmergenciaResponse;
 import br.com.fiap.vozviva.seguranca.Papel;
 import br.com.fiap.vozviva.usuario.Usuario;
 import br.com.fiap.vozviva.usuario.UsuarioRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -64,7 +65,14 @@ public class PerfilEmergenciaService {
 		Usuario cuidador = usuarios.getReferenceById(cuidadorId);
 		PerfilEmergencia perfil = new PerfilEmergencia(cidadao, cuidador);
 		perfil.atualizar(request.mobilidade(), request.condicoesSaude(), request.medicamentos(), request.observacoes());
-		PerfilEmergencia salvo = perfis.saveAndFlush(perfil);
+		PerfilEmergencia salvo;
+		try {
+			salvo = perfis.saveAndFlush(perfil);
+		}
+		catch (DataIntegrityViolationException ex) {
+			// Dois cuidadores criando o perfil do mesmo cidadão ao mesmo tempo: a restrição única decide.
+			throw new ConflitoException("Este cidadão já tem um perfil de emergência.");
+		}
 		return PerfilEmergenciaMapper.paraResponse(carregar(salvo.getId()));
 	}
 
@@ -103,7 +111,12 @@ public class PerfilEmergenciaService {
 
 	@Transactional
 	public ContatoEmergenciaResponse adicionarContato(Long perfilId, Long cuidadorId, ContatoEmergenciaRequest request) {
-		PerfilEmergencia perfil = perfilGerenciadoPor(perfilId, cuidadorId);
+		// Trava o perfil: inclusões simultâneas não conseguem passar do limite de contatos.
+		PerfilEmergencia perfil = perfis.findParaAlterarById(perfilId)
+			.orElseThrow(() -> new RecursoNaoEncontradoException("Perfil de emergência não encontrado."));
+		if (!perfil.ehGerenciadoPor(cuidadorId)) {
+			throw new AccessDeniedException("Perfil gerenciado por outro cuidador.");
+		}
 		if (contatos.countByPerfilId(perfilId) >= MAXIMO_CONTATOS) {
 			throw new ConflitoException("O perfil já tem o máximo de " + MAXIMO_CONTATOS + " contatos.");
 		}
