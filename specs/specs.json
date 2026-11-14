@@ -398,7 +398,7 @@
       "modulo": "Saúde Preventiva",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-002", "SPEC-017", "SPEC-022"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Ao acionar o socorro, a API registra uma Emergencia (JPA) e publica um evento no RabbitMQ; um consumidor processa o evento de forma assíncrona e avisa os contatos do perfil de emergência, sem bloquear a resposta ao cidadão. Atende a opção A (arquitetura distribuída) de Java Advanced.",
       "oQueFaz": [
         "Entidade Emergencia (JPA): id, perfil (N:1 PerfilEmergencia), status (ACIONADA, NOTIFICADA, ATENDIDA, CANCELADA), latitude, longitude, textoOriginal, acionadaEm, notificadaEm, encerradaEm, contatosNotificados.",

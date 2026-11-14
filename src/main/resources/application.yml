@@ -34,6 +34,18 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
+    # Broker fora do ar: a publicação (assíncrona) desiste logo e o reenvio automático tenta depois.
+    connection-timeout: 5s
+    listener:
+      simple:
+        # Falhas no consumidor: 3 tentativas com espera crescente (1s, 2s); depois a mensagem é
+        # rejeitada sem voltar para a fila e cai na DLQ (vozviva.emergencias.dlq).
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+        default-requeue-rejected: false
   ai:
     anthropic:
       api-key: ${ANTHROPIC_API_KEY:}

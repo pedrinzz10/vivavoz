@@ -174,6 +174,39 @@ aceita campos públicos (perfis: `id`, `mobilidade`, `criadoEm`, `atualizadoEm`;
 
 **Limitação conhecida:** o cuidador vincula o perfil pelo e-mail da conta do cidadão, sem confirmação do
 cidadão. Num sistema em produção, o vínculo seria confirmado por convite.
+## Botão de emergência (arquitetura distribuída — opção A: RabbitMQ)
+
+```
+App ──POST /api/v1/emergencias──▶ grava Emergencia (ACIONADA) ──após o commit──▶ publica EmergenciaAcionadaEvento
+    ◀── 202 Accepted na hora                                                          │
+                                                                                      ▼
+               exchange vozviva.emergencias ──(emergencia.acionada)──▶ fila vozviva.emergencias.acionadas
+                                                                                      │
+          ConsumidorEmergencia: avisa os contatos por prioridade, grava cada aviso, status NOTIFICADA
+                     3 tentativas com espera crescente ──falhou──▶ DLQ vozviva.emergencias.dlq
+```
+
+| Endpoint | Acesso | O que faz |
+|---|---|---|
+| `POST /api/v1/emergencias` | `CIDADAO` | Aciona a emergência (`latitude`, `longitude` e `textoOriginal` opcionais) → **202** |
+| `GET /api/v1/emergencias` | `CIDADAO` / `CUIDADOR` | Histórico paginado (do cidadão ou dos perfis do cuidador) |
+| `GET /api/v1/emergencias/{id}` | Cidadão dono ou cuidador responsável | Status atual |
+| `GET /api/v1/emergencias/{id}/avisos` | Cidadão dono ou cuidador responsável | Quem foi avisado e com qual mensagem |
+| `PATCH /api/v1/emergencias/{id}/cancelar` | `CIDADAO` dono | Cancela um acionamento por engano |
+| `PATCH /api/v1/emergencias/{id}/atender` | `CUIDADOR` responsável | Encerra como atendida |
+
+Garantias:
+- **Publicação só depois do commit:** o consumidor nunca procura uma emergência que ainda não foi gravada.
+- **Broker fora do ar não vira erro para o cidadão:** a emergência fica `ACIONADA` e o `ReenvioEmergencias`
+  publica de novo a cada 30 s.
+- **Consumo idempotente com trava da linha:** mensagens repetidas (reenvio ou nova entrega do broker) nunca
+  avisam os contatos em dobro.
+- **Toque duplo:** um novo acionamento em até 2 minutos devolve a emergência que já está aberta.
+- **DLQ:** depois de 3 tentativas, a mensagem vai para `vozviva.emergencias.dlq` para análise.
+- O envio real (SMS/WhatsApp) fica atrás da interface `NotificadorContatos`; a implementação padrão registra o
+  aviso no log com o telefone mascarado.
+
+O painel do RabbitMQ (http://localhost:15672) mostra as filas e as mensagens em JSON.
 ## Banco de dados
 
 O esquema é versionado com **Flyway** em `src/main/resources/db/migration` (`V1__descricao.sql`, `V2__...`).
@@ -205,7 +238,7 @@ br.com.fiap.vozviva
 ├── usuario      cadastro, login e emissão do JWT
 ├── voz          classificação de intenção por voz (Spring AI)
 ├── perfil       perfil de emergência e contatos (cuidador)
-├── emergencia   botão de emergência assíncrono (RabbitMQ)
+├── emergencia   botão de emergência assíncrono (RabbitMQ: publicador, consumidor, DLQ e reenvio)
 ├── seguranca    JWT e controle de acesso
 └── comum        erros, DTOs compartilhados e utilitários
 ```
