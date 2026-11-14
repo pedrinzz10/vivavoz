@@ -7,9 +7,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
@@ -41,8 +45,20 @@ public class ProblemDetailSecurityHandler implements AuthenticationEntryPoint, A
 	@Override
 	public void handle(HttpServletRequest request, HttpServletResponse response,
 			AccessDeniedException ex) throws IOException {
+		// O filtro de CSRF roda antes da autenticação: uma escrita sem token JWT falha no CSRF.
+		// Para o app, isso significa "precisa entrar de novo" (401), não "sem permissão" (403).
+		if (ex instanceof CsrfException && naoAutenticado()) {
+			commence(request, response, null);
+			return;
+		}
 		escrever(request, response, CodigoErro.ACESSO_NEGADO,
 				"O usuário não tem permissão para acessar este recurso.");
+	}
+
+	private static boolean naoAutenticado() {
+		Authentication autenticacao = SecurityContextHolder.getContext().getAuthentication();
+		return autenticacao == null || autenticacao instanceof AnonymousAuthenticationToken
+				|| !autenticacao.isAuthenticated();
 	}
 
 	private void escrever(HttpServletRequest request, HttpServletResponse response, CodigoErro codigo,

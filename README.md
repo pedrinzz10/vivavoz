@@ -93,6 +93,15 @@ ou da claim `NameIdentifier` do ASP.NET.
 As regras por papel ficam nos endpoints com `@PreAuthorize`. Respostas 401 e 403 seguem o formato de
 erro padrão da API, com `mensagemFalada` e `traceId`.
 
+### CSRF
+
+A proteção CSRF continua **ativa**, mas requisições com header `Authorization` não precisam do token CSRF:
+um site malicioso não consegue fazer o navegador enviar esse header, e por isso o ataque não se aplica.
+Assim, o app envia apenas o JWT, sem requisição extra para buscar um token CSRF. Requisições sem
+`Authorization` continuam passando pelo CSRF (token em cookie `HttpOnly`, `Secure`, `SameSite=Strict`),
+o que já protege um eventual login por cookie no futuro. Uma escrita sem JWT recebe 401
+(`NAO_AUTENTICADO`), para o app saber que precisa entrar de novo.
+
 ## Testes
 
 ```bash

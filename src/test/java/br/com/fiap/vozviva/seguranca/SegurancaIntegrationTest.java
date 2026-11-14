@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -121,6 +123,30 @@ class SegurancaIntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.cidadaoId").value("42"));
+	}
+
+	@Test
+	void escritaSemTokenRetorna401EmVezDe403DoCsrf() throws Exception {
+		mvc.perform(put("/teste-seguranca/perfis/42"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.codigo").value("NAO_AUTENTICADO"));
+	}
+
+	@Test
+	void escritaComCsrfValidoMasSemTokenContinuaExigindoLogin() throws Exception {
+		mvc.perform(put("/teste-seguranca/perfis/42").with(csrf()))
+			.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void csrfContinuaAtivoParaUsuarioAutenticadoSemHeaderAuthorization() throws Exception {
+		// Simula um futuro login por cookie/sessão: autenticado, mas sem header Authorization.
+		mvc.perform(put("/teste-seguranca/perfis/42").with(user("cuidador-web").roles("CUIDADOR")))
+			.andExpect(status().isForbidden())
+			.andExpect(jsonPath("$.codigo").value("ACESSO_NEGADO"));
+
+		mvc.perform(put("/teste-seguranca/perfis/42").with(user("cuidador-web").roles("CUIDADOR")).with(csrf()))
+			.andExpect(status().isOk());
 	}
 
 	@Test

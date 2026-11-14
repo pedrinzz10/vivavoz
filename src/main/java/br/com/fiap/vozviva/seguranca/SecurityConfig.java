@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,6 +22,8 @@ import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher;
 import org.springframework.util.StringUtils;
 
 import javax.crypto.spec.SecretKeySpec;
@@ -54,8 +57,13 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity http, ProblemDetailSecurityHandler erros,
 			JwtProperties propriedades) throws Exception {
 		http
-			// API stateless com Bearer token: sem sessão, sem cookie, logo sem CSRF.
-			.csrf(AbstractHttpConfigurer::disable)
+			// CSRF só explora credenciais enviadas automaticamente pelo navegador (cookies).
+			// Requisições com header Authorization não podem ser forjadas por outro site, então
+			// dispensam o token CSRF. As demais continuam protegidas, o que já cobre um eventual
+			// login por cookie no futuro. O token fica em cookie para a API seguir sem sessão.
+			.csrf(csrf -> csrf
+				.ignoringRequestMatchers(new RequestHeaderRequestMatcher(HttpHeaders.AUTHORIZATION))
+				.csrfTokenRepository(repositorioCsrf()))
 			.sessionManagement(sessao -> sessao.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.httpBasic(AbstractHttpConfigurer::disable)
 			.formLogin(AbstractHttpConfigurer::disable)
@@ -71,6 +79,12 @@ public class SecurityConfig {
 				.authenticationEntryPoint(erros)
 				.accessDeniedHandler(erros));
 		return http.build();
+	}
+
+	private static CookieCsrfTokenRepository repositorioCsrf() {
+		CookieCsrfTokenRepository repositorio = new CookieCsrfTokenRepository();
+		repositorio.setCookieCustomizer(cookie -> cookie.secure(true).sameSite("Strict"));
+		return repositorio;
 	}
 
 	@Bean

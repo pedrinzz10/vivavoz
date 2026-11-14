@@ -11,8 +11,13 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.csrf.MissingCsrfTokenException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,6 +37,26 @@ class ProblemDetailSecurityHandlerTest {
 	@AfterEach
 	void limparTraceId() {
 		MDC.remove(TraceIdFilter.MDC_KEY);
+		SecurityContextHolder.clearContext();
+	}
+
+	@Test
+	void falhaDeCsrfSemUsuarioAutenticadoViraNaoAutenticado401() throws Exception {
+		handler.handle(request, response, new MissingCsrfTokenException("sem token csrf"));
+
+		assertThat(response.getStatus()).isEqualTo(401);
+		assertThat(json.readTree(response.getContentAsString()).get("codigo").asString()).isEqualTo("NAO_AUTENTICADO");
+	}
+
+	@Test
+	void falhaDeCsrfComUsuarioAutenticadoContinuaAcessoNegado403() throws Exception {
+		SecurityContextHolder.getContext().setAuthentication(
+				UsernamePasswordAuthenticationToken.authenticated("cuidador", null, List.of()));
+
+		handler.handle(request, response, new MissingCsrfTokenException("sem token csrf"));
+
+		assertThat(response.getStatus()).isEqualTo(403);
+		assertThat(json.readTree(response.getContentAsString()).get("codigo").asString()).isEqualTo("ACESSO_NEGADO");
 	}
 
 	@Test
