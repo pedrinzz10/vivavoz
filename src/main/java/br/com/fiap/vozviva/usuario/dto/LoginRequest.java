@@ -1,11 +1,12 @@
 package br.com.fiap.vozviva.usuario.dto;
 
+import br.com.fiap.vozviva.comum.validacao.LimiteBytesUtf8;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public record LoginRequest(
 		@NotBlank @Size(max = 160) String email,
-		@NotBlank @Size(max = 72) String senha) {
+		@NotBlank @LimiteBytesUtf8(max = 72) String senha) {
 
 	@Override
 	public String toString() {

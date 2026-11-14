@@ -60,14 +60,14 @@ public class AutenticacaoService {
 	@Transactional(readOnly = true)
 	public TokenResponse login(LoginRequest request) {
 		String email = normalizarEmail(request.email());
-		limitador.verificar(email);
+		// A tentativa é reservada antes de conferir a senha: chamadas simultâneas não furam o limite.
+		limitador.consumirTentativa(email);
 
 		Optional<Usuario> encontrado = usuarios.findByEmail(email);
 		String hash = encontrado.map(Usuario::getSenhaHash).orElse(hashFicticio);
 		boolean senhaConfere = senhas.matches(request.senha(), hash);
 
 		if (encontrado.isEmpty() || !senhaConfere || !encontrado.get().isAtivo()) {
-			limitador.registrarFalha(email);
 			throw new CredenciaisInvalidasException();
 		}
 		limitador.registrarSucesso(email);

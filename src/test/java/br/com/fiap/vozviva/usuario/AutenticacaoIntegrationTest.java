@@ -80,6 +80,28 @@ class AutenticacaoIntegrationTest {
 	}
 
 	@Test
+	void senhaAcentuadaAcimaDe72BytesRetorna400EmVezDe500() throws Exception {
+		String senha = "á".repeat(40) + "1"; // 41 caracteres, 81 bytes em UTF-8
+
+		mvc.perform(cadastro("Maria", emailUnico(), senha, "CIDADAO"))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.codigo").value("VALIDACAO"))
+			.andExpect(jsonPath("$.campos[0].campo").value("senha"));
+		mvc.perform(login(emailUnico(), senha))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.campos[0].campo").value("senha"));
+	}
+
+	@Test
+	void senhaAcentuadaDentroDoLimiteFunciona() throws Exception {
+		String email = emailUnico();
+		String senha = "ação".repeat(10) + "1"; // 41 caracteres, 61 bytes em UTF-8
+
+		mvc.perform(cadastro("Maria", email, senha, "CIDADAO")).andExpect(status().isCreated());
+		mvc.perform(login(email, senha)).andExpect(status().isOk());
+	}
+
+	@Test
 	void papelInexistenteNaoECadastrado() throws Exception {
 		mvc.perform(cadastro("Invasor", emailUnico(), SENHA, "ADMIN"))
 			.andExpect(status().isBadRequest());

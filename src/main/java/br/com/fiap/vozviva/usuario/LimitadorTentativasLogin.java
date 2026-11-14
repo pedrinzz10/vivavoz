@@ -9,8 +9,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Protege o login contra tentativa e erro de senhas: depois de {@value #MAXIMO_FALHAS} falhas seguidas
- * no mesmo e-mail dentro da janela, o e-mail fica bloqueado por {@link #BLOQUEIO}.
+ * Protege o login contra tentativa e erro de senhas: cada e-mail tem {@value #MAXIMO_TENTATIVAS}
+ * tentativas por janela; esgotadas, o e-mail fica bloqueado por {@link #BLOQUEIO}. Um login correto
+ * devolve as tentativas.
+ * <p>
+ * A tentativa é consumida de forma atômica <b>antes</b> de a senha ser conferida. Assim, requisições
+ * simultâneas não conseguem passar todas pela verificação antes de alguma falha ser registrada.
  * <p>
  * Guarda o estado em memória, o que basta para uma instância. Com várias instâncias, o contador
  * deveria ir para um armazenamento compartilhado (ex.: Redis).
@@ -18,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class LimitadorTentativasLogin {
 
-	static final int MAXIMO_FALHAS = 5;
+	static final int MAXIMO_TENTATIVAS = 5;
 	static final Duration JANELA = Duration.ofMinutes(15);
 	static final Duration BLOQUEIO = Duration.ofMinutes(15);
 	private static final int LIMITE_ENTRADAS = 10_000;
@@ -35,28 +39,31 @@ public class LimitadorTentativasLogin {
 	}
 
 	/**
+	 * Reserva uma tentativa para o e-mail. A última tentativa disponível é permitida e já ativa o
+	 * bloqueio para as próximas.
+	 *
 	 * @throws MuitasTentativasException se o e-mail estiver bloqueado
 	 */
-	public void verificar(String email) {
-		Registro registro = registros.get(email);
-		if (registro != null && registro.bloqueadoAte() != null && Instant.now(clock).isBefore(registro.bloqueadoAte())) {
+	public void consumirTentativa(String email) {
+		Instant agora = Instant.now(clock);
+		limparExpirados(agora);
+		Registro resultado = registros.compute(email, (chave, atual) -> {
+			if (atual != null && atual.bloqueadoEm(agora)) {
+				return atual.recusado();
+			}
+			if (atual == null || atual.janelaVencida(agora)) {
+				return Registro.primeira(agora);
+			}
+			int tentativas = atual.tentativas() + 1;
+			Instant bloqueadoAte = tentativas >= MAXIMO_TENTATIVAS ? agora.plus(BLOQUEIO) : null;
+			return new Registro(tentativas, atual.inicioJanela(), bloqueadoAte, false);
+		});
+		if (resultado.recusada()) {
 			throw new MuitasTentativasException();
 		}
 	}
 
-	public void registrarFalha(String email) {
-		Instant agora = Instant.now(clock);
-		limparExpirados(agora);
-		registros.compute(email, (chave, atual) -> {
-			if (atual == null || agora.isAfter(atual.inicioJanela().plus(JANELA))) {
-				return new Registro(1, agora, null);
-			}
-			int falhas = atual.falhas() + 1;
-			Instant bloqueadoAte = falhas >= MAXIMO_FALHAS ? agora.plus(BLOQUEIO) : null;
-			return new Registro(falhas, atual.inicioJanela(), bloqueadoAte);
-		});
-	}
-
+	/** Login correto: zera as tentativas do e-mail. */
 	public void registrarSucesso(String email) {
 		registros.remove(email);
 	}
@@ -65,15 +72,31 @@ public class LimitadorTentativasLogin {
 		if (registros.size() < LIMITE_ENTRADAS) {
 			return;
 		}
-		registros.entrySet().removeIf(entrada -> {
-			Registro r = entrada.getValue();
-			boolean janelaVencida = agora.isAfter(r.inicioJanela().plus(JANELA));
-			boolean semBloqueio = r.bloqueadoAte() == null || agora.isAfter(r.bloqueadoAte());
-			return janelaVencida && semBloqueio;
-		});
+		registros.entrySet().removeIf(entrada -> entrada.getValue().janelaVencida(agora)
+				&& !entrada.getValue().bloqueadoEm(agora));
 	}
 
-	private record Registro(int falhas, Instant inicioJanela, Instant bloqueadoAte) {
+	/**
+	 * @param recusada indica que a última tentativa foi recusada por bloqueio (não altera o estado salvo)
+	 */
+	private record Registro(int tentativas, Instant inicioJanela, Instant bloqueadoAte, boolean recusada) {
+
+		static Registro primeira(Instant agora) {
+			return new Registro(1, agora, null, false);
+		}
+
+		boolean bloqueadoEm(Instant agora) {
+			return bloqueadoAte != null && agora.isBefore(bloqueadoAte);
+		}
+
+		boolean janelaVencida(Instant agora) {
+			return agora.isAfter(inicioJanela.plus(JANELA));
+		}
+
+		Registro recusado() {
+			return new Registro(tentativas, inicioJanela, bloqueadoAte, true);
+		}
+
 	}
 
 }
