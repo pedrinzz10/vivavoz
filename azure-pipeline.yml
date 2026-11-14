@@ -1,0 +1,132 @@
+# VozViva - CI/CD no Azure DevOps (SPEC-024).
+#
+# Build (CI): roda a cada merge na main (a main só recebe código por PR). Compila, executa todos os testes
+# (unitários, integração com H2 e Testcontainers com SQL Server e RabbitMQ reais, arquitetura, contrato
+# OpenAPI), publica os resultados JUnit e a cobertura JaCoCo, publica o pacote (jar, contrato OpenAPI e
+# script do banco) e envia a imagem para o Azure Container Registry.
+# Release (CD): logo depois de um build com sucesso, publica a nova imagem no App Service e confere o health.
+#
+# Pré-requisitos (uma vez só, ver README "Deploy na Azure"):
+#   - recursos criados por scripts/provisionar-azure.sh;
+#   - service connections "vozviva-azure" (Azure Resource Manager) e "vozviva-acr" (Docker Registry/ACR);
+#   - grupo de variáveis "vozviva-azure" com webAppName e acrLoginServer;
+#   - environment "producao" (pode exigir aprovação, se a equipe quiser).
+# Nenhum segredo fica aqui: as senhas estão nas configurações do App Service.
+
+trigger:
+  branches:
+    include:
+      - main
+
+pr: none
+
+variables:
+  - group: vozviva-azure
+  - name: azureServiceConnection
+    value: vozviva-azure
+  - name: acrServiceConnection
+    value: vozviva-acr
+  - name: imagem
+    value: vozviva-api
+  - name: GRADLE_USER_HOME
+    value: $(Pipeline.Workspace)/.gradle
+
+stages:
+  - stage: Build
+    displayName: Build e testes (CI)
+    jobs:
+      - job: BuildTestes
+        displayName: Compilar, testar e gerar a imagem
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: Cache@2
+            displayName: Cache do Gradle
+            inputs:
+              key: 'gradle | "$(Agent.OS)" | build.gradle | gradle/wrapper/gradle-wrapper.properties'
+              restoreKeys: |
+                gradle | "$(Agent.OS)"
+              path: $(GRADLE_USER_HOME)
+
+          - task: Gradle@3
+            displayName: Build + testes + cobertura
+            inputs:
+              gradleWrapperFile: gradlew
+              tasks: build jacocoTestReport
+              options: --no-daemon
+              javaHomeOption: Path
+              jdkDirectory: $(JAVA_HOME_21_X64)
+              publishJUnitResults: true
+              testResultsFiles: '**/build/test-results/test/TEST-*.xml'
+              testRunTitle: VozViva - testes automatizados
+
+          - task: PublishCodeCoverageResults@2
+            displayName: Publicar cobertura (JaCoCo)
+            condition: succeededOrFailed()
+            inputs:
+              summaryFileLocation: build/reports/jacoco/test/jacocoTestReport.xml
+
+          - task: CopyFiles@2
+            displayName: Separar o pacote
+            inputs:
+              SourceFolder: $(Build.SourcesDirectory)
+              Contents: |
+                build/libs/vozviva.jar
+                build/openapi/openapi.json
+                scripts/script-bd.sql
+              TargetFolder: $(Build.ArtifactStagingDirectory)/vozviva
+              flattenFolders: true
+
+          - task: PublishPipelineArtifact@1
+            displayName: Publicar pacote (jar, OpenAPI, script do banco)
+            inputs:
+              targetPath: $(Build.ArtifactStagingDirectory)/vozviva
+              artifact: vozviva
+
+          - task: Docker@2
+            displayName: Gerar e enviar a imagem para o ACR
+            inputs:
+              command: buildAndPush
+              containerRegistry: $(acrServiceConnection)
+              repository: $(imagem)
+              Dockerfile: dockerfiles/Dockerfile
+              buildContext: $(Build.SourcesDirectory)
+              tags: |
+                $(Build.BuildId)
+                latest
+
+  - stage: Release
+    displayName: Deploy no App Service (CD)
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: Deploy
+        displayName: Publicar a nova imagem
+        pool:
+          vmImage: ubuntu-latest
+        environment: producao
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureWebAppContainer@1
+                  displayName: Atualizar o App Service com a imagem $(Build.BuildId)
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    appName: $(webAppName)
+                    containers: $(acrLoginServer)/$(imagem):$(Build.BuildId)
+
+                - bash: |
+                    set -euo pipefail
+                    url="https://$(webAppName).azurewebsites.net/actuator/health"
+                    for tentativa in $(seq 1 30); do
+                      if curl -fsS --max-time 10 "$url" | grep -q '"status":"UP"'; then
+                        echo "API no ar: $url (tentativa $tentativa)"
+                        exit 0
+                      fi
+                      echo "Aguardando a API subir ($tentativa/30)..."
+                      sleep 10
+                    done
+                    echo "##vso[task.logissue type=error]A API não respondeu UP em $url"
+                    exit 1
+                  displayName: Conferir o health da API publicada

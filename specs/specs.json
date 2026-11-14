@@ -1083,7 +1083,7 @@
       "modulo": "Infraestrutura",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-022"],
-      "status": "PENDENTE",
+      "status": "EM_ANDAMENTO",
       "descricao": "Artefatos para a disciplina de DevOps implantar a API Java na Azure com Azure DevOps: Dockerfile, scripts Azure CLI, script de banco e pipeline YAML de build e release.",
       "oQueFaz": [
         "Dockerfile multi-stage em /dockerfiles (build com Gradle, imagem final JRE 21, usuário não-root, healthcheck).",

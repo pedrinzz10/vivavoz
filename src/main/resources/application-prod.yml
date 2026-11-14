@@ -1,5 +1,6 @@
-# Perfil de produção: sem valores padrão para conexões e credenciais.
-# A aplicação não inicia se MONGODB_URI, RABBITMQ_HOST, RABBITMQ_USERNAME ou RABBITMQ_PASSWORD estiverem ausentes.
+# Perfil de produção (Azure App Service): sem valores padrão para conexões e credenciais.
+# A aplicação não inicia sem DB_URL, DB_USERNAME, DB_PASSWORD, RABBITMQ_HOST, RABBITMQ_USERNAME,
+# RABBITMQ_PASSWORD e JWT_SECRET, todos definidos como configurações do App Service (nunca em arquivo).
 logging:
   level:
     root: INFO
@@ -8,3 +9,5 @@ server:
   error:
     include-stacktrace: never
     include-message: never
+  # Atrás do proxy do App Service: respeita X-Forwarded-Proto/Host (links e Swagger com https).
+  forward-headers-strategy: framework

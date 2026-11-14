@@ -59,6 +59,15 @@ dependencyManagement {
 	}
 }
 
+// Um só artefato, com nome fixo (build/libs/vozviva.jar): é o que a imagem e a pipeline usam.
+tasks.named('bootJar') {
+	archiveFileName = 'vozviva.jar'
+}
+
+tasks.named('jar') {
+	enabled = false
+}
+
 tasks.named('test') {
 	useJUnitPlatform {
 		// Testes com o modelo de IA real (pagos) ficam fora do build: rode ./gradlew avaliarIa.

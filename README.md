@@ -14,6 +14,20 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 - Spring AI – assistente contra golpes (RAG) e classificação de intenção por voz
 - RabbitMQ – evento assíncrono do botão de emergência
 
+## Arquitetura
+
+![Arquitetura macro do VozViva](docs/arquitetura.svg)
+
+| # | Fluxo |
+|---|---|
+| 1 | O app (React Native) transcreve a fala ou recebe o toque e chama a API Java por HTTPS, com o JWT no header `Authorization` |
+| 2 | A API lê e grava no Azure SQL com Spring Data JPA; o esquema é versionado com Flyway |
+| 3 | O botão de emergência grava o pedido, publica o evento no RabbitMQ e responde 202; o consumidor avisa os contatos em segundo plano, com retry e DLQ |
+| 4 | O assistente contra golpes e a classificação por voz chamam o modelo na OCI pelo Spring AI, com RAG; sem IA, as regras respondem |
+| 5 | O app também usa a API .NET (zeladoria, Oracle), que valida o mesmo JWT emitido pela API Java |
+| 6 | Azure DevOps: tarefa no Boards, branch e PR no Repos; o merge na main dispara o build com testes, a imagem vai para o ACR e a release a publica no App Service |
+| 7 | Os locais de atendimento vêm de uma importação única do OpenStreetMap, aplicada pelo Flyway como carga do banco |
+
 ## Pré-requisitos
 
 - JDK 21
@@ -60,7 +74,7 @@ Com a aplicação no ar:
 Para testar pelo Swagger:
 1. Chame `POST /api/v1/auth/login`. No perfil dev existem `cidadao.teste@vozviva.dev` e
    `cuidador.teste@vozviva.dev`, com a senha de `USUARIOS_TESTE_SENHA`.
-2. Copie o `token` da resposta e clique em **Authorize**.
+2. Copie o `accessToken` da resposta e clique em **Authorize**.
 3. Experimente os endpoints. O token fica guardado entre recarregamentos da página.
 
 Os endpoints estão agrupados por módulo: Autenticação, Voz, Botão de emergência, Perfil de emergência, Contatos
@@ -405,6 +419,74 @@ O Hibernate apenas valida as entidades (`ddl-auto=validate`); nunca cria tabelas
 `scripts/script-bd.sql` reúne todas as migrações (DDL e carga) num único script (exigência da disciplina de DevOps). Depois de
 criar ou alterar uma migração, rode `./gradlew gerarScriptBd`: o `check` (e o CI) falha se o arquivo estiver
 desatualizado.
+
+## Deploy na Azure (DevOps)
+
+| Artefato | Onde |
+|---|---|
+| Dockerfile (multi-stage, JRE 21, usuário sem privilégios, healthcheck) | [`dockerfiles/Dockerfile`](dockerfiles/Dockerfile) |
+| Provisionamento com Azure CLI (idempotente) | [`scripts/provisionar-azure.sh`](scripts/provisionar-azure.sh) |
+| Remoção de tudo (para parar a cobrança) | [`scripts/remover-azure.sh`](scripts/remover-azure.sh) |
+| DDL e carga do banco | [`scripts/script-bd.sql`](scripts/script-bd.sql) |
+| Pipeline de build (CI) e release (CD) | [`azure-pipeline.yml`](azure-pipeline.yml) |
+
+**Recursos criados pelo script** (grupo `rg-vozviva`):
+
+| Recurso | Uso |
+|---|---|
+| Azure SQL (servidor + banco `vozviva`, Basic) | Banco da API (PaaS) |
+| Azure Container Registry (Basic) | Imagens da API, uma por build |
+| Container Instance com RabbitMQ | Fila do botão de emergência |
+| App Service Linux B1 (container) | API Java; HTTPS obrigatório e health check em `/actuator/health/liveness` |
+
+O App Service puxa a imagem do ACR com identidade gerenciada (sem senha de registry). Todas as senhas e
+configurações ficam nas variáveis de ambiente do App Service, nunca no repositório.
+
+**Passo a passo:**
+
+1. **Provisionar** (Azure Cloud Shell ou Azure CLI com `az login`):
+
+   ```bash
+   export SUFIXO=rm556677 SQL_ADMIN_SENHA='...' RABBITMQ_SENHA='...' JWT_SECRET='...'
+   export USUARIOS_TESTE_SENHA='...'   # opcional: cria cidadao.teste@ e cuidador.teste@ para a demonstração
+   export LIBERAR_MEU_IP=sim           # opcional: libera o seu IP no Azure SQL (Query editor e SELECT)
+   ./scripts/provisionar-azure.sh
+   ```
+
+   O script pode rodar de novo: ele só cria o que falta e mostra o que criou ou reaproveitou. No fim, imprime
+   as URLs e os nomes para o próximo passo.
+2. **Azure DevOps:**
+   - Importe o repositório no Azure Repos.
+   - Em Project settings → Service connections, crie `vozviva-azure` (Azure Resource Manager, grupo
+     `rg-vozviva`) e `vozviva-acr` (Docker Registry → Azure Container Registry).
+   - Em Pipelines → Library, crie o grupo de variáveis `vozviva-azure` com `webAppName` e `acrLoginServer`.
+   - Crie a pipeline a partir do `azure-pipeline.yml` da raiz.
+3. **Branch principal protegida** (Repos → Branches → main → Branch policies): revisor obrigatório (o
+   próprio autor pode aprovar), vínculo obrigatório com Work Item e o RM como revisor padrão.
+4. **Fluxo da entrega:**
+   1. Tarefa no Boards.
+   2. Branch nova.
+   3. Alteração no código.
+   4. PR vinculada à tarefa.
+   5. Merge.
+   6. Build: testes publicados na aba Tests, cobertura e pacote `vozviva` com o jar, o contrato OpenAPI e o script do banco.
+   7. Release automática no App Service, que confere o `/actuator/health` no fim.
+5. **CRUD no banco em nuvem:** pelo Swagger publicado (`https://<webAppName>.azurewebsites.net/swagger-ui.html`),
+   crie, leia, altere e exclua perfis de emergência (`perfis_emergencia`) e contatos (`contatos_emergencia`).
+   Confira cada operação com `SELECT` no Query editor do Azure SQL, por exemplo:
+   `SELECT * FROM contatos_emergencia ORDER BY id DESC;`.
+6. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro.
+
+Para testar a imagem localmente, com o SQL Server e o RabbitMQ do `docker compose` (o mesmo teste foi feito
+antes da entrega: health `UP` e fluxo de cadastro, login, atendimentos e voz funcionando no perfil `prod`):
+
+```bash
+docker build -f dockerfiles/Dockerfile -t vozviva-api .
+docker run --rm -p 8081:8080 --network vozviva_default \
+  -e DB_URL="jdbc:sqlserver://sqlserver:1433;databaseName=vozviva;encrypt=true;trustServerCertificate=true" \
+  -e DB_USERNAME=sa -e DB_PASSWORD -e RABBITMQ_HOST=rabbitmq -e RABBITMQ_USERNAME=vozviva \
+  -e RABBITMQ_PASSWORD -e JWT_SECRET -e JWT_ISSUER=vozviva vozviva-api
+```
 
 ## Testes
 
