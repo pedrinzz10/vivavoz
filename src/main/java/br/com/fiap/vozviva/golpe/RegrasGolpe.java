@@ -25,7 +25,8 @@ final class RegrasGolpe {
 				"\\burgente\\b|\\bimediat|\\b(ainda|somente|so|apenas) hoje\\b|\\bem ate \\d+|\\bultim[oa] (dia|aviso|chance)"
 						+ "|\\b(sera|foi|esta) (bloquead|cancelad|suspens)|\\bbloquead"),
 		LINK_SUSPEITO("Traz um link para clicar",
-				"https?://|\\bwww\\.|\\bbit\\.ly\\b|\\btinyurl\\b|\\bcutt\\.ly\\b|\\bclique (no|aqui|neste)"),
+				"https?://|\\bwww\\.|\\bclique (no|aqui|neste)|" + Encurtadores.REGEX),
+		LINK_ENCURTADO("Usa link encurtado, que esconde o endereço verdadeiro", Encurtadores.REGEX),
 		NUMERO_NOVO("Diz ser um parente com número novo",
 				"\\b(troquei|mudei) de (numero|celular|telefone)|\\bmeu (numero|celular) novo\\b|\\beste e meu novo"
 						+ "|\\bperdi (o|meu) (celular|telefone)\\b|\\bcelular (quebrou|foi roubado)\\b|\\bnumero (temporario|provisorio)\\b"),
@@ -39,12 +40,21 @@ final class RegrasGolpe {
 
 		Sinal(String descricao, String regex) {
 			this.descricao = descricao;
-			this.padrao = Pattern.compile(regex);
+			// DOTALL: uma quebra de linha no meio ("o código\nque recebeu") não escapa da regra.
+			this.padrao = Pattern.compile(regex, Pattern.DOTALL);
 		}
 
 		String descricao() {
 			return descricao;
 		}
+	}
+
+	/** Encurtadores de link mais usados em golpes por SMS e WhatsApp (classe à parte: o enum não lê constantes próprias). */
+	private static final class Encurtadores {
+
+		static final String REGEX = "\\b(bit\\.ly|tinyurl\\.com|tinyurl|cutt\\.ly|is\\.gd|t\\.ly|rb\\.gy|ow\\.ly|tiny\\.cc"
+				+ "|shorturl\\.at|encurtador\\.com\\.br)\\b";
+
 	}
 
 	private RegrasGolpe() {
@@ -69,7 +79,8 @@ final class RegrasGolpe {
 		if (sinais.contains(Sinal.PEDIDO_DE_SENHA) || pagamentoComPressao || linkComIsca) {
 			return ClassificacaoGolpe.PROVAVEL_GOLPE;
 		}
-		if (sinais.contains(Sinal.NUMERO_NOVO) || sinais.contains(Sinal.PREMIO) || sinais.size() >= 2) {
+		if (sinais.contains(Sinal.NUMERO_NOVO) || sinais.contains(Sinal.PREMIO) || sinais.contains(Sinal.LINK_ENCURTADO)
+				|| sinais.size() >= 2) {
 			return ClassificacaoGolpe.SUSPEITA;
 		}
 		return null;
@@ -85,7 +96,7 @@ final class RegrasGolpe {
 		if (sinais.contains(Sinal.ORGAO_OU_BENEFICIO)) {
 			return TipoGolpe.FALSO_BENEFICIO;
 		}
-		if (sinais.contains(Sinal.LINK_SUSPEITO)) {
+		if (sinais.contains(Sinal.LINK_SUSPEITO) || sinais.contains(Sinal.LINK_ENCURTADO)) {
 			return TipoGolpe.LINK_MALICIOSO;
 		}
 		if (sinais.contains(Sinal.PEDIDO_DE_PAGAMENTO)) {

@@ -38,6 +38,20 @@ class RegrasGolpeTest {
 	}
 
 	@Test
+	void quebraDeLinhaNoMeioDoPedidoNaoEscapaDaRegra() {
+		assertThat(RegrasGolpe.analisar("Me envie o código\nque recebeu por SMS").piso())
+			.isEqualTo(ClassificacaoGolpe.PROVAVEL_GOLPE);
+	}
+
+	@Test
+	void linkEncurtadoSozinhoJaESuspeito() {
+		RegrasGolpe.Resultado resultado = RegrasGolpe.analisar("Confira as fotos: bit.ly/album");
+
+		assertThat(resultado.piso()).isEqualTo(ClassificacaoGolpe.SUSPEITA);
+		assertThat(resultado.tipoProvavel()).isEqualTo(TipoGolpe.LINK_MALICIOSO);
+	}
+
+	@Test
 	void numeroNovoIndicaFalsoParente() {
 		RegrasGolpe.Resultado resultado = RegrasGolpe.analisar("Oi vó, troquei de número, salva esse");
 
