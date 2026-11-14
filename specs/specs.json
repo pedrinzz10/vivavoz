@@ -99,7 +99,7 @@
     },
     {
       "id": "SPEC-002",
-      "nome": "Segurança: Validação de JWT emitido pelo .NET e RBAC",
+      "nome": "Segurança: Validação de JWT e Controle de Acesso por Papel (RBAC)",
       "modulo": "Segurança",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
