@@ -10,6 +10,10 @@ spring:
     host: localhost
     username: test
     password: test
+    listener:
+      simple:
+        # Sem broker nos testes comuns: o consumidor só sobe nos testes com Testcontainers.
+        auto-startup: false
   ai:
     model:
       chat: none
@@ -18,6 +22,9 @@ vozviva:
   seguranca:
     jwt:
       issuer: vozviva-dotnet-teste
+  emergencias:
+    reenvio:
+      habilitado: false
 
 management:
   health:
