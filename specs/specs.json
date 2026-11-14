@@ -5,7 +5,7 @@
   "dataRevisao": "2026-11-14",
   "fonte": ["Dores Dos Grupos CitizenTech.md", "requisitos-global-solution-2026-2.md"],
   "prazoEntrega": "2026-11-19T23:55-03:00",
-  "escopo": "Microsserviço Java (Spring Boot 4 / Java 21) do ecossistema Fala Cidadão. Funcionalidades da entrega: (1) rede de apoio no socorro: perfil de emergência com contatos (CRUD paginado, Spring Data JPA / Azure SQL) e botão de emergência assíncrono via RabbitMQ; (2) assistente contra desinformação com Spring AI + RAG; (3) atendimento acessível mais próximo com rota no app de navegação (dados do OpenStreetMap); (4) zeladoria cidadã por voz. A classificação de intenção de voz (Spring AI) encaminha a fala para essas funcionalidades. Deploy na Azure (disciplina de DevOps). Público-alvo: idosos e pessoas com deficiência (PcD) com baixo letramento digital.",
+  "escopo": "Microsserviço Java (Spring Boot 4 / Java 21) do ecossistema Fala Cidadão. Funcionalidades da entrega: (1) rede de apoio no socorro: perfil de emergência com contatos (CRUD paginado, Spring Data JPA / Azure SQL) e botão de emergência assíncrono via RabbitMQ; (2) assistente contra desinformação com Spring AI + RAG; (3) atendimento acessível mais próximo com rota no app de navegação (dados do OpenStreetMap). A zeladoria cidadã fica com a API .NET ou no roadmap. A classificação de intenção de voz (Spring AI) encaminha a fala para essas funcionalidades. Deploy na Azure (disciplina de DevOps). Público-alvo: idosos e pessoas com deficiência (PcD) com baixo letramento digital.",
   "arquitetura": {
     "microsservicos": {
       "api-java (este repositório)": "Spring Boot; Azure SQL via Spring Data JPA (perfis de emergência, contatos, emergências, obstruções, estatísticas de golpes e interações de voz); RabbitMQ para eventos de emergência; Spring AI (provedor configurável: OCI Generative AI ou Ollama na OCI, com Anthropic como alternativa). Dona dos usuários: cadastro, login e emissão do JWT.",
@@ -20,7 +20,7 @@
     "Java Advanced 1 - API REST do domínio (3 entidades, CRUD JPA, paginação)": ["SPEC-022", "SPEC-023", "SPEC-017", "SPEC-008"],
     "Java Advanced 2 - Validação e erros": ["SPEC-014"],
     "Java Advanced 3 - Spring Security + JWT com papéis": ["SPEC-023", "SPEC-002"],
-    "Java Advanced 4 - Spring AI": ["SPEC-015", "SPEC-006", "SPEC-003", "SPEC-004"],
+    "Java Advanced 4 - Spring AI": ["SPEC-015", "SPEC-004", "SPEC-003"],
     "Mobile - funcionalidade de geolocalização (atendimento mais próximo)": ["SPEC-007"],
     "IA (Disruptive Architectures) - IA generativa + RAG + avaliação": ["SPEC-015", "SPEC-004", "SPEC-003"],
     "Java Advanced 5 - Arquitetura distribuída (opção A, RabbitMQ)": ["SPEC-008"],
@@ -35,7 +35,7 @@
     "prefixoApi": "/api/v1",
     "papeis": ["CIDADAO", "CUIDADOR"],
     "intencoes": ["SOCORRO", "BUSCAR_ATENDIMENTO", "VERIFICAR_INFORMACAO", "ZELADORIA_REPORT", "DESCONHECIDA"],
-    "acoes": ["ACIONAR_SOCORRO", "MOSTRAR_ATENDIMENTOS", "MOSTRAR_VERIFICACAO", "ABRIR_PROTOCOLO", "PEDIR_REPETICAO"],
+    "acoes": ["ACIONAR_SOCORRO", "MOSTRAR_ATENDIMENTOS", "MOSTRAR_VERIFICACAO", "ABRIR_ZELADORIA_DOTNET", "PEDIR_REPETICAO"],
     "intencoesRoadmap": ["ROTA_FUGA", "ALERTA_CLIMA_CONSULTA", "SAUDE_AGENDAMENTO", "COMPRA_PRODUTOR_LOCAL"],
     "urgencias": ["BAIXA", "MEDIA", "ALTA", "CRITICA"],
     "coordenadas": "GeoJSON padrão [longitude, latitude] (WGS84)",
@@ -204,7 +204,7 @@
       "prioridade": "ALTA",
       "dependencias": ["SPEC-003"],
       "status": "PENDENTE",
-      "descricao": "Base de conhecimento usada como contexto (Retrieval-Augmented Generation): golpes comuns contra idosos e canais oficiais para o assistente contra desinformação (SPEC-015), exemplos de frases por intenção para a classificação (SPEC-003) e tipos de obstrução para a zeladoria (SPEC-006). Cada documento registra a fonte (gov.br, INSS, Procon, Febraban, Polícia Civil), atendendo ao requisito de documentar fontes e preparação dos dados da disciplina de IA.",
+      "descricao": "Base de conhecimento usada como contexto (Retrieval-Augmented Generation): golpes comuns contra idosos e canais oficiais para o assistente contra desinformação (SPEC-015), exemplos de frases por intenção para a classificação (SPEC-003) e as frases de busca de atendimento (SPEC-007). Cada documento registra a fonte (gov.br, INSS, Procon, Febraban, Polícia Civil), atendendo ao requisito de documentar fontes e preparação dos dados da disciplina de IA.",
       "oQueFaz": [
         "Mantém documentos de conhecimento em arquivos versionados (ex.: resources/knowledge/*.md ou *.json).",
         "Carrega e indexa os documentos na inicialização em um VectorStore em memória (SimpleVectorStore), com embeddings do provedor configurado; Oracle 23ai Vector Search fica como evolução.",
@@ -283,7 +283,8 @@
       "modulo": "Cidades",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-002", "SPEC-003", "SPEC-022"],
-      "status": "PENDENTE",
+      "status": "BACKLOG",
+      "roadmap": "Removida da API Java por decisão do grupo (2026-11-14). Se a API .NET implementar a zeladoria (protocolo no Oracle com idempotência), a classificação de intenção da API Java apenas reconhece ZELADORIA_REPORT e o app abre a tela da API .NET; caso contrário, fica como próxima fase.",
       "descricao": "68,8% dos moradores urbanos vivem em ruas sem rampa, e denunciar o problema exige formulários complexos. O cidadão relata por voz um buraco, calçada quebrada ou falta de rampa; a IA extrai tipo, gravidade e se impede a passagem de cadeirantes, e a API grava a obstrução com as coordenadas no Azure SQL. A geração de protocolo formal na API .NET fica como evolução.",
       "oQueFaz": [
         "Entidade Obstrucao (JPA): id, autorId (sub do token), tipo (BURACO, CALCADA_QUEBRADA, SEM_RAMPA, DESNIVEL, OBSTACULO, OUTRO), gravidade (BAIXA, MEDIA, ALTA), impedeCadeirante, descricao, latitude, longitude, status (ABERTA, EM_ANALISE, RESOLVIDA), confirmacoes, criadaEm, atualizadaEm.",
@@ -1125,7 +1126,7 @@
         "Como rodar (local e Docker), usuários de teste, endpoints principais e link do Swagger e do deploy.",
         "Opção escolhida no requisito 5 de Java Advanced (A: RabbitMQ) e explicação do fluxo do botão de emergência.",
         "Fluxo de autenticação JWT (cadastro e login na API Java, emissão e validação, papéis CIDADAO e CUIDADOR) e contrato do token para a API .NET.",
-        "Funcionalidades de IA (anti-desinformação, zeladoria por voz, classificação de intenção): fluxo, modelo e onde roda (OCI), RAG e fontes, limitações e resultados da avaliação.",
+        "Funcionalidades de IA (assistente contra golpes com RAG e classificação de intenção por voz): fluxo, modelo e onde roda (OCI), RAG e fontes, limitações e resultados da avaliação.",
         "Diagrama macro da arquitetura.",
         "Integrantes (RM, nome e turma) e link do vídeo pitch.",
         "Seção de declaração de uso de IA generativa: ferramentas usadas (incluindo Claude Code) e para quê."
