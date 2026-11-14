@@ -1,10 +1,10 @@
 package br.com.fiap.vozviva.golpe;
 
-import java.text.Normalizer;
+import br.com.fiap.vozviva.comum.busca.IndiceTfIdf;
+
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -107,8 +107,7 @@ final class RegrasGolpe {
 
 	/** Minúsculas e sem acentos, para "Benefício" e "beneficio" casarem com a mesma regra. */
 	static String normalizar(String texto) {
-		String semAcento = Normalizer.normalize(texto, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
-		return semAcento.toLowerCase(Locale.ROOT);
+		return IndiceTfIdf.normalizar(texto);
 	}
 
 	/**
