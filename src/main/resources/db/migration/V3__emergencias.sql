@@ -7,12 +7,13 @@ CREATE TABLE emergencias (
     longitude            DECIMAL(9,6)         NULL,
     texto_original       NVARCHAR(300)        NULL,
     contatos_notificados INT                  NOT NULL DEFAULT 0,
+    reenvios             INT                  NOT NULL DEFAULT 0,
     acionada_em          DATETIME2            NOT NULL,
     notificada_em        DATETIME2            NULL,
     encerrada_em         DATETIME2            NULL,
     CONSTRAINT pk_emergencias PRIMARY KEY (id),
     CONSTRAINT fk_emergencias_perfil FOREIGN KEY (perfil_id) REFERENCES perfis_emergencia (id) ON DELETE CASCADE,
-    CONSTRAINT ck_emergencias_status CHECK (status IN ('ACIONADA', 'NOTIFICADA', 'ATENDIDA', 'CANCELADA')),
+    CONSTRAINT ck_emergencias_status CHECK (status IN ('ACIONADA', 'NOTIFICADA', 'FALHA_NO_AVISO', 'ATENDIDA', 'CANCELADA')),
     CONSTRAINT ck_emergencias_coordenadas CHECK (
         (latitude IS NULL AND longitude IS NULL)
         OR (latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180))
