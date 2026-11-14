@@ -11,8 +11,9 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.csrf.MissingCsrfTokenException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -50,8 +51,8 @@ class ProblemDetailSecurityHandlerTest {
 
 	@Test
 	void falhaDeCsrfComUsuarioAutenticadoContinuaAcessoNegado403() throws Exception {
-		SecurityContextHolder.getContext().setAuthentication(
-				UsernamePasswordAuthenticationToken.authenticated("cuidador", null, List.of()));
+		Jwt jwt = Jwt.withTokenValue("token").header("alg", "HS256").subject("cuidador-1").build();
+		SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt, List.of()));
 
 		handler.handle(request, response, new MissingCsrfTokenException("sem token csrf"));
 
