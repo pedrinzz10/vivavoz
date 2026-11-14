@@ -13,6 +13,14 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+    properties:
+      hibernate:
+        # Texto como NVARCHAR (acentos do português no SQL Server) e datas sempre em UTC.
+        use_nationalized_character_data: true
+        jdbc:
+          time_zone: UTC
+        type:
+          preferred_instant_jdbc_type: TIMESTAMP
   flyway:
     locations: classpath:db/migration
   rabbitmq:
@@ -48,11 +56,14 @@ vozviva:
     jwt:
       # Segredo de assinatura do JWT (mínimo de 32 caracteres), compartilhado com a API .NET.
       secret: ${JWT_SECRET:}
-      # Alternativa ao segredo: validar com chaves publicadas via JWKS.
-      jwks-uri: ${JWT_JWKS_URI:}
       algoritmo: ${JWT_ALGORITMO:HS256}
       issuer: ${JWT_ISSUER:}
       audience: ${JWT_AUDIENCE:}
+      expiracao: ${JWT_EXPIRACAO:2h}
+  # Cidadão e cuidador de teste para demonstração (senha sempre via ambiente).
+  usuarios-teste:
+    habilitado: ${USUARIOS_TESTE_HABILITADO:false}
+    senha: ${USUARIOS_TESTE_SENHA:}
 
 management:
   endpoints:
