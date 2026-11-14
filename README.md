@@ -503,18 +503,34 @@ desatualizado.
 |---|---|
 | Azure SQL (servidor + banco `vozviva`, Basic) | Banco da API (PaaS) |
 | Azure Container Registry (Basic) | Imagens da API, uma por build |
-| Container Instance com RabbitMQ | Fila do botão de emergência |
+| Rede virtual `vnet-vozviva` (2 sub-redes) | Liga o App Service ao RabbitMQ por IP privado |
+| Container Instance com RabbitMQ | Fila do botão de emergência, sem IP público |
 | App Service Linux B1 (container) | API Java; HTTPS obrigatório e health check em `/actuator/health/liveness` |
 
-O App Service puxa a imagem do ACR com identidade gerenciada (sem senha de registry). Todas as senhas e
-configurações ficam nas variáveis de ambiente do App Service, nunca no repositório.
+**Segurança do ambiente:**
+- O App Service puxa a imagem do ACR com identidade gerenciada (`AcrPull`), sem senha de registry.
+- A API usa o usuário contido `vozviva_app`, com privilégio mínimo: leitura, escrita e DDL só no banco
+  `vozviva`, porque o Flyway precisa criar as tabelas. Ele não é `db_owner` nem administrador do servidor. O
+  administrador do Azure SQL serve só para o provisionamento. Essas permissões foram testadas num SQL Server
+  local em modo contido: o Flyway criou as 9 tabelas e aplicou a carga só com elas.
+- O RabbitMQ fica só na rede privada, e a porta 5672 não é exposta na internet.
+- Todas as senhas e configurações ficam nas variáveis de ambiente do App Service, nunca no repositório.
+
+**Sobre a fila:**
+- A fonte da verdade é o Azure SQL, não o RabbitMQ: toda emergência fica gravada com o status.
+- Se o container do broker for recriado, as mensagens na fila e na DLQ se perdem. As emergências ainda
+  `ACIONADA` voltam a ser publicadas pelo reenvio automático.
+- As que esgotaram os reenvios ficam como `FALHA_NO_AVISO`, que o app mostra ("ligue 192") e o cuidador vê no
+  histórico.
+- O RabbitMQ não usa volume do Azure Files: a documentação do RabbitMQ desaconselha guardar os dados em
+  sistemas de arquivos de rede.
 
 **Passo a passo:**
 
 1. **Provisionar** (Azure Cloud Shell ou Azure CLI com `az login`):
 
    ```bash
-   export SUFIXO=rm556677 SQL_ADMIN_SENHA='...' RABBITMQ_SENHA='...' JWT_SECRET='...'
+   export SUFIXO=rm556677 SQL_ADMIN_SENHA='...' APP_SQL_SENHA='...' RABBITMQ_SENHA='...' JWT_SECRET='...'
    export USUARIOS_TESTE_SENHA='...'   # opcional: cria cidadao.teste@ e cuidador.teste@ para a demonstração
    export LIBERAR_MEU_IP=sim           # opcional: libera o seu IP no Azure SQL (Query editor e SELECT)
    ./scripts/provisionar-azure.sh

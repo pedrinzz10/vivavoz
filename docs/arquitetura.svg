@@ -60,7 +60,7 @@
   <!-- RabbitMQ -->
   <rect x="650" y="150" width="198" height="140" rx="12" class="azure"/>
   <text x="666" y="178" class="nome">RabbitMQ (ACI)</text>
-  <text x="666" y="200" class="det">Container Instance</text>
+  <text x="666" y="200" class="det">ACI em rede privada (VNet)</text>
   <text x="666" y="222" class="det">exchange vozviva.emergencias</text>
   <text x="666" y="242" class="det">fila .acionadas + DLQ</text>
   <text x="666" y="262" class="det">retry com espera crescente</text>

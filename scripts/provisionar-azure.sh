@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 # SPEC-024: provisiona na Azure tudo o que a API VozViva usa em produção.
 #
-#   Resource Group -> Azure SQL (servidor + banco) -> Container Registry (ACR)
-#   -> RabbitMQ em container (ACI) -> App Service para containers (Linux) puxando a imagem do ACR
+#   Resource Group -> Azure SQL (servidor, banco e usuário da aplicação) -> Container Registry (ACR)
+#   -> rede virtual -> RabbitMQ em container (ACI, só IP privado) -> App Service para containers (Linux)
+#   ligado à rede virtual e puxando a imagem do ACR
+#
+# Requer o sqlcmd (já vem no Azure Cloud Shell) para criar o usuário da aplicação no banco.
 #
 # Idempotente: cada recurso é conferido antes de ser criado; rodar de novo só cria o que falta e
 # atualiza as configurações do App Service. O modelo de IA fica na OCI (fora da Azure).
 #
 # Uso (Azure Cloud Shell ou Azure CLI 2.60+ com "az login"):
 #   export SUFIXO=rm556677                 # deixa os nomes únicos (ex.: RM do representante)
-#   export SQL_ADMIN_SENHA='...'           # senha forte do administrador do Azure SQL
+#   export SQL_ADMIN_SENHA='...'           # senha forte do administrador do Azure SQL (só para provisionar)
+#   export APP_SQL_SENHA='...'             # senha do usuário da aplicação no banco (privilégio mínimo)
 #   export RABBITMQ_SENHA='...'            # senha do RabbitMQ
 #   export JWT_SECRET='...'                # 32+ caracteres, o mesmo da API .NET
 #   ./scripts/provisionar-azure.sh
@@ -22,6 +26,7 @@ set -euo pipefail
 
 : "${SUFIXO:?Defina SUFIXO (ex.: o RM do representante) para os nomes ficarem únicos}"
 : "${SQL_ADMIN_SENHA:?Defina SQL_ADMIN_SENHA}"
+: "${APP_SQL_SENHA:?Defina APP_SQL_SENHA (senha do usuário da aplicação no banco)}"
 : "${RABBITMQ_SENHA:?Defina RABBITMQ_SENHA}"
 : "${JWT_SECRET:?Defina JWT_SECRET (mínimo de 32 caracteres)}"
 if [ "${#JWT_SECRET}" -lt 32 ]; then
@@ -35,9 +40,12 @@ GRUPO="${GRUPO:-rg-vozviva}"
 SQL_SERVIDOR="sql-vozviva-${SUFIXO_LIMPO}"
 SQL_BANCO="vozviva"
 SQL_ADMIN="vozvivaadmin"
+SQL_APP_USUARIO="vozviva_app"
 ACR="acrvozviva${SUFIXO_LIMPO}"
+VNET="vnet-vozviva"
+SUBNET_APP="snet-app"
+SUBNET_RABBITMQ="snet-rabbitmq"
 ACI_RABBITMQ="aci-vozviva-rabbitmq"
-DNS_RABBITMQ="vozviva-rabbitmq-${SUFIXO_LIMPO}"
 RABBITMQ_USUARIO="vozviva"
 PLANO="plan-vozviva"
 WEBAPP="app-vozviva-${SUFIXO_LIMPO}"
@@ -95,6 +103,30 @@ else
   criado "$SQL_BANCO"
 fi
 
+passo "Azure SQL: usuário da aplicação ${SQL_APP_USUARIO} (privilégio mínimo, só neste banco)"
+# A API não usa o administrador do servidor: o usuário contido no banco só lê, grava e altera o esquema
+# deste banco (o Flyway precisa de DDL). O administrador fica só para o provisionamento.
+if ! command -v sqlcmd > /dev/null 2>&1; then
+  echo "sqlcmd não encontrado. Rode no Azure Cloud Shell ou instale o go-sqlcmd." >&2
+  exit 1
+fi
+IP_PROVISIONAMENTO="$(curl -fsS https://api.ipify.org)"
+az sql server firewall-rule create -g "$GRUPO" -s "$SQL_SERVIDOR" -n ProvisionamentoTemporario \
+  --start-ip-address "$IP_PROVISIONAMENTO" --end-ip-address "$IP_PROVISIONAMENTO" -o none
+SENHA_APP_SQL_ESCAPADA="${APP_SQL_SENHA//\'/\'\'}"
+SQLCMDPASSWORD="$SQL_ADMIN_SENHA" sqlcmd -S "tcp:${SQL_SERVIDOR}.database.windows.net,1433" -d "$SQL_BANCO" \
+  -U "$SQL_ADMIN" -b -Q "
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${SQL_APP_USUARIO}')
+    CREATE USER [${SQL_APP_USUARIO}] WITH PASSWORD = N'${SENHA_APP_SQL_ESCAPADA}';
+ELSE
+    ALTER USER [${SQL_APP_USUARIO}] WITH PASSWORD = N'${SENHA_APP_SQL_ESCAPADA}';
+ALTER ROLE db_datareader ADD MEMBER [${SQL_APP_USUARIO}];
+ALTER ROLE db_datawriter ADD MEMBER [${SQL_APP_USUARIO}];
+ALTER ROLE db_ddladmin ADD MEMBER [${SQL_APP_USUARIO}];
+GRANT REFERENCES ON SCHEMA::dbo TO [${SQL_APP_USUARIO}];"
+az sql server firewall-rule delete -g "$GRUPO" -s "$SQL_SERVIDOR" -n ProvisionamentoTemporario -o none
+echo "    usuário ${SQL_APP_USUARIO} pronto (leitura, escrita e DDL no banco ${SQL_BANCO})"
+
 passo "Container Registry ${ACR}"
 if existe az acr show -g "$GRUPO" -n "$ACR"; then
   reaproveitado "$ACR"
@@ -106,18 +138,41 @@ fi
 ACR_SERVIDOR="$(az acr show -g "$GRUPO" -n "$ACR" --query loginServer -o tsv)"
 ACR_ID="$(az acr show -g "$GRUPO" -n "$ACR" --query id -o tsv)"
 
-passo "RabbitMQ em container (ACI) ${ACI_RABBITMQ}"
+passo "Rede virtual ${VNET} (o RabbitMQ não fica exposto na internet)"
+if existe az network vnet show -g "$GRUPO" -n "$VNET"; then
+  reaproveitado "$VNET"
+else
+  az network vnet create -g "$GRUPO" -n "$VNET" -l "$LOCALIZACAO" --address-prefixes 10.40.0.0/16 -o none
+  criado "$VNET"
+fi
+if existe az network vnet subnet show -g "$GRUPO" --vnet-name "$VNET" -n "$SUBNET_APP"; then
+  reaproveitado "sub-rede ${SUBNET_APP}"
+else
+  az network vnet subnet create -g "$GRUPO" --vnet-name "$VNET" -n "$SUBNET_APP" \
+    --address-prefixes 10.40.1.0/24 --delegations Microsoft.Web/serverFarms -o none
+  criado "sub-rede ${SUBNET_APP} (integração do App Service)"
+fi
+if existe az network vnet subnet show -g "$GRUPO" --vnet-name "$VNET" -n "$SUBNET_RABBITMQ"; then
+  reaproveitado "sub-rede ${SUBNET_RABBITMQ}"
+else
+  az network vnet subnet create -g "$GRUPO" --vnet-name "$VNET" -n "$SUBNET_RABBITMQ" \
+    --address-prefixes 10.40.2.0/24 --delegations Microsoft.ContainerInstance/containerGroups -o none
+  criado "sub-rede ${SUBNET_RABBITMQ} (RabbitMQ)"
+fi
+
+passo "RabbitMQ em container (ACI) ${ACI_RABBITMQ}, só com IP privado"
 if existe az container show -g "$GRUPO" -n "$ACI_RABBITMQ"; then
   reaproveitado "$ACI_RABBITMQ (para trocar a senha, apague o container e rode o script de novo)"
 else
+  # Sem IP público: só o App Service (pela integração com a rede virtual) alcança a porta 5672.
   az container create -g "$GRUPO" -n "$ACI_RABBITMQ" -l "$LOCALIZACAO" \
     --image docker.io/library/rabbitmq:4 --os-type Linux --cpu 1 --memory 1.5 \
-    --ports 5672 --ip-address Public --dns-name-label "$DNS_RABBITMQ" --restart-policy Always \
+    --ports 5672 --vnet "$VNET" --subnet "$SUBNET_RABBITMQ" --restart-policy Always \
     --environment-variables RABBITMQ_DEFAULT_USER="$RABBITMQ_USUARIO" \
     --secure-environment-variables RABBITMQ_DEFAULT_PASS="$RABBITMQ_SENHA" -o none
   criado "$ACI_RABBITMQ"
 fi
-RABBITMQ_HOST="$(az container show -g "$GRUPO" -n "$ACI_RABBITMQ" --query ipAddress.fqdn -o tsv)"
+RABBITMQ_HOST="$(az container show -g "$GRUPO" -n "$ACI_RABBITMQ" --query ipAddress.ip -o tsv)"
 
 passo "App Service: plano ${PLANO} (Linux B1)"
 if existe az appservice plan show -g "$GRUPO" -n "$PLANO"; then
@@ -146,6 +201,14 @@ else
   criado "permissão AcrPull"
 fi
 
+passo "App Service: integração com a rede virtual (acesso privado ao RabbitMQ)"
+if [ -n "$(az webapp vnet-integration list -g "$GRUPO" -n "$WEBAPP" --query '[].name' -o tsv)" ]; then
+  reaproveitado "integração com ${VNET}"
+else
+  az webapp vnet-integration add -g "$GRUPO" -n "$WEBAPP" --vnet "$VNET" --subnet "$SUBNET_APP" -o none
+  criado "integração com ${VNET}/${SUBNET_APP}"
+fi
+
 passo "App Service: configuração (HTTPS, health check, always on)"
 az webapp update -g "$GRUPO" -n "$WEBAPP" --https-only true -o none
 az webapp config set -g "$GRUPO" -n "$WEBAPP" --always-on true --min-tls-version 1.2 --ftps-state Disabled \
@@ -159,8 +222,8 @@ CONFIGURACOES=(
   "WEBSITES_PORT=8080"
   "WEBSITES_CONTAINER_START_TIME_LIMIT=300"
   "DB_URL=${DB_URL}"
-  "DB_USERNAME=${SQL_ADMIN}"
-  "DB_PASSWORD=${SQL_ADMIN_SENHA}"
+  "DB_USERNAME=${SQL_APP_USUARIO}"
+  "DB_PASSWORD=${APP_SQL_SENHA}"
   "RABBITMQ_HOST=${RABBITMQ_HOST}"
   "RABBITMQ_PORT=5672"
   "RABBITMQ_USERNAME=${RABBITMQ_USUARIO}"
@@ -182,9 +245,10 @@ cat <<RESUMO
     API (depois do primeiro deploy): https://${WEBAPP}.azurewebsites.net
     Swagger:                         https://${WEBAPP}.azurewebsites.net/swagger-ui.html
     Health:                          https://${WEBAPP}.azurewebsites.net/actuator/health
-    Azure SQL:                       ${SQL_SERVIDOR}.database.windows.net / banco ${SQL_BANCO} (usuário ${SQL_ADMIN})
+    Azure SQL:                       ${SQL_SERVIDOR}.database.windows.net / banco ${SQL_BANCO}
+                                     (API usa ${SQL_APP_USUARIO}; ${SQL_ADMIN} só para administração)
     Container Registry:              ${ACR_SERVIDOR}
-    RabbitMQ:                        ${RABBITMQ_HOST}:5672
+    RabbitMQ (rede privada):         ${RABBITMQ_HOST}:5672
 
     Próximos passos no Azure DevOps (detalhes no README, seção "Deploy na Azure"):
     1. Service connections: "vozviva-azure" (Azure Resource Manager, grupo ${GRUPO})
