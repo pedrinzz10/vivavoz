@@ -72,8 +72,8 @@ public class IntencaoVozService {
 		Decisao decisao = decidir(regras, respostaIa.orElse(null), confiancaMinima);
 
 		AtendimentosProximosResponse proximos = buscarAtendimentos(decisao, request);
-		String mensagemFalada = proximos != null && !proximos.atendimentos().isEmpty()
-				? proximos.mensagemFalada() : decisao.mensagemFalada();
+		// Com a busca feita, vale a frase dela (inclusive "não encontrei..."), nunca uma promessa genérica.
+		String mensagemFalada = proximos != null ? proximos.mensagemFalada() : decisao.mensagemFalada();
 		String analisadoPor = respostaIa.isPresent() ? "IA_E_REGRAS" : "REGRAS";
 
 		int latenciaMs = (int) ((System.nanoTime() - inicio) / 1_000_000);

@@ -28,6 +28,31 @@ class RegrasIntencaoTest {
 		assertThat(resultado.entidades().tipoAtendimento()).isEqualTo(TipoAtendimento.HOSPITAL);
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = { "onde fica o pronto-socorro mais perto?", "onde fica o pronto  socorro", "Pronto_Socorro perto" })
+	void prontoSocorroComHifenOuEspacosTambemELugar(String fala) {
+		RegrasIntencao.Resultado resultado = RegrasIntencao.analisar(fala);
+
+		assertThat(resultado.intencao()).isEqualTo(Intencao.BUSCAR_ATENDIMENTO);
+		assertThat(resultado.entidades().tipoAtendimento()).isEqualTo(TipoAtendimento.HOSPITAL);
+	}
+
+	@Test
+	void prontoSocorroNaoEscondeUmPedidoDeSocorroDeVerdade() {
+		assertThat(RegrasIntencao.analisar("caí, me leva no pronto-socorro").intencao()).isEqualTo(Intencao.SOCORRO);
+	}
+
+	@ParameterizedTest
+	@CsvSource(delimiter = '|', value = {
+			"me ajuda a encontrar uma farmácia                      | FARMACIA",
+			"Preciso de ajuda com o Bolsa Família, onde fica o CRAS? | CRAS" })
+	void pedidoGenericoDeAjudaComOutroObjetivoNaoESocorro(String fala, TipoAtendimento tipo) {
+		RegrasIntencao.Resultado resultado = RegrasIntencao.analisar(fala);
+
+		assertThat(resultado.intencao()).isEqualTo(Intencao.BUSCAR_ATENDIMENTO);
+		assertThat(resultado.entidades().tipoAtendimento()).isEqualTo(tipo);
+	}
+
 	@Test
 	void arvoreQueCaiuEProblemaNaRuaNaoSocorro() {
 		RegrasIntencao.Resultado resultado = RegrasIntencao.analisar("a árvore caiu na calçada");

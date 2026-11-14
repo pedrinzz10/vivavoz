@@ -24,14 +24,25 @@ final class RegrasIntencao {
 	/** Confiança atribuída a uma classificação feita só pelas regras. */
 	static final double CONFIANCA_REGRAS = 0.7;
 
+	/** Sinais de perigo agora: sempre viram SOCORRO. */
 	private static final Pattern SOCORRO = padrao(
-			"\\b(socorro|me (ajuda|ajude|acuda)|ajuda urgente|preciso de ajuda|emergencia)\\b",
+			"\\b(socorro|me acuda|emergencia)\\b",
 			"\\b(eu )?cai\\b|\\blevei um tombo\\b",
 			"\\b(mae|pai|vo|avo|vovo|marido|esposa|mulher|filho|filha|irmao|irma|ele|ela|alguem|senhor|senhora|vizinho|vizinha) (caiu|desmaiou|passou mal)\\b",
 			"\\bnao consigo (levantar|respirar|me mexer|mexer|andar|falar)\\b",
 			"\\b(passando|estou|to|ta|esta) (muito )?mal\\b",
 			"\\bdor (muito )?(forte )?no peito\\b|\\binfarto\\b|\\bderrame\\b|\\bavc\\b|\\bdesmai|\\bconvuls|\\bsangrando\\b|\\bengasg|\\bfalta de ar\\b",
 			"\\b(chama|chame|liga|ligue|chamar|ligar) (a |o |pro |para o |para a )?(ambulancia|samu|192|bombeiros?)\\b");
+
+	/**
+	 * Pedido genérico de ajuda: só vira SOCORRO quando a fala não pede outra coisa ("me ajuda a achar uma
+	 * farmácia" é uma busca; "me ajuda, por favor" é socorro).
+	 */
+	private static final Pattern AJUDA_GENERICA = padrao("\\bme (ajuda|ajude)\\b", "\\bpreciso de ajuda\\b",
+			"\\bajuda urgente\\b");
+
+	/** Hífens, sublinhados e espaços repetidos viram um espaço: "pronto-socorro" e "pronto  socorro" são iguais. */
+	private static final Pattern SEPARADORES = Pattern.compile("[\\s\\-_]+");
 
 	private static final Map<TipoAtendimento, Pattern> ATENDIMENTOS = new LinkedHashMap<>();
 
@@ -76,11 +87,11 @@ final class RegrasIntencao {
 	}
 
 	static Resultado analisar(String fala) {
-		String texto = IndiceTfIdf.normalizar(fala);
+		String texto = SEPARADORES.matcher(IndiceTfIdf.normalizar(fala)).replaceAll(" ").strip();
 		// "Pronto socorro" é um lugar, não um pedido de socorro.
-		String semNomesDeLugar = texto.replace("pronto socorro", "pronto_atendimento");
+		String semNomesDeLugar = texto.replace("pronto socorro", "pronto atendimento");
 		if (SOCORRO.matcher(semNomesDeLugar).find()) {
-			return new Resultado(Intencao.SOCORRO, Urgencia.CRITICA, EntidadesFala.NENHUMA);
+			return socorro();
 		}
 
 		Set<Intencao> encontradas = EnumSet.noneOf(Intencao.class);
@@ -94,6 +105,9 @@ final class RegrasIntencao {
 		}
 		if (VERIFICACAO.matcher(texto).find()) {
 			encontradas.add(Intencao.VERIFICAR_INFORMACAO);
+		}
+		if (encontradas.isEmpty() && AJUDA_GENERICA.matcher(texto).find()) {
+			return socorro();
 		}
 		if (encontradas.size() != 1) {
 			// Nada reconhecido, ou duas coisas ao mesmo tempo: melhor perguntar do que adivinhar.
@@ -112,6 +126,10 @@ final class RegrasIntencao {
 			}
 			default -> new Resultado(Intencao.VERIFICAR_INFORMACAO, Urgencia.MEDIA, EntidadesFala.NENHUMA);
 		};
+	}
+
+	private static Resultado socorro() {
+		return new Resultado(Intencao.SOCORRO, Urgencia.CRITICA, EntidadesFala.NENHUMA);
 	}
 
 	private static <T> T primeiro(Map<T, Pattern> padroes, String texto) {

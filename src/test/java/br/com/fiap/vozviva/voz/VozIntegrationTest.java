@@ -94,6 +94,14 @@ class VozIntegrationTest {
 	}
 
 	@Test
+	void buscaSemNadaPertoDizQueNaoEncontrouEmVezDePrometer() throws Exception {
+		classificar(cidadao, """
+				{"texto": "onde tem farmácia", "localizacao": {"latitude": 10.0, "longitude": 10.0}}""")
+			.andExpect(jsonPath("$.atendimentos.atendimentos", empty()))
+			.andExpect(jsonPath("$.mensagemFalada", containsString("Não encontrei farmácia")));
+	}
+
+	@Test
 	void buscaSemLocalizacaoNaoTrazAtendimentos() throws Exception {
 		classificar(cidadao, "{\"texto\": \"tem farmácia perto?\"}")
 			.andExpect(jsonPath("$.acao").value("MOSTRAR_ATENDIMENTOS"))
