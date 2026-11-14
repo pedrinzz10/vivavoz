@@ -94,6 +94,28 @@ tasks.named('jacocoTestReport') {
 	}
 }
 
+// SPEC-021: o build falha se a cobertura de linhas cair abaixo do mínimo (80% no total e 70% em cada serviço).
+tasks.named('jacocoTestCoverageVerification') {
+	dependsOn tasks.named('test')
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				minimum = 0.80
+			}
+		}
+		rule {
+			element = 'CLASS'
+			includes = ['*Service', '*.AvisosDeEmergencia', '*.ReenvioEmergencias', '*.Regras*', '*.AnaliseIa*',
+					'*.ImportadorOsm', '*.ClassificadorOsm']
+			limit {
+				counter = 'LINE'
+				minimum = 0.70
+			}
+		}
+	}
+}
+
 // /scripts/script-bd.sql (exigido pela disciplina de DevOps) é a concatenação das migrações do
 // Flyway: as versionadas (V*) em ordem de versão e depois as repetíveis (R__*, carga de dados) por nome.
 // gerarScriptBd atualiza o arquivo; verificarScriptBd roda no check e falha o build se alguém criar
@@ -150,5 +172,5 @@ tasks.register('importarOsm', JavaExec) {
 }
 
 tasks.named('check') {
-	dependsOn tasks.named('verificarScriptBd')
+	dependsOn tasks.named('verificarScriptBd'), tasks.named('jacocoTestCoverageVerification')
 }
