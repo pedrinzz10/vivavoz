@@ -1,5 +1,6 @@
 package br.com.fiap.vozviva.seguranca;
 
+import jakarta.servlet.DispatcherType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -79,6 +80,8 @@ public class SecurityConfig {
 			.formLogin(AbstractHttpConfigurer::disable)
 			.logout(AbstractHttpConfigurer::disable)
 			.authorizeHttpRequests(rotas -> rotas
+				// Encaminhamentos internos para /error não podem virar 401 e esconder o erro original.
+				.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
 				.requestMatchers(HttpMethod.GET, ROTAS_PUBLICAS).permitAll()
 				.requestMatchers(HttpMethod.POST, ROTAS_AUTENTICACAO).permitAll()
 				.anyRequest().authenticated())
