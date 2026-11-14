@@ -335,7 +335,7 @@
       "modulo": "Saúde e Rede de Apoio",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-002", "SPEC-022"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Com um toque (ou por voz), o idoso ou a PcD encontra o atendimento do tipo desejado mais próximo de onde está, de preferência com acessibilidade, e abre a rota no Google Maps, Waze ou outro app de navegação. Os locais vêm de uma importação de dados abertos do OpenStreetMap (região de Osasco/SP) gravada no Azure SQL.",
       "oQueFaz": [
         "Entidade PontoAtendimento (JPA, somente leitura pela API): id, osmId, nome, tipo (HOSPITAL, UPA, UBS, FARMACIA, CRAS, DELEGACIA, DEFENSORIA), endereco, telefone, latitude, longitude, acessibilidade (SIM, PARCIAL, NAO, DESCONHECIDA), banheiroAdaptado, funciona24h, fonte, atualizadoEm.",
