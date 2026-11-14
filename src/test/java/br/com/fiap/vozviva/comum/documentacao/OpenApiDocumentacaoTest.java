@@ -122,6 +122,29 @@ class OpenApiDocumentacaoTest {
 	}
 
 	@Test
+	void todaOperacaoDocumentaASuaRespostaDeSucesso() {
+		List<String> semSucesso = new ArrayList<>();
+		documento.path("paths").properties().forEach(caminho -> caminho.getValue().properties().forEach(op -> {
+			JsonNode respostas = op.getValue().path("responses");
+			List<String> sucesso = new ArrayList<>();
+			respostas.propertyNames().forEach(codigo -> {
+				if (codigo.startsWith("2")) {
+					sucesso.add(codigo);
+				}
+			});
+			boolean ok = !sucesso.isEmpty() && sucesso.stream()
+				.allMatch(c -> c.equals("204") || respostas.path(c).path("content").toString().contains("$ref"));
+			if (!ok) {
+				semSucesso.add(op.getKey().toUpperCase(Locale.ROOT) + " " + caminho.getKey() + " " + sucesso);
+			}
+		}));
+
+		assertThat(semSucesso).isEmpty();
+		assertThat(documento.path("paths").path("/api/v1/emergencias/{id}/cancelar").path("patch").path("responses")
+			.path("200").toString()).contains("EmergenciaResponse");
+	}
+
+	@Test
 	void corposDeRequisicaoTemExemplo() {
 		List<String> semExemplo = new ArrayList<>();
 		documento.path("paths").properties().forEach(caminho -> caminho.getValue().properties().forEach(op -> {
