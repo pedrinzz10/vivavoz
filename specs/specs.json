@@ -8,18 +8,18 @@
   "escopo": "Microsserviço Java (Spring Boot 4 / Java 21) do ecossistema Fala Cidadão. Funcionalidades da entrega: (1) rede de apoio no socorro: perfil de emergência com contatos (CRUD paginado, Spring Data JPA / Azure SQL) e botão de emergência assíncrono via RabbitMQ; (2) assistente contra desinformação com Spring AI + RAG; (3) zeladoria cidadã por voz. A classificação de intenção de voz (Spring AI) encaminha a fala para essas funcionalidades. Deploy na Azure (disciplina de DevOps). Público-alvo: idosos e pessoas com deficiência (PcD) com baixo letramento digital.",
   "arquitetura": {
     "microsservicos": {
-      "api-java (este repositório)": "Spring Boot; Azure SQL via Spring Data JPA (perfis de emergência, contatos, emergências, obstruções, estatísticas de golpes e interações de voz); RabbitMQ para eventos de emergência; Spring AI (provedor configurável: OCI Generative AI ou Ollama na OCI, com Anthropic como alternativa). Não guarda usuários: usa o id (sub) do token.",
-      "api-dotnet (outro repositório)": "ASP.NET Core Minimal API; Oracle com PL/SQL; dona dos usuários (cadastro e login) e emissora do JWT; cadastros oficiais e protocolos."
+      "api-java (este repositório)": "Spring Boot; Azure SQL via Spring Data JPA (perfis de emergência, contatos, emergências, obstruções, estatísticas de golpes e interações de voz); RabbitMQ para eventos de emergência; Spring AI (provedor configurável: OCI Generative AI ou Ollama na OCI, com Anthropic como alternativa). Dona dos usuários: cadastro, login e emissão do JWT.",
+      "api-dotnet (outro repositório)": "ASP.NET Core Minimal API; Oracle com PL/SQL; valida o JWT emitido pela API Java; cadastros oficiais e protocolos."
     },
-    "autenticacao": "Um único emissor de identidade: a API .NET cadastra os usuários e emite o JWT; a API Java apenas valida (mesmo JWT_SECRET, HS256, mesmo JWT_ISSUER, claims sub e role com CIDADAO ou CUIDADOR, exp obrigatório). Evita dois cadastros para a mesma pessoa. Se o .NET não implementar usuários, a SPEC-023 inverte os papéis.",
+    "autenticacao": "Um único emissor de identidade: a API Java cadastra os usuários e emite o JWT (SPEC-023); a API .NET apenas valida, com o mesmo JWT_SECRET (HS256), o mesmo JWT_ISSUER e as claims sub (id do usuário), role (CIDADAO ou CUIDADOR) e exp. Evita dois cadastros para a mesma pessoa.",
     "ia": "A API Java chama o modelo via Spring AI; o modelo pode rodar fora da Azure (créditos da Oracle OCI). Caminho preferido: OCI Generative AI por API compatível com OpenAI (a confirmar); reserva: Ollama em VM da OCI.",
     "arquiteturaDistribuidaJava": "Opção A do requisito 5 de Java Advanced: evento publicado e consumido de forma assíncrona com RabbitMQ.",
     "bancosDeDados": "Um banco por microsserviço: Oracle (PL/SQL) na API .NET e Azure SQL (JPA) na API Java. O MongoDB não roda na aplicação: aparece apenas nos scripts da disciplina de Banco de Dados (que não exige integração automática), modelando os mesmos dados como documentos."
   },
   "mapaRequisitosGS": {
-    "Java Advanced 1 - API REST do domínio (3 entidades, CRUD JPA, paginação)": ["SPEC-022", "SPEC-017", "SPEC-008", "SPEC-006"],
+    "Java Advanced 1 - API REST do domínio (3 entidades, CRUD JPA, paginação)": ["SPEC-022", "SPEC-023", "SPEC-017", "SPEC-008"],
     "Java Advanced 2 - Validação e erros": ["SPEC-014"],
-    "Java Advanced 3 - Spring Security + JWT com papéis": ["SPEC-002"],
+    "Java Advanced 3 - Spring Security + JWT com papéis": ["SPEC-023", "SPEC-002"],
     "Java Advanced 4 - Spring AI": ["SPEC-015", "SPEC-006", "SPEC-003", "SPEC-004"],
     "IA (Disruptive Architectures) - IA generativa + RAG + avaliação": ["SPEC-015", "SPEC-004", "SPEC-003"],
     "Java Advanced 5 - Arquitetura distribuída (opção A, RabbitMQ)": ["SPEC-008"],
@@ -102,7 +102,7 @@
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
       "status": "CONCLUIDA",
-      "descricao": "O Spring Security atua como Resource Server: valida o token JWT emitido pela API .NET ou pela própria API Java (SPEC-023), que compartilham segredo e emissor, e aplica controle de acesso por papel (CIDADAO e CUIDADOR) com @PreAuthorize.",
+      "descricao": "O Spring Security atua como Resource Server: valida o token JWT emitido pela própria API Java (SPEC-023) e aplica controle de acesso por papel (CIDADAO e CUIDADOR) com @PreAuthorize. O mesmo formato de token é validado pela API .NET.",
       "oQueFaz": [
         "Valida a assinatura, a expiração e o emissor (issuer) do JWT usando chave/segredo compartilhado ou JWKS da API .NET.",
         "Converte as claims de papel do token em authorities ROLE_CIDADAO e ROLE_CUIDADOR.",
@@ -766,11 +766,11 @@
       "nome": "Perfil de Emergência Gerenciado pelo Cuidador",
       "modulo": "Saúde Preventiva",
       "prioridade": "ALTA",
-      "dependencias": ["SPEC-002", "SPEC-022"],
+      "dependencias": ["SPEC-002", "SPEC-022", "SPEC-023"],
       "status": "PENDENTE",
       "descricao": "Perfil com as informações vitais do cidadão para emergências e seus contatos, persistidos no Azure SQL via Spring Data JPA. O cuidador vinculado faz o CRUD completo pelo app; o cidadão consulta o próprio perfil.",
       "oQueFaz": [
-        "Entidade PerfilEmergencia (JPA): id, cidadaoId (id do usuário no .NET, único), cuidadorId (sub de quem criou o perfil), mobilidade (CADEIRANTE, ANDADOR, BENGALA, DEFICIENCIA_VISUAL, NENHUMA), condicoesSaude, medicamentos, observacoes, criadoEm, atualizadoEm.",
+        "Entidade PerfilEmergencia (JPA): id, cidadao (N:1 Usuario, único), cuidador (N:1 Usuario), mobilidade (CADEIRANTE, ANDADOR, BENGALA, DEFICIENCIA_VISUAL, NENHUMA), condicoesSaude, medicamentos, observacoes, criadoEm, atualizadoEm.",
         "Entidade ContatoEmergencia (JPA): id, perfil (N:1 PerfilEmergencia), nome, telefone, parentesco, prioridade; relação 1:N com cascade e orphanRemoval.",
         "CRUD de perfis em /api/v1/perfis-emergencia: POST (CUIDADOR cria para um cidadão), GET por id, GET paginado (Pageable: page, size, sort; o cuidador vê só os perfis que gerencia), PUT e DELETE (CUIDADOR vinculado).",
         "CRUD de contatos em /api/v1/perfis-emergencia/{perfilId}/contatos: POST, GET paginado, PUT e DELETE (CUIDADOR vinculado).",
@@ -806,7 +806,7 @@
         { "tipo": "unitario", "nome": "mapper", "descricao": "Conversão entidade <-> DTO preserva os campos e não expõe dados do usuário além do necessário." }
       ],
       "criteriosDeAceite": [
-        "PerfilEmergencia, ContatoEmergencia e Emergencia (SPEC-008) são entidades JPA relacionadas entre si; usuários são referenciados pelo id do token.",
+        "Usuario, PerfilEmergencia, ContatoEmergencia e Emergencia (SPEC-008) são entidades JPA relacionadas por chaves estrangeiras.",
         "CRUD completo de perfis e contatos, com listagens paginadas (Pageable).",
         "Somente o cuidador vinculado cria, edita e exclui; o cidadão só lê o próprio perfil.",
         "Telefones validados no formato brasileiro; erros no formato padrão (SPEC-014).",
@@ -965,7 +965,7 @@
       "oQueFaz": [
         "Adiciona spring-boot-starter-data-jpa, driver do SQL Server (mssql-jdbc), H2 (somente testes) e Flyway para versionar o esquema.",
         "Configura a conexão por variáveis de ambiente (DB_URL, DB_USERNAME, DB_PASSWORD); ddl-auto=validate, o esquema vem só das migrações.",
-        "Cria as migrações das tabelas perfis_emergencia, contatos_emergencia, emergencias, obstrucoes, verificacoes_golpe e interacoes_voz, com chaves estrangeiras e índices.",
+        "Cria as migrações das tabelas usuarios, perfis_emergencia, contatos_emergencia, emergencias, obstrucoes, verificacoes_golpe e interacoes_voz, com chaves estrangeiras e índices.",
         "Remove o MongoDB da aplicação (starter, chat memory, Testcontainers e docker-compose) e as dependências não usadas (Eureka, OpenFeign), que voltam se as specs do backlog entrarem.",
         "Mantém /scripts/script-bd.sql com o mesmo DDL das migrações (exigência de DevOps).",
         "Adiciona SQL Server ao docker-compose (porta só em 127.0.0.1, senha obrigatória no .env).",
@@ -1004,9 +1004,8 @@
       "modulo": "Segurança",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-002", "SPEC-022"],
-      "status": "BACKLOG",
-      "condicao": "Só entra se a API .NET não implementar cadastro e login. Por padrão, o .NET é o único emissor de identidade e a API Java apenas valida o token (SPEC-002), evitando dois cadastros para a mesma pessoa.",
-      "descricao": "A API Java passa a cadastrar usuários e emitir JWT, para funcionar como microsserviço independente. Os tokens usam o mesmo segredo e emissor da API .NET, então um token emitido por uma API é aceito pela outra.",
+      "status": "PENDENTE",
+      "descricao": "A API Java é a única dona da identidade do ecossistema: cadastra cidadãos e cuidadores e emite o JWT. A API .NET não tem cadastro próprio; valida o mesmo token (segredo e emissor compartilhados), evitando duas contas para a mesma pessoa.",
       "oQueFaz": [
         "Entidade Usuario (JPA): id, nome, email (único), senhaHash (BCrypt), papel (CIDADAO ou CUIDADOR), ativo, criadoEm.",
         "POST /api/v1/auth/cadastro (público): valida os dados, rejeita e-mail duplicado (409) e devolve UsuarioResponse (sem a senha).",
@@ -1016,7 +1015,7 @@
         "Mensagens de erro de login genéricas (não revelam se o e-mail existe); limite simples de tentativas por e-mail e IP.",
         "Usuários de teste (um CIDADAO e um CUIDADOR) criados só no perfil dev, com senhas definidas no .env, para o README e a demonstração."
       ],
-      "resultadoEsperado": "O app Mobile faz cadastro e login direto na API Java e usa o token em todos os endpoints; tokens da API .NET continuam aceitos.",
+      "resultadoEsperado": "O app Mobile faz cadastro e login na API Java e usa o mesmo token nas duas APIs.",
       "casosDeUso": [
         {
           "titulo": "Cuidador cria conta e entra",
@@ -1029,9 +1028,9 @@
           "fluxo": "Erra a senha e recebe 401 com mensagem simples, sem saber se o e-mail existe."
         },
         {
-          "titulo": "Token da API .NET",
+          "titulo": "Mesmo token na API .NET",
           "ator": "App Mobile",
-          "fluxo": "Usa um token obtido na API .NET; a API Java aceita porque o segredo e o emissor são os mesmos."
+          "fluxo": "Usa o token obtido no login da API Java para chamar a API .NET, que o aceita porque o segredo e o emissor são os mesmos."
         }
       ],
       "testes": [
@@ -1045,7 +1044,7 @@
       "criteriosDeAceite": [
         "Cadastro, login e /eu funcionando e documentados no Swagger.",
         "Senhas apenas com hash BCrypt; nunca retornadas nem registradas em log.",
-        "Token emitido validado pelo mesmo decoder que aceita os tokens do .NET.",
+        "Token emitido validado pelo decoder da SPEC-002; formato documentado para a API .NET (contrato do token no README).",
         "Pelo menos 2 papéis (CIDADAO e CUIDADOR) protegendo endpoints diferentes.",
         "Usuários de teste documentados no README, sem senhas versionadas."
       ]
@@ -1098,7 +1097,7 @@
         "Problema, cidadão beneficiado, solução, ecossistema (Mobile, API Java, API .NET) e ODS atendidos (3, 10 e 11), com dados do relatório de dores.",
         "Como rodar (local e Docker), usuários de teste, endpoints principais e link do Swagger e do deploy.",
         "Opção escolhida no requisito 5 de Java Advanced (A: RabbitMQ) e explicação do fluxo do botão de emergência.",
-        "Fluxo de autenticação JWT (emissão na API .NET, validação na API Java com segredo compartilhado, papéis CIDADAO e CUIDADOR).",
+        "Fluxo de autenticação JWT (cadastro e login na API Java, emissão e validação, papéis CIDADAO e CUIDADOR) e contrato do token para a API .NET.",
         "Funcionalidades de IA (anti-desinformação, zeladoria por voz, classificação de intenção): fluxo, modelo e onde roda (OCI), RAG e fontes, limitações e resultados da avaliação.",
         "Diagrama macro da arquitetura.",
         "Integrantes (RM, nome e turma) e link do vídeo pitch.",
