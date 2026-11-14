@@ -1,6 +1,5 @@
 package br.com.fiap.vozviva;
 
-import org.bson.Document;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.amqp.core.Queue;
@@ -8,15 +7,15 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * SPEC-001: valida a conexão real com MongoDB e RabbitMQ.
- * É ignorado automaticamente quando não há Docker disponível na máquina.
+ * SPEC-001/SPEC-022: valida a conexão real com SQL Server (mesmo motor do Azure SQL), onde o
+ * Flyway aplica as migrações ao subir o contexto, e com o RabbitMQ. É ignorado automaticamente sem Docker.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -25,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class InfraestruturaIntegrationTest {
 
 	@Autowired
-	private MongoTemplate mongoTemplate;
+	private JdbcTemplate jdbc;
 
 	@Autowired
 	private RabbitTemplate rabbitTemplate;
@@ -34,13 +33,10 @@ class InfraestruturaIntegrationTest {
 	private AmqpAdmin amqpAdmin;
 
 	@Test
-	void conexaoMongo() {
-		Document salvo = mongoTemplate.insert(new Document("mensagem", "olá, VozViva"), "infra_teste");
+	void conexaoSqlServer() {
+		String versao = jdbc.queryForObject("SELECT @@VERSION", String.class);
 
-		Document lido = mongoTemplate.findById(salvo.getObjectId("_id"), Document.class, "infra_teste");
-
-		assertThat(lido).isNotNull();
-		assertThat(lido.getString("mensagem")).isEqualTo("olá, VozViva");
+		assertThat(versao).contains("Microsoft SQL Server");
 	}
 
 	@Test

@@ -3,8 +3,18 @@ spring:
     name: vozviva
   profiles:
     default: dev
-  mongodb:
-    uri: ${MONGODB_URI}
+  datasource:
+    # Azure SQL em produção; SQL Server do docker-compose em desenvolvimento.
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    # O esquema vem só das migrações do Flyway; o Hibernate apenas confere se as entidades batem.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    locations: classpath:db/migration
   rabbitmq:
     host: ${RABBITMQ_HOST}
     port: ${RABBITMQ_PORT:5672}
@@ -33,16 +43,12 @@ logging:
     # traceId da requisição (TraceIdFilter) em cada linha de log.
     correlation: "[%X{traceId:-}] "
 
-eureka:
-  client:
-    enabled: ${EUREKA_ENABLED:false}
-
 vozviva:
   seguranca:
     jwt:
-      # Mesmo segredo usado pela API .NET para assinar os tokens (mínimo de 32 caracteres).
+      # Segredo de assinatura do JWT (mínimo de 32 caracteres), compartilhado com a API .NET.
       secret: ${JWT_SECRET:}
-      # Alternativa ao segredo, se o .NET publicar as chaves via JWKS.
+      # Alternativa ao segredo: validar com chaves publicadas via JWKS.
       jwks-uri: ${JWT_JWKS_URI:}
       algoritmo: ${JWT_ALGORITMO:HS256}
       issuer: ${JWT_ISSUER:}
