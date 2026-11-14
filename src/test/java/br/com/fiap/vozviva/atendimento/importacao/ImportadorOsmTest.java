@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ImportadorOsmTest {
 
@@ -53,11 +54,19 @@ class ImportadorOsmTest {
 
 		assertThat(sql)
 			.startsWith("-- SPEC-007")
-			.contains("colaboradores do OpenStreetMap", "DELETE FROM pontos_atendimento;")
+			.contains("colaboradores do OpenStreetMap", "DELETE FROM pontos_atendimento WHERE osm_id NOT IN (N'node/1', N'node/5');")
+			.contains("MERGE INTO pontos_atendimento AS destino", "ON destino.osm_id = origem.osm_id")
 			.contains("(N'node/1', N'Hospital D''Ávila', N'HOSPITAL', NULL, NULL, -23.535600, -46.781000, N'SIM', NULL, NULL, "
 					+ "N'OpenStreetMap (ODbL)', '2026-07-28 02:16:18'),")
 			.contains("N'Drogaria Central', N'FARMACIA', NULL, NULL, -23.560000, -46.770000, N'DESCONHECIDA', NULL, 1,")
-			.endsWith("');\n");
+			.endsWith("origem.atualizado_em);\n");
+	}
+
+	@Test
+	void importacaoVaziaNaoGeraCargaQueApagariaTudo() {
+		assertThatThrownBy(() -> ImportadorOsm.gerarSql(List.of(), Instant.now()))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("não será substituída");
 	}
 
 	private static Ponto ponto(String osmId, double latitude) {

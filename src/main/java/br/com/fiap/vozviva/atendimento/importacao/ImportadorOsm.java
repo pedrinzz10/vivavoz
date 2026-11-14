@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Importa os locais de atendimento da região de Osasco/SP do OpenStreetMap (Overpass API) e gera a
@@ -45,6 +46,10 @@ public final class ImportadorOsm {
 	/** Mesmo local mapeado duas vezes (ex.: ponto e contorno do prédio) a menos disso vira um só. */
 	private static final double DISTANCIA_DUPLICATA_METROS = 200;
 	private static final int LINHAS_POR_INSERT = 500;
+	private static final List<String> COLUNAS_ATUALIZADAS = List.of("nome", "tipo", "endereco", "telefone", "latitude",
+			"longitude", "acessibilidade", "banheiro_adaptado", "funciona_24h", "fonte", "atualizado_em");
+	private static final List<String> TODAS_AS_COLUNAS = Stream.concat(Stream.of("osm_id"), COLUNAS_ATUALIZADAS.stream()).toList();
+	private static final String COLUNAS = String.join(", ", TODAS_AS_COLUNAS);
 
 	static final String CONSULTA = """
 			[out:json][timeout:90][bbox:%s];
@@ -65,6 +70,9 @@ public final class ImportadorOsm {
 		}
 		String json = args.length > 1 ? Files.readString(Path.of(args[1])) : consultarOverpass();
 		JsonNode resposta = JsonMapper.builder().build().readTree(json);
+		if (!resposta.path("elements").isArray()) {
+			throw new IOException("Resposta da Overpass sem a lista de elementos: a carga atual não será substituída.");
+		}
 		List<Ponto> pontos = converter(resposta);
 		Instant dataBase = dataDosDados(resposta);
 		Files.writeString(Path.of(args[0]), gerarSql(pontos, dataBase), StandardCharsets.UTF_8);
@@ -139,18 +147,28 @@ public final class ImportadorOsm {
 		return unicos;
 	}
 
+	/**
+	 * Gera a carga como atualização por {@code osm_id} (MERGE): um local que continua no mapa mantém o
+	 * mesmo {@code id}, então links e favoritos salvos pelo app não quebram quando a carga é refeita.
+	 * Só os locais que saíram do mapa são removidos.
+	 */
 	static String gerarSql(List<Ponto> pontos, Instant dataBase) {
+		if (pontos.isEmpty()) {
+			throw new IllegalArgumentException("Nenhum local na importação: a carga atual não será substituída.");
+		}
 		String data = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC).format(dataBase);
 		StringBuilder sql = new StringBuilder()
 			.append("-- SPEC-007: carga dos locais de atendimento de Osasco/SP e arredores.\n")
 			.append("-- Gerado por ./gradlew importarOsm a partir da Overpass API. Não edite à mão.\n")
 			.append("-- Dados © colaboradores do OpenStreetMap, licença ODbL (https://www.openstreetmap.org/copyright).\n")
 			.append("-- Base OSM de ").append(data).append(" UTC; ").append(pontos.size()).append(" locais.\n")
-			.append("-- Migração repetível: o Flyway reaplica quando o conteúdo muda.\n")
-			.append("DELETE FROM pontos_atendimento;\n");
+			.append("-- Migração repetível: o Flyway reaplica quando o conteúdo muda. A atualização é por osm_id,\n")
+			.append("-- então os locais que continuam no mapa mantêm o mesmo id.\n")
+			.append("DELETE FROM pontos_atendimento WHERE osm_id NOT IN (")
+			.append(String.join(", ", pontos.stream().map(p -> texto(p.osmId())).toList()))
+			.append(");\n");
 		for (int inicio = 0; inicio < pontos.size(); inicio += LINHAS_POR_INSERT) {
-			sql.append("\nINSERT INTO pontos_atendimento (osm_id, nome, tipo, endereco, telefone, latitude, longitude, ")
-				.append("acessibilidade, banheiro_adaptado, funciona_24h, fonte, atualizado_em) VALUES\n");
+			sql.append("\nMERGE INTO pontos_atendimento AS destino\nUSING (VALUES\n");
 			List<Ponto> lote = pontos.subList(inicio, Math.min(inicio + LINHAS_POR_INSERT, pontos.size()));
 			for (int i = 0; i < lote.size(); i++) {
 				Ponto p = lote.get(i);
@@ -160,8 +178,15 @@ public final class ImportadorOsm {
 					.append(coordenada(p.longitude())).append(", ").append(texto(p.acessibilidade().name())).append(", ")
 					.append(bit(p.banheiroAdaptado())).append(", ").append(bit(p.funciona24h())).append(", ")
 					.append(texto(FONTE)).append(", '").append(data).append("')")
-					.append(i < lote.size() - 1 ? ",\n" : ";\n");
+					.append(i < lote.size() - 1 ? ",\n" : "\n");
 			}
+			sql.append(") AS origem (").append(COLUNAS).append(")\n")
+				.append("ON destino.osm_id = origem.osm_id\n")
+				.append("WHEN MATCHED THEN UPDATE SET ")
+				.append(String.join(", ", COLUNAS_ATUALIZADAS.stream().map(c -> c + " = origem." + c).toList()))
+				.append("\nWHEN NOT MATCHED THEN INSERT (").append(COLUNAS).append(") VALUES (")
+				.append(String.join(", ", TODAS_AS_COLUNAS.stream().map(c -> "origem." + c).toList()))
+				.append(");\n");
 		}
 		return sql.toString();
 	}

@@ -4,6 +4,7 @@ import br.com.fiap.vozviva.atendimento.Acessibilidade;
 import br.com.fiap.vozviva.atendimento.TipoAtendimento;
 
 import java.text.Normalizer;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -92,11 +93,13 @@ public final class ClassificadorOsm {
 
 	/** Primeiro telefone de {@code phone} ou {@code contact:phone}. */
 	public static String telefone(Map<String, String> tags) {
-		String telefone = tags.getOrDefault("phone", tags.get("contact:phone"));
-		if (telefone == null || telefone.isBlank()) {
-			return null;
+		for (String chave : List.of("phone", "contact:phone")) {
+			String telefone = tags.get(chave);
+			if (telefone != null && !telefone.isBlank()) {
+				return telefone.split(";")[0].trim();
+			}
 		}
-		return telefone.split(";")[0].trim();
+		return null;
 	}
 
 	static String normalizar(String texto) {

@@ -77,6 +77,8 @@ class ClassificadorOsmTest {
 		assertThat(ClassificadorOsm.banheiroAdaptado(Map.of())).isNull();
 		assertThat(ClassificadorOsm.endereco(Map.of())).isNull();
 		assertThat(ClassificadorOsm.telefone(Map.of("contact:phone", "192"))).isEqualTo("192");
+		assertThat(ClassificadorOsm.telefone(Map.of("phone", " ", "contact:phone", "+55 11 1234-5678")))
+			.isEqualTo("+55 11 1234-5678");
 	}
 
 }
