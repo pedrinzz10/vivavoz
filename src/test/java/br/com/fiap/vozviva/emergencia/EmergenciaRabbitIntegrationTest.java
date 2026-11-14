@@ -71,6 +71,9 @@ class EmergenciaRabbitIntegrationTest {
 	private EmergenciaRepository emergencias;
 
 	@Autowired
+	private AvisoEmergenciaRepository avisos;
+
+	@Autowired
 	private RabbitTemplate rabbit;
 
 	@Autowired
@@ -101,15 +104,37 @@ class EmergenciaRabbitIntegrationTest {
 		assertThat(emergencias.findById(id).orElseThrow().getStatus()).isEqualTo(StatusEmergencia.ACIONADA);
 	}
 
-	private Usuario perfilComContato(String nomeContato) {
+	/**
+	 * Um contato que sempre falha não impede o aviso aos demais, e as novas tentativas não repetem
+	 * o aviso de quem já recebeu (apontamento da revisão do PR #15).
+	 */
+	@Test
+	void falhaDeUmContatoNaoBloqueiaNemRepeteOsOutros() throws Exception {
+		String ana = "Ana " + UUID.randomUUID();
+		Usuario cidadao = perfilComContato(NotificadorDeTeste.CONTATO_QUE_FALHA, ana);
+
+		long id = acionar(cidadao);
+
+		aguardar(() -> {
+			Message morta = rabbit.receive(RabbitEmergenciaConfig.FILA_DLQ, 500);
+			return morta != null && new String(morta.getBody(), StandardCharsets.UTF_8).contains("\"emergenciaId\":" + id) ? morta : null;
+		});
+		assertThat(notificador.avisados).filteredOn(ana::equals).hasSize(1);
+		assertThat(avisos.findByEmergenciaIdOrderByIdAsc(id)).extracting(AvisoEmergencia::getContatoNome).containsExactly(ana);
+		assertThat(emergencias.findById(id).orElseThrow().getStatus()).isEqualTo(StatusEmergencia.ACIONADA);
+	}
+
+	private Usuario perfilComContato(String... nomesContatos) {
 		Usuario cidadao = usuarios.save(new Usuario("Maria", "c-" + UUID.randomUUID() + "@vozviva.dev", "{noop}x", Papel.CIDADAO));
 		Usuario cuidador = usuarios.save(new Usuario("João", "k-" + UUID.randomUUID() + "@vozviva.dev", "{noop}x", Papel.CUIDADOR));
 		PerfilEmergencia perfil = new PerfilEmergencia(cidadao, cuidador);
 		perfil.atualizar(Mobilidade.CADEIRANTE, null, null, null);
 		perfis.save(perfil);
-		ContatoEmergencia contato = new ContatoEmergencia(perfil);
-		contato.atualizar(nomeContato, "+5511912345678", "filha", 1);
-		contatos.save(contato);
+		for (int i = 0; i < nomesContatos.length; i++) {
+			ContatoEmergencia contato = new ContatoEmergencia(perfil);
+			contato.atualizar(nomesContatos[i], "+551191234567" + i, "filha", i + 1);
+			contatos.save(contato);
+		}
 		return cidadao;
 	}
 
