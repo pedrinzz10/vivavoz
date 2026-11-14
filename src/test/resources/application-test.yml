@@ -1,9 +1,11 @@
 # Perfil de testes: nenhum serviço externo é necessário.
-# MongoDB e RabbitMQ reais são fornecidos pelo Testcontainers apenas nos testes de integração.
-# O segredo JWT é gerado aleatoriamente por execução (SegredoJwtDeTeste).
+# Banco H2 em memória no modo SQL Server; os testes de integração com Testcontainers sobem
+# SQL Server e RabbitMQ reais. O segredo JWT é gerado aleatoriamente por execução (SegredoJwtDeTeste).
 spring:
-  mongodb:
-    uri: mongodb://localhost:27017/vozviva-test
+  datasource:
+    url: jdbc:h2:mem:vozviva;MODE=MSSQLServer;DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
   rabbitmq:
     host: localhost
     username: test
@@ -12,10 +14,6 @@ spring:
     model:
       chat: none
 
-eureka:
-  client:
-    enabled: false
-
 vozviva:
   seguranca:
     jwt:
@@ -23,8 +21,6 @@ vozviva:
 
 management:
   health:
-    # Sem Mongo/Rabbit reais nos testes comuns; o health reflete apenas a aplicação.
-    mongodb:
-      enabled: false
+    # Sem RabbitMQ real nos testes comuns; o health reflete a aplicação e o banco H2.
     rabbit:
       enabled: false

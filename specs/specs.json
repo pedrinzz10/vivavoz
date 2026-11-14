@@ -988,14 +988,14 @@
       "modulo": "Núcleo",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Reintroduz o Spring Data JPA (obrigatório em Java Advanced) com Azure SQL em produção, SQL Server no docker-compose para desenvolvimento e H2 nos testes. O esquema é versionado e também exportado como script-bd.sql para a disciplina de DevOps.",
       "oQueFaz": [
         "Adiciona spring-boot-starter-data-jpa, driver do SQL Server (mssql-jdbc), H2 (somente testes) e Flyway para versionar o esquema.",
         "Configura a conexão por variáveis de ambiente (DB_URL, DB_USERNAME, DB_PASSWORD); ddl-auto=validate, o esquema vem só das migrações.",
-        "Cria as migrações das tabelas usuarios, perfis_emergencia, contatos_emergencia, emergencias, pontos_atendimento, verificacoes_golpe e interacoes_voz, com chaves estrangeiras e índices.",
+        "Prepara as migrações versionadas em db/migration; cada spec cria as suas tabelas com chaves estrangeiras e índices (usuarios na SPEC-023, perfis_emergencia e contatos_emergencia na SPEC-017, emergencias na SPEC-008, verificacoes_golpe na SPEC-015, pontos_atendimento na SPEC-007, interacoes_voz na SPEC-003).",
         "Remove o MongoDB da aplicação (starter, chat memory, Testcontainers e docker-compose) e as dependências não usadas (Eureka, OpenFeign), que voltam se as specs do backlog entrarem.",
-        "Mantém /scripts/script-bd.sql com o mesmo DDL das migrações (exigência de DevOps).",
+        "Mantém /scripts/script-bd.sql com o mesmo DDL das migrações (exigência de DevOps): ./gradlew gerarScriptBd gera o arquivo e a tarefa verificarScriptBd, ligada ao check, falha o build se ele estiver desatualizado.",
         "Adiciona SQL Server ao docker-compose (porta só em 127.0.0.1, senha obrigatória no .env).",
         "Inclui o health check do banco no /actuator/health.",
         "Adapta as regras de arquitetura (ArchUnit) para também barrar @Entity em controllers e DTOs."
@@ -1014,13 +1014,13 @@
         }
       ],
       "testes": [
-        { "tipo": "integracao", "nome": "migracoesAplicadas", "descricao": "O contexto sobe com H2 e as migrações criam todas as tabelas (ddl-auto=validate passa)." },
+        { "tipo": "integracao", "nome": "migracoesAplicadas", "descricao": "O contexto sobe com H2 (modo SQL Server) e com SQL Server real (Testcontainers), aplicando as migrações com ddl-auto=validate." },
         { "tipo": "integracao", "nome": "relacionamentos", "descricao": "Salvar um perfil com contatos e ocorrências e lê-los de volta respeitando as chaves estrangeiras." },
-        { "tipo": "unitario", "nome": "scriptBdEmSincronia", "descricao": "O /scripts/script-bd.sql contém todas as tabelas criadas pelas migrações." },
+        { "tipo": "build", "nome": "verificarScriptBd", "descricao": "O check falha se /scripts/script-bd.sql não for igual à concatenação das migrações." },
         { "tipo": "integracao", "nome": "healthComBanco", "descricao": "/actuator/health inclui o componente db." }
       ],
       "criteriosDeAceite": [
-        "Spring Data JPA com pelo menos 3 entidades relacionadas.",
+        "Spring Data JPA, Flyway e o banco relacional configurados; as 3 ou mais entidades relacionadas chegam nas SPEC-023, 017 e 008.",
         "Esquema versionado (Flyway) e script-bd.sql na pasta /scripts.",
         "Nenhuma credencial de banco versionada.",
         "Build e testes rodam sem banco externo."

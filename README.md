@@ -1,18 +1,18 @@
 # VozViva
 
 Motor de inteligência e interface de voz do ecossistema **Fala Cidadão** (CitizenTech – FIAP Global Solution).
-Microsserviço Java que transforma a fala de idosos e pessoas com deficiência em ações concretas: zeladoria de calçadas,
-pedido de socorro, alertas climáticos, saúde preventiva e compra direta da agricultura familiar.
+Microsserviço Java que ajuda idosos e pessoas com deficiência no dia a dia, por toque ou por voz: pedido de socorro
+com aviso à rede de apoio, assistente contra golpes e atendimento acessível mais próximo com rota no celular.
 
 As especificações das funcionalidades estão em [`specs/specs.json`](specs/specs.json).
 
 ## Stack
 
 - Java 21 · Spring Boot 4 · Gradle
-- Spring AI (Anthropic) – classificação de intenção
-- MongoDB (GeoJSON / 2dsphere) – dados geoespaciais
-- RabbitMQ – eventos de emergência e alertas
-- OpenFeign – integração com a API .NET (Oracle)
+- Spring Data JPA + Flyway – Azure SQL em produção, SQL Server no desenvolvimento, H2 nos testes
+- Spring Security – JWT e controle de acesso por papel
+- Spring AI – assistente contra golpes (RAG) e classificação de intenção por voz
+- RabbitMQ – evento assíncrono do botão de emergência
 
 ## Pré-requisitos
 
@@ -24,9 +24,9 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 
 ```bash
 # 1. Variáveis de ambiente (o perfil dev lê o .env automaticamente)
-cp .env.example .env        # preencha RABBITMQ_PASSWORD, JWT_SECRET e ANTHROPIC_API_KEY
+cp .env.example .env        # preencha DB_PASSWORD, RABBITMQ_PASSWORD, JWT_SECRET e ANTHROPIC_API_KEY
 
-# 2. Infraestrutura (MongoDB + RabbitMQ)
+# 2. Infraestrutura (SQL Server + RabbitMQ); o banco "vozviva" é criado na primeira subida
 docker compose up -d --wait
 
 # 3. Aplicação (perfil dev por padrão)
@@ -44,8 +44,8 @@ Para parar a infraestrutura: `docker compose down` (adicione `-v` para apagar os
 | Perfil | Uso | Conexões |
 |---|---|---|
 | `dev` (padrão) | Desenvolvimento local | Host, porta e usuário padrão compatíveis com o `docker-compose.yml`; senha vem do `.env` |
-| `test` | Testes automatizados | Testcontainers nos testes de integração; nenhum serviço externo necessário |
-| `prod` | Produção | Sem valores padrão: falha ao iniciar se faltar `MONGODB_URI` ou as credenciais do RabbitMQ |
+| `test` | Testes automatizados | H2 em memória (modo SQL Server); Testcontainers nos testes de integração; nenhum serviço externo necessário |
+| `prod` | Produção | Sem valores padrão: falha ao iniciar se faltar `DB_URL`, as credenciais do banco ou do RabbitMQ |
 
 Selecione com `SPRING_PROFILES_ACTIVE=prod`.
 
@@ -55,16 +55,15 @@ Selecione com `SPRING_PROFILES_ACTIVE=prod`.
 |---|---|
 | `ANTHROPIC_API_KEY` | Chave da API Anthropic (Spring AI) |
 | `ANTHROPIC_MODEL` | Modelo usado (padrão `claude-sonnet-5`) |
-| `MONGODB_URI` | URI de conexão do MongoDB |
+| `DB_URL` | URL JDBC do banco (Azure SQL em produção; padrão do dev aponta para o SQL Server do docker-compose) |
+| `DB_USERNAME` / `DB_PASSWORD` | Credenciais do banco (no dev, usuário `sa` e a senha do `.env`) |
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` | Endereço do RabbitMQ |
 | `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | Credenciais do RabbitMQ |
-| `JWT_SECRET` | Segredo compartilhado com a API .NET para validar o JWT (mínimo de 32 caracteres). Obrigatório, exceto se `JWT_JWKS_URI` for usado |
+| `JWT_SECRET` | Segredo de assinatura do JWT, compartilhado com a API .NET (mínimo de 32 caracteres). Obrigatório, exceto se `JWT_JWKS_URI` for usado |
 | `JWT_ISSUER` | Emissor esperado no token (claim `iss`). Recomendado |
 | `JWT_AUDIENCE` | Audiência esperada no token (claim `aud`). Opcional |
 | `JWT_ALGORITMO` | `HS256` (padrão), `HS384` ou `HS512` |
-| `JWT_JWKS_URI` | Alternativa ao segredo: endpoint JWKS publicado pelo .NET |
-| `DOTNET_API_URL` | URL da API .NET Core (a partir da SPEC-011) |
-| `EUREKA_ENABLED` | Ativa o registro no Eureka (padrão `false`) |
+| `JWT_JWKS_URI` | Alternativa ao segredo: validar com chaves publicadas via JWKS |
 
 ## Padrão DTO
 
@@ -72,24 +71,25 @@ Os controllers nunca expõem entidades, `Map` ou `Object`: tudo que entra e sai 
 
 | Regra | Exemplo |
 |---|---|
-| DTOs ficam no subpacote `dto` do módulo | `zeladoria.dto.ObstrucaoRequest` |
-| DTOs são `record` (imutáveis) | `public record ObstrucaoResponse(String id, String tipo) {}` |
-| Entrada termina em `Request`, saída em `Response` | `ObstrucaoRequest`, `ObstrucaoResponse` |
-| Endpoints recebem DTO no `@RequestBody` e devolvem DTO (ou `ResponseEntity`/`List` de DTO) | `ResponseEntity<ObstrucaoResponse> criar(@RequestBody @Valid ObstrucaoRequest r)` |
-| Controllers não acessam entidades (`@Document`) nem repositórios: passam por um serviço | `controller → service → repository` |
-| DTOs não dependem de entidades; a conversão fica em um mapper do módulo | `ObstrucaoMapper.paraResponse(obstrucao)` |
-| Validação (`@NotBlank`, `@Valid`...) fica no DTO de entrada | `record ObstrucaoRequest(@NotBlank String tipo, ...)` |
+| DTOs ficam no subpacote `dto` do módulo | `perfil.dto.ContatoEmergenciaRequest` |
+| DTOs são `record` (imutáveis) | `public record ContatoEmergenciaResponse(Long id, String nome) {}` |
+| Entrada termina em `Request`, saída em `Response` | `ContatoEmergenciaRequest`, `ContatoEmergenciaResponse` |
+| Endpoints recebem DTO no `@RequestBody` e devolvem DTO (ou `ResponseEntity`/`List` de DTO) | `ResponseEntity<ContatoEmergenciaResponse> criar(@RequestBody @Valid ContatoEmergenciaRequest r)` |
+| Controllers não acessam entidades (`@Entity`) nem repositórios: passam por um serviço | `controller → service → repository` |
+| DTOs não dependem de entidades; a conversão fica em um mapper do módulo | `ContatoEmergenciaMapper.paraResponse(contato)` |
+| Validação (`@NotBlank`, `@Valid`...) fica no DTO de entrada | `record ContatoEmergenciaRequest(@NotBlank String nome, ...)` |
 
 Essas regras são verificadas por testes de arquitetura com ArchUnit (`ArquiteturaDtoTest`): uma
 violação quebra o build. O contrato de erro também é um DTO: `comum.dto.ErroResponse`.
 
 ## Segurança
 
-A API Java não emite tokens: ela valida o **JWT emitido pela API .NET** (Resource Server) e aplica
-controle de acesso por papel. Envie o token em todas as chamadas:
+A API Java é a dona da identidade do ecossistema: cadastra os usuários e emite o JWT (cadastro e login
+chegam na SPEC-023). Ela valida o token em todas as chamadas (Resource Server) e aplica controle de acesso
+por papel. A API .NET valida o mesmo token, com o mesmo segredo e emissor.
 
 ```
-Authorization: Bearer <token do login .NET>
+Authorization: Bearer <token>
 ```
 
 O token precisa ter assinatura válida, `exp` (tokens sem expiração são recusados), o `iss` configurado
@@ -103,7 +103,7 @@ ou da claim `NameIdentifier` do ASP.NET.
 |---|---|
 | `GET /actuator/health`, `GET /actuator/info` | Público |
 | `GET /v3/api-docs/**`, `GET /swagger-ui/**` | Público |
-| Consumo de dados de suporte (rede, alertas, agendamentos...) | `CIDADAO` ou `CUIDADOR` |
+| Consumo de dados de suporte (atendimentos próximos, verificação de golpes...) | `CIDADAO` ou `CUIDADOR` |
 | Alteração de perfil de emergência | `CUIDADOR` (vinculado ao cidadão) |
 | Qualquer outra rota | Token válido |
 
@@ -119,6 +119,15 @@ Assim, o app envia apenas o JWT, sem requisição extra para buscar um token CSR
 o que já protege um eventual login por cookie no futuro. Uma escrita sem JWT recebe 401
 (`NAO_AUTENTICADO`), para o app saber que precisa entrar de novo.
 
+## Banco de dados
+
+O esquema é versionado com **Flyway** em `src/main/resources/db/migration` (`V1__descricao.sql`, `V2__...`).
+O Hibernate apenas valida as entidades (`ddl-auto=validate`); nunca cria tabelas sozinho.
+
+`scripts/script-bd.sql` reúne todas as migrações num único DDL (exigência da disciplina de DevOps). Depois de
+criar ou alterar uma migração, rode `./gradlew gerarScriptBd`: o `check` (e o CI) falha se o arquivo estiver
+desatualizado.
+
 ## Testes
 
 ```bash
@@ -126,8 +135,9 @@ o que já protege um eventual login por cookie no futuro. Uma escrita sem JWT re
 ./gradlew test jacocoTestReport   # com relatório de cobertura em build/reports/jacoco
 ```
 
-Os testes de integração sobem MongoDB e RabbitMQ reais com Testcontainers. Sem Docker, eles são ignorados
-automaticamente e os demais testes continuam rodando.
+Os testes comuns usam H2 em memória (modo SQL Server). Os testes de integração sobem SQL Server (mesmo motor
+do Azure SQL) e RabbitMQ reais com Testcontainers. Sem Docker, eles são ignorados automaticamente e os demais
+testes continuam rodando.
 
 Nos testes, o segredo JWT é gerado aleatoriamente a cada execução (`SegredoJwtDeTeste`), e
 `TokenDeTeste` assina tokens no formato do .NET, como em `TokenDeTeste.cuidador("42").bearer()`.
@@ -137,20 +147,14 @@ Nenhum segredo fica no repositório.
 
 ```
 br.com.fiap.vozviva
-├── voz          classificação de intenção (Spring AI + RAG)
-├── zeladoria    obstruções de mobilidade
-├── rede         abrigos, postos de saúde e voluntários
-├── emergencia   botão de emergência assíncrono
-├── clima        alertas climáticos e rotas de fuga
-├── saude        agendamentos e tradução de termos técnicos
-├── economia     agricultura familiar e pedidos
-├── perfil       perfil de emergência (cuidador)
-├── notificacao  notificações amigáveis
-├── dados        relatórios anonimizados
-├── integracao   clientes da API .NET
+├── voz          classificação de intenção por voz (Spring AI)
+├── perfil       perfil de emergência e contatos (cuidador)
+├── emergencia   botão de emergência assíncrono (RabbitMQ)
 ├── seguranca    JWT e controle de acesso
 └── comum        erros, DTOs compartilhados e utilitários
 ```
+
+Os módulos de usuários, assistente contra golpes e atendimento mais próximo entram com as suas specs.
 
 Dentro de cada módulo: `dto` (records de entrada e saída), controller, serviço, mapper, entidade e
 repositório.

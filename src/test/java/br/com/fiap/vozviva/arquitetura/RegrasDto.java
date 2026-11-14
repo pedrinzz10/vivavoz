@@ -8,7 +8,7 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.Entity;
 import org.springframework.data.repository.Repository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,7 +27,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
  * Regras do padrão DTO do projeto:
  * <ul>
  *   <li>DTOs ficam em subpacotes {@code dto}, são records imutáveis e terminam em Request ou Response;</li>
- *   <li>controllers só recebem e devolvem DTOs (nunca entidades, Map ou Object);</li>
+ *   <li>controllers só recebem e devolvem DTOs (nunca entidades JPA, Map ou Object);</li>
  *   <li>entidades e repositórios nunca chegam aos controllers nem aos DTOs.</li>
  * </ul>
  */
@@ -69,14 +69,14 @@ final class RegrasDto {
 
 	static final ArchRule CONTROLLERS_NAO_ACESSAM_ENTIDADES_NEM_REPOSITORIOS = noClasses()
 		.that().areAnnotatedWith(RestController.class)
-		.should().dependOnClassesThat().areAnnotatedWith(Document.class)
+		.should().dependOnClassesThat().areAnnotatedWith(Entity.class)
 		.orShould().dependOnClassesThat().areAssignableTo(Repository.class)
 		.allowEmptyShould(true)
 		.as("Controllers não devem acessar entidades nem repositórios (use serviços e DTOs)");
 
 	static final ArchRule DTOS_NAO_DEPENDEM_DE_ENTIDADES = noClasses()
 		.that().resideInAPackage(PACOTE_DTO)
-		.should().dependOnClassesThat().areAnnotatedWith(Document.class)
+		.should().dependOnClassesThat().areAnnotatedWith(Entity.class)
 		.orShould().dependOnClassesThat().areAssignableTo(Repository.class)
 		.as("DTOs não devem depender de entidades nem de repositórios");
 
