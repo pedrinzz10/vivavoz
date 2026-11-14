@@ -29,7 +29,7 @@
   },
   "convencoes": {
     "statusPossiveis": ["PENDENTE", "EM_ANDAMENTO", "CONCLUIDA", "BACKLOG"],
-    "statusBacklog": "Fora do escopo da entrega de 19/11/2026; mantida como evolução futura.",
+    "statusBacklog": "Fora do escopo da entrega de 19/11/2026; mantida como evolução futura. Specs com o campo roadmap foram removidas da solução e só aparecem como próximas fases.",
     "prioridades": ["ALTA", "MEDIA", "BAIXA"],
     "prefixoApi": "/api/v1",
     "papeis": ["CIDADAO", "CUIDADOR"],
@@ -424,6 +424,7 @@
       "prioridade": "ALTA",
       "dependencias": ["SPEC-005", "SPEC-018"],
       "status": "BACKLOG",
+      "roadmap": "Removida da solução da Global Solution por decisão do grupo (2026-11-14). Citada no README e no pitch apenas como próxima fase de ampliação do impacto.",
       "descricao": "Consome alertas de risco (formato inspirado no Cemaden/Defesa Civil) de uma fila RabbitMQ, identifica os cidadãos dentro da área afetada via $geoWithin e envia alertas sonoros amigáveis orientando a evacuação.",
       "oQueFaz": [
         "Consome AlertaClimaticoEvent { id, tipo (ENCHENTE, DESLIZAMENTO, TEMPESTADE), nivel (OBSERVACAO, ATENCAO, ALERTA, ALERTA_MAXIMO), area (GeoJSON Polygon), validoAte, fonte }.",
@@ -468,6 +469,7 @@
       "prioridade": "MEDIA",
       "dependencias": ["SPEC-005", "SPEC-006", "SPEC-007", "SPEC-009"],
       "status": "BACKLOG",
+      "roadmap": "Removida da solução da Global Solution por decisão do grupo (2026-11-14). Citada no README e no pitch apenas como próxima fase de ampliação do impacto.",
       "descricao": "Indica o destino seguro mais adequado (abrigo acessível fora da área de risco) e os obstáculos conhecidos no trajeto, focando a mobilidade de cadeirantes e idosos.",
       "oQueFaz": [
         "Expõe GET /api/v1/rotas-fuga?lon&lat&acessivel=true.",
@@ -726,6 +728,7 @@
       "prioridade": "MEDIA",
       "dependencias": ["SPEC-003", "SPEC-005"],
       "status": "BACKLOG",
+      "roadmap": "Removida da solução da Global Solution por decisão do grupo (2026-11-14). Citada no README e no pitch apenas como próxima fase de ampliação do impacto.",
       "descricao": "Une o desejo de compra falado pelo cidadão aos pequenos produtores da agricultura familiar da região, fomentando cadeias curtas, reduzindo intermediários e combatendo o desperdício de alimentos.",
       "oQueFaz": [
         "Mantém a coleção Produtor { nome, localizacao, produtos[{nome, unidade, preco, disponivelAte}], entrega, contato, aceitaPix }.",
