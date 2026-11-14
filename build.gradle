@@ -31,7 +31,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-resource-server'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-	implementation 'org.springframework.ai:spring-ai-starter-model-anthropic'
+	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
 	implementation 'org.flywaydb:flyway-sqlserver'
 	runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc'
 	compileOnly 'org.projectlombok:lombok'
@@ -67,7 +67,7 @@ tasks.named('test') {
 
 tasks.register('avaliarIa', Test) {
 	group = 'verification'
-	description = 'Avalia o assistente contra golpes com o modelo de IA real (exige ANTHROPIC_API_KEY).'
+	description = 'Avalia o assistente contra golpes com o modelo de IA real (exige OCI_GENAI_API_KEY).'
 	testClassesDirs = sourceSets.test.output.classesDirs
 	classpath = sourceSets.test.runtimeClasspath
 	useJUnitPlatform {

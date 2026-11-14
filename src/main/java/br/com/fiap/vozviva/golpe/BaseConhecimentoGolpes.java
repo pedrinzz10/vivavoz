@@ -22,7 +22,7 @@ import java.util.stream.IntStream;
  * orientações oficiais e não só no que "acha".
  * <p>
  * A busca é por relevância de palavras (TF-IDF). Escolha consciente: a base é pequena e curada, a busca é
- * determinística e testável, e não depende de um modelo de embeddings (a Anthropic não oferece um).
+ * determinística e testável, e não depende de um modelo de embeddings (a API compatível com OpenAI da OCI não expõe embeddings).
  * A evolução natural é trocar por busca vetorial (embeddings da OCI ou Oracle 23ai Vector Search).
  */
 @Component

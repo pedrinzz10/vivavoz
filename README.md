@@ -24,7 +24,7 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 
 ```bash
 # 1. Variáveis de ambiente (o perfil dev lê o .env automaticamente)
-cp .env.example .env        # preencha DB_PASSWORD, RABBITMQ_PASSWORD, JWT_SECRET, USUARIOS_TESTE_SENHA e ANTHROPIC_API_KEY
+cp .env.example .env        # preencha DB_PASSWORD, RABBITMQ_PASSWORD, JWT_SECRET, USUARIOS_TESTE_SENHA e OCI_GENAI_API_KEY
 
 # 2. Infraestrutura (SQL Server + RabbitMQ); o banco "vozviva" é criado na primeira subida
 docker compose up -d --wait
@@ -53,8 +53,9 @@ Selecione com `SPRING_PROFILES_ACTIVE=prod`.
 
 | Variável | Descrição |
 |---|---|
-| `ANTHROPIC_API_KEY` | Chave da API Anthropic (Spring AI) |
-| `ANTHROPIC_MODEL` | Modelo usado (padrão `claude-sonnet-5`) |
+| `OCI_GENAI_API_KEY` | API key do OCI Generative AI (sem ela, o assistente usa só as regras) |
+| `OCI_GENAI_BASE_URL` | Endpoint compatível com OpenAI da OCI (padrão `https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/openai/v1`) |
+| `OCI_GENAI_MODEL` | Modelo usado (padrão `openai.gpt-oss-120b`) |
 | `DB_URL` | URL JDBC do banco (Azure SQL em produção; padrão do dev aponta para o SQL Server do docker-compose) |
 | `DB_USERNAME` / `DB_PASSWORD` | Credenciais do banco (no dev, usuário `sa` e a senha do `.env`) |
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` | Endereço do RabbitMQ |
@@ -229,15 +230,16 @@ mensagem ──▶ 1. Regras determinísticas (senha, Pix com pressa, link, "tro
   uma com o órgão de origem (INSS, Febraban, Banco Central, Procon-SP, Polícia Civil-SP, Ministério da Saúde,
   Receita Federal, Correios, MDHC) e o canal oficial para confirmar.
 - **Por que TF-IDF e não busca vetorial:** a base é pequena e curada, a busca fica determinística e testável e
-  não depende de um modelo de embeddings (a Anthropic não oferece um). A evolução natural é a busca vetorial
+  não depende de um modelo de embeddings (o endpoint compatível com OpenAI da OCI não expõe embeddings). A evolução natural é a busca vetorial
   (embeddings da OCI ou Oracle 23ai Vector Search).
 - **Segurança da IA:** a mensagem recebida vai delimitada e é tratada pelo modelo como dado, não como
   instrução (proteção contra *prompt injection*); as regras garantem que um pedido de senha nunca sai como
   "sem risco", mesmo que o modelo erre; sem IA (fora do ar, sem chave ou timeout de 30 s), as regras
   respondem sozinhas.
 - **LGPD:** o texto da mensagem e o usuário nunca são gravados; só tipo, classificação, canal e data.
-- **Modelo:** configurável por `ANTHROPIC_MODEL` (padrão `claude-opus-5`). O Spring AI permite trocar de
-  provedor (ex.: OCI) só pela configuração.
+- **Modelo:** OCI Generative AI pelo endpoint compatível com a API da OpenAI (Spring AI + SDK oficial da
+  OpenAI), configurável por `OCI_GENAI_MODEL` (padrão `openai.gpt-oss-120b`). O código depende só do
+  `ChatModel` do Spring AI, então trocar de modelo ou provedor é só configuração.
 
 ### Avaliação
 
@@ -248,7 +250,7 @@ de banco e saúde. "Golpe detectado" = `PROVAVEL_GOLPE` ou `SUSPEITA`.
 | Configuração | Acurácia | Recall | Precisão | Falsos alarmes | Como rodar |
 |---|---|---|---|---|---|
 | Só regras (linha de base) | 83,3% | 72,2% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-golpes/somente-regras.md`) |
-| IA + regras | meta ≥ 80% | meta ≥ 90% | — | — | `./gradlew avaliarIa` (exige `ANTHROPIC_API_KEY`; usa a API paga) |
+| IA + regras | meta ≥ 80% | meta ≥ 90% | — | — | `./gradlew avaliarIa` (exige `OCI_GENAI_API_KEY`; consome créditos da OCI) |
 
 Os golpes que as regras não pegam são os semânticos (falso advogado, motoboy, "vaga de emprego"), que é
 onde a IA agrega. As regras foram ajustadas com padrões gerais conhecidos ("somente hoje", "perdi meu

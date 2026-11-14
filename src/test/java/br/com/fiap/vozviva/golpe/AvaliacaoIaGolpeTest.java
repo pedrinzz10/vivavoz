@@ -13,11 +13,11 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Avaliação com o modelo de IA real sobre o conjunto rotulado (30 mensagens). Não roda no build normal,
- * porque chama a API paga: execute com {@code ./gradlew avaliarIa} (exige ANTHROPIC_API_KEY).
+ * porque chama a API paga: execute com {@code ./gradlew avaliarIa} (exige OCI_GENAI_API_KEY; usa o OCI Generative AI).
  * O relatório fica em build/reports/avaliacao-golpes/ia-e-regras.md.
  */
 @Tag("llm")
-@SpringBootTest(properties = "spring.ai.model.chat=anthropic")
+@SpringBootTest(properties = "spring.ai.model.chat=openai")
 @ActiveProfiles("test")
 class AvaliacaoIaGolpeTest {
 
@@ -26,7 +26,7 @@ class AvaliacaoIaGolpeTest {
 
 	@Test
 	void desempenhoNoConjuntoRotulado() {
-		assumeTrue(StringUtils.hasText(System.getenv("ANTHROPIC_API_KEY")), "Defina ANTHROPIC_API_KEY para avaliar");
+		assumeTrue(StringUtils.hasText(System.getenv("OCI_GENAI_API_KEY")), "Defina OCI_GENAI_API_KEY para avaliar");
 
 		var metricas = MensagensRotuladas.avaliar(MensagensRotuladas.carregar(),
 				m -> assistente.verificar(new VerificacaoRequest(m.texto(), m.canal())).classificacao());
