@@ -5,7 +5,7 @@
   "dataRevisao": "2026-11-14",
   "fonte": ["Dores Dos Grupos CitizenTech.md", "requisitos-global-solution-2026-2.md"],
   "prazoEntrega": "2026-11-19T23:55-03:00",
-  "escopo": "Microsserviço Java (Spring Boot 4 / Java 21) do ecossistema Fala Cidadão. Funcionalidades da entrega: (1) rede de apoio no socorro: perfil de emergência com contatos (CRUD paginado, Spring Data JPA / Azure SQL) e botão de emergência assíncrono via RabbitMQ; (2) assistente contra desinformação com Spring AI + RAG; (3) zeladoria cidadã por voz. A classificação de intenção de voz (Spring AI) encaminha a fala para essas funcionalidades. Deploy na Azure (disciplina de DevOps). Público-alvo: idosos e pessoas com deficiência (PcD) com baixo letramento digital.",
+  "escopo": "Microsserviço Java (Spring Boot 4 / Java 21) do ecossistema Fala Cidadão. Funcionalidades da entrega: (1) rede de apoio no socorro: perfil de emergência com contatos (CRUD paginado, Spring Data JPA / Azure SQL) e botão de emergência assíncrono via RabbitMQ; (2) assistente contra desinformação com Spring AI + RAG; (3) atendimento acessível mais próximo com rota no app de navegação (dados do OpenStreetMap); (4) zeladoria cidadã por voz. A classificação de intenção de voz (Spring AI) encaminha a fala para essas funcionalidades. Deploy na Azure (disciplina de DevOps). Público-alvo: idosos e pessoas com deficiência (PcD) com baixo letramento digital.",
   "arquitetura": {
     "microsservicos": {
       "api-java (este repositório)": "Spring Boot; Azure SQL via Spring Data JPA (perfis de emergência, contatos, emergências, obstruções, estatísticas de golpes e interações de voz); RabbitMQ para eventos de emergência; Spring AI (provedor configurável: OCI Generative AI ou Ollama na OCI, com Anthropic como alternativa). Dona dos usuários: cadastro, login e emissão do JWT.",
@@ -21,6 +21,7 @@
     "Java Advanced 2 - Validação e erros": ["SPEC-014"],
     "Java Advanced 3 - Spring Security + JWT com papéis": ["SPEC-023", "SPEC-002"],
     "Java Advanced 4 - Spring AI": ["SPEC-015", "SPEC-006", "SPEC-003", "SPEC-004"],
+    "Mobile - funcionalidade de geolocalização (atendimento mais próximo)": ["SPEC-007"],
     "IA (Disruptive Architectures) - IA generativa + RAG + avaliação": ["SPEC-015", "SPEC-004", "SPEC-003"],
     "Java Advanced 5 - Arquitetura distribuída (opção A, RabbitMQ)": ["SPEC-008"],
     "Java Advanced 6 - Swagger, README e integração com Mobile": ["SPEC-020", "SPEC-025"],
@@ -33,8 +34,9 @@
     "prioridades": ["ALTA", "MEDIA", "BAIXA"],
     "prefixoApi": "/api/v1",
     "papeis": ["CIDADAO", "CUIDADOR"],
-    "intencoes": ["ZELADORIA_REPORT", "SOCORRO", "ROTA_FUGA", "ALERTA_CLIMA_CONSULTA", "SAUDE_AGENDAMENTO", "VERIFICAR_INFORMACAO", "COMPRA_PRODUTOR_LOCAL", "DESCONHECIDA"],
-    "acoes": ["ABRIR_PROTOCOLO", "ACIONAR_SOCORRO", "MOSTRAR_ROTA", "MOSTRAR_ALERTAS", "MOSTRAR_AGENDAMENTO", "MOSTRAR_VERIFICACAO", "MOSTRAR_PRODUTORES", "PEDIR_REPETICAO"],
+    "intencoes": ["SOCORRO", "BUSCAR_ATENDIMENTO", "VERIFICAR_INFORMACAO", "ZELADORIA_REPORT", "DESCONHECIDA"],
+    "acoes": ["ACIONAR_SOCORRO", "MOSTRAR_ATENDIMENTOS", "MOSTRAR_VERIFICACAO", "ABRIR_PROTOCOLO", "PEDIR_REPETICAO"],
+    "intencoesRoadmap": ["ROTA_FUGA", "ALERTA_CLIMA_CONSULTA", "SAUDE_AGENDAMENTO", "COMPRA_PRODUTOR_LOCAL"],
     "urgencias": ["BAIXA", "MEDIA", "ALTA", "CRITICA"],
     "coordenadas": "GeoJSON padrão [longitude, latitude] (WGS84)",
     "padraoDto": {
@@ -328,43 +330,65 @@
     },
     {
       "id": "SPEC-007",
-      "nome": "Busca do Ponto de Apoio Mais Próximo",
-      "modulo": "Cidades e Clima / Saúde",
+      "nome": "Atendimento Acessível Mais Próximo (Ir até lá)",
+      "modulo": "Saúde e Rede de Apoio",
       "prioridade": "ALTA",
-      "dependencias": ["SPEC-005"],
-      "status": "BACKLOG",
-      "descricao": "Encontra em milissegundos o abrigo, posto de saúde ou voluntário mais próximo da coordenada do celular, com filtro de acessibilidade para cadeirantes.",
+      "dependencias": ["SPEC-002", "SPEC-022"],
+      "status": "PENDENTE",
+      "descricao": "Com um toque (ou por voz), o idoso ou a PcD encontra o atendimento do tipo desejado mais próximo de onde está, de preferência com acessibilidade, e abre a rota no Google Maps, Waze ou outro app de navegação. Os locais vêm de uma importação de dados abertos do OpenStreetMap (região de Osasco/SP) gravada no Azure SQL.",
       "oQueFaz": [
-        "Expõe GET /api/v1/rede/proximos?lon&lat&tipo&raio&acessivel&limite.",
-        "Executa $near no MongoDB com distância máxima e retorna os itens ordenados por distância em metros.",
-        "Filtra por 'acessivel=true' (rampa, elevador, banheiro adaptado) quando solicitado.",
-        "Retorna DTO compacto: { id, nome, tipo, distanciaMetros, endereco, telefone, acessivel }.",
-        "Expõe um CRUD administrativo para cadastrar pontos da rede."
+        "Entidade PontoAtendimento (JPA, somente leitura pela API): id, osmId, nome, tipo (HOSPITAL, UPA, UBS, FARMACIA, CRAS, DELEGACIA, DEFENSORIA), endereco, telefone, latitude, longitude, acessibilidade (SIM, PARCIAL, NAO, DESCONHECIDA), banheiroAdaptado, funciona24h, fonte, atualizadoEm.",
+        "Script de importação em /scripts consulta a Overpass API do OpenStreetMap uma única vez (amenity=hospital/clinic/pharmacy/police/social_facility e healthcare=*), classifica o tipo (ex.: nome com 'UPA' ou 'Pronto Atendimento' vira UPA; 'UBS' ou 'Unidade Básica' vira UBS), converte a tag wheelchair (yes/limited/no) e gera a carga de dados versionada aplicada pelo Flyway.",
+        "GET /api/v1/atendimentos/proximos?tipo&latitude&longitude&acessivel&raioMetros&limite (CIDADAO ou CUIDADOR): pré-filtro por área (bounding box) e distância por Haversine, ordenado do mais próximo; limite padrão 3 e máximo 10; raio padrão 5 km.",
+        "Com acessivel=true, prioriza SIM e PARCIAL; se não houver nenhum no raio, devolve os mais próximos com acessibilidade DESCONHECIDA, sinalizados, e a orientação de ligar antes.",
+        "Cada item do AtendimentoProximoResponse traz distanciaMetros, acessibilidade, telefone e os links de rota prontos: Google Maps (https://www.google.com/maps/dir/?api=1&destination=LAT,LNG), Waze (https://waze.com/ul?ll=LAT,LNG&navigate=yes) e geo:LAT,LNG.",
+        "Resposta com mensagemFalada curta (ex.: 'O hospital mais perto com rampa fica a 1,2 km. Quer que eu abra o caminho?').",
+        "Para HOSPITAL e UPA, a resposta sempre inclui a orientação de emergência: em caso de urgência, ligar 192 (SAMU) em vez de ir sozinho.",
+        "GET /api/v1/atendimentos paginado e GET /api/v1/atendimentos/{id} para o app listar e detalhar os locais.",
+        "A localização do usuário é usada só na consulta e nunca é gravada (LGPD).",
+        "A classificação de intenção (SPEC-003) mapeia falas como 'me leva ao hospital' para essa busca, e a mensagem do botão de emergência (SPEC-008) pode incluir o hospital mais próximo."
       ],
-      "resultadoEsperado": "Uma lista curta (padrão 3 itens) com os pontos mais próximos, pronta para ser lida em voz alta pelo app.",
+      "resultadoEsperado": "Um toque em 'Hospital mais perto' devolve, em menos de 1 s, até 3 hospitais ordenados por distância com a acessibilidade de cada um, e um segundo toque abre a rota no app de navegação do celular.",
       "casosDeUso": [
         {
-          "titulo": "Botão Socorro",
-          "ator": "Idoso",
-          "fluxo": "Aciona o socorro; o app consulta o posto de saúde mais próximo e mostra/fala o nome e a distância."
+          "titulo": "Cadeirante procura hospital acessível",
+          "ator": "Cidadão cadeirante",
+          "fluxo": "Toca em 'Hospital mais perto' com o filtro de acessibilidade; o app ouve 'O hospital mais perto com rampa fica a 1,2 km' e abre a rota no Google Maps."
         },
         {
-          "titulo": "Cadeirante procura abrigo",
-          "ator": "Cidadão cadeirante",
-          "fluxo": "Pede abrigo; a API retorna somente abrigos acessíveis."
+          "titulo": "Idosa precisa de farmácia",
+          "ator": "Idosa",
+          "fluxo": "Diz 'onde tem uma farmácia aqui perto?'; a intenção é reconhecida e o app mostra as 3 farmácias mais próximas com o botão 'Ir até lá'."
+        },
+        {
+          "titulo": "Sem informação de acessibilidade",
+          "ator": "Cidadão com andador",
+          "fluxo": "Nenhuma UBS próxima tem acessibilidade confirmada; o app mostra a mais próxima marcada como 'acessibilidade não informada' e sugere ligar antes, com o telefone."
+        },
+        {
+          "titulo": "Urgência",
+          "ator": "Cuidador",
+          "fluxo": "Busca o hospital mais próximo para o pai passando mal; a tela destaca 'Ligar 192' antes da rota."
         }
       ],
       "testes": [
-        { "tipo": "integracao", "nome": "ordenacaoPorDistancia", "descricao": "Os resultados vêm ordenados do mais próximo para o mais distante." },
-        { "tipo": "integracao", "nome": "filtroAcessivel", "descricao": "Com acessivel=true, pontos não acessíveis são excluídos." },
-        { "tipo": "integracao", "nome": "semResultadosNoRaio", "descricao": "Sem pontos no raio, retorna lista vazia com mensagemFalada orientando a ligar 192/193." },
-        { "tipo": "desempenho", "nome": "latencia", "descricao": "Com 10.000 pontos, a consulta responde em menos de 100 ms." }
+        { "tipo": "unitario", "nome": "haversine", "descricao": "Distâncias conhecidas entre pontos de Osasco calculadas com erro menor que 1%." },
+        { "tipo": "unitario", "nome": "classificacaoOsm", "descricao": "Tags e nomes do OSM viram o tipo e a acessibilidade corretos (ex.: wheelchair=limited vira PARCIAL; 'UPA Centro' vira UPA)." },
+        { "tipo": "integracao", "nome": "ordenacaoERaio", "descricao": "Retorna só locais do tipo pedido dentro do raio, do mais próximo para o mais distante, respeitando o limite." },
+        { "tipo": "integracao", "nome": "prioridadeAcessivel", "descricao": "Com acessivel=true, um local acessível a 2 km vem antes de um sem informação a 500 m; sem nenhum acessível, devolve os desconhecidos sinalizados." },
+        { "tipo": "unitario", "nome": "linksDeRota", "descricao": "Links do Google Maps, Waze e geo: gerados com as coordenadas corretas e formato numérico com ponto decimal." },
+        { "tipo": "integracao", "nome": "orientacaoEmergencia", "descricao": "Buscas por HOSPITAL e UPA incluem a orientação do 192." },
+        { "tipo": "integracao", "nome": "validacao400", "descricao": "Latitude fora de -90..90, longitude fora de -180..180 ou tipo inválido retornam 400." },
+        { "tipo": "integracao", "nome": "localizacaoNaoPersistida", "descricao": "Após a busca, nenhuma tabela contém as coordenadas do usuário." }
       ],
       "criteriosDeAceite": [
-        "A consulta usa índice 2dsphere (verificado com explain).",
-        "O limite padrão é 3 e o máximo é 20.",
-        "A distância é retornada em metros inteiros.",
-        "A resposta vazia sempre inclui um número de emergência como alternativa."
+        "Busca por tipo e proximidade em menos de 1 s com a base importada.",
+        "Cada resultado traz distância, acessibilidade, telefone e links de rota prontos para abrir.",
+        "Locais sem informação de acessibilidade são claramente sinalizados, nunca apresentados como acessíveis.",
+        "Orientação de ligar 192 nas buscas por hospital e UPA.",
+        "Localização do usuário não armazenada.",
+        "Carga de dados reproduzível pelo script de importação; crédito '© colaboradores do OpenStreetMap' no README e no app (licença ODbL).",
+        "Limitação documentada: o destino é filtrado por acessibilidade, mas a rota calculada pelo app de navegação pode não ser acessível."
       ]
     },
     {
@@ -968,7 +992,7 @@
       "oQueFaz": [
         "Adiciona spring-boot-starter-data-jpa, driver do SQL Server (mssql-jdbc), H2 (somente testes) e Flyway para versionar o esquema.",
         "Configura a conexão por variáveis de ambiente (DB_URL, DB_USERNAME, DB_PASSWORD); ddl-auto=validate, o esquema vem só das migrações.",
-        "Cria as migrações das tabelas usuarios, perfis_emergencia, contatos_emergencia, emergencias, obstrucoes, verificacoes_golpe e interacoes_voz, com chaves estrangeiras e índices.",
+        "Cria as migrações das tabelas usuarios, perfis_emergencia, contatos_emergencia, emergencias, pontos_atendimento, verificacoes_golpe e interacoes_voz, com chaves estrangeiras e índices.",
         "Remove o MongoDB da aplicação (starter, chat memory, Testcontainers e docker-compose) e as dependências não usadas (Eureka, OpenFeign), que voltam se as specs do backlog entrarem.",
         "Mantém /scripts/script-bd.sql com o mesmo DDL das migrações (exigência de DevOps).",
         "Adiciona SQL Server ao docker-compose (porta só em 127.0.0.1, senha obrigatória no .env).",
