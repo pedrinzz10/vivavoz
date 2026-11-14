@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -61,6 +63,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		log.warn("Timeout ao acessar dependência externa", ex);
 		return responder(erros.criar(CodigoErro.SERVICO_INDISPONIVEL,
 				"Tempo de resposta esgotado ao acessar um serviço externo.", request.getRequestURI()), null);
+	}
+
+	/**
+	 * Rede de segurança para restrições do banco (unicidade, chave estrangeira) que escapem das
+	 * verificações dos serviços, por exemplo em requisições simultâneas. Nunca expõe o SQL.
+	 */
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	ResponseEntity<ErroResponse> tratarRestricaoDoBanco(DataIntegrityViolationException ex, HttpServletRequest request) {
+		log.warn("Restrição do banco violada em {} {}", paraLog(request.getMethod()), paraLog(request.getRequestURI()), ex);
+		return responder(erros.criar(CodigoErro.CONFLITO,
+				"A operação conflita com dados já existentes.", request.getRequestURI()), null);
+	}
+
+	/**
+	 * Ordenação por um campo que não existe (ex.: {@code ?sort=senha}) é erro do cliente, não do servidor.
+	 */
+	@ExceptionHandler(PropertyReferenceException.class)
+	ResponseEntity<ErroResponse> tratarOrdenacaoInvalida(PropertyReferenceException ex, HttpServletRequest request) {
+		return responder(erros.criar(CodigoErro.REQUISICAO_INVALIDA,
+				"Campo de ordenação inválido: " + ex.getPropertyName() + ".", request.getRequestURI()), null);
 	}
 
 	/**

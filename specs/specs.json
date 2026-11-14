@@ -795,7 +795,7 @@
       "modulo": "Saúde Preventiva",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-002", "SPEC-022", "SPEC-023"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Perfil com as informações vitais do cidadão para emergências e seus contatos, persistidos no Azure SQL via Spring Data JPA. O cuidador vinculado faz o CRUD completo pelo app; o cidadão consulta o próprio perfil.",
       "oQueFaz": [
         "Entidade PerfilEmergencia (JPA): id, cidadao (N:1 Usuario, único), cuidador (N:1 Usuario), mobilidade (CADEIRANTE, ANDADOR, BENGALA, DEFICIENCIA_VISUAL, NENHUMA), condicoesSaude, medicamentos, observacoes, criadoEm, atualizadoEm.",

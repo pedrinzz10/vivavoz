@@ -23,6 +23,12 @@ spring:
           preferred_instant_jdbc_type: TIMESTAMP
   flyway:
     locations: classpath:db/migration
+  data:
+    web:
+      pageable:
+        # Paginação: ?page=0&size=10&sort=campo,asc (no máximo 50 itens por página).
+        default-page-size: 10
+        max-page-size: 50
   rabbitmq:
     host: ${RABBITMQ_HOST}
     port: ${RABBITMQ_PORT:5672}

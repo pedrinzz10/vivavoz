@@ -151,6 +151,29 @@ Assim, o app envia apenas o JWT, sem requisição extra para buscar um token CSR
 o que já protege um eventual login por cookie no futuro. Uma escrita sem JWT recebe 401
 (`NAO_AUTENTICADO`), para o app saber que precisa entrar de novo.
 
+## Perfil de emergência e contatos
+
+O cuidador mantém pelo app o perfil de emergência do cidadão (mobilidade, condições de saúde, medicamentos) e
+os contatos avisados quando ele aciona o socorro.
+
+| Endpoint | Acesso | O que faz |
+|---|---|---|
+| `POST /api/v1/perfis-emergencia` | `CUIDADOR` | Cria o perfil informando o e-mail da conta do cidadão (`cidadaoEmail`) |
+| `GET /api/v1/perfis-emergencia` | `CUIDADOR` | Lista paginada dos perfis que ele gerencia |
+| `GET /api/v1/perfis-emergencia/meu` | `CIDADAO` | O perfil do próprio cidadão |
+| `GET /api/v1/perfis-emergencia/{id}` | Cuidador responsável ou o cidadão | Detalhe do perfil |
+| `PUT` / `DELETE /api/v1/perfis-emergencia/{id}` | Cuidador responsável | Atualiza / exclui |
+| `POST /api/v1/perfis-emergencia/{id}/contatos` | Cuidador responsável | Adiciona contato (até 10) |
+| `GET /api/v1/perfis-emergencia/{id}/contatos` | Cuidador responsável ou o cidadão | Lista paginada dos contatos |
+| `GET` / `PUT` / `DELETE /api/v1/perfis-emergencia/{id}/contatos/{contatoId}` | Leitura: ambos; alteração: cuidador | Detalhe / atualiza / exclui |
+
+**Paginação:** `?page=0&size=10&sort=nome,asc` (a primeira página é a 0; no máximo 50 itens). A ordenação só
+aceita campos públicos (perfis: `id`, `mobilidade`, `criadoEm`, `atualizadoEm`; contatos: `id`, `nome`,
+`prioridade`, `parentesco`). Telefones aceitam os formatos brasileiros comuns e são devolvidos no padrão
+`+55DDDNUMERO`, pronto para o app ligar.
+
+**Limitação conhecida:** o cuidador vincula o perfil pelo e-mail da conta do cidadão, sem confirmação do
+cidadão. Num sistema em produção, o vínculo seria confirmado por convite.
 ## Banco de dados
 
 O esquema é versionado com **Flyway** em `src/main/resources/db/migration` (`V1__descricao.sql`, `V2__...`).
