@@ -176,16 +176,16 @@ Os controllers nunca expõem entidades, `Map` ou `Object`: tudo que entra e sai 
 
 | Regra | Exemplo |
 |---|---|
-| DTOs ficam no subpacote `dto` do módulo | `perfil.dto.ContatoEmergenciaRequest` |
+| DTOs ficam no pacote `dto` | `dto.ContatoEmergenciaRequest` |
 | DTOs são `record` (imutáveis) | `public record ContatoEmergenciaResponse(Long id, String nome) {}` |
 | Entrada termina em `Request`, saída em `Response` | `ContatoEmergenciaRequest`, `ContatoEmergenciaResponse` |
 | Endpoints recebem DTO no `@RequestBody` e devolvem DTO (ou `ResponseEntity`/`List` de DTO) | `ResponseEntity<ContatoEmergenciaResponse> criar(@RequestBody @Valid ContatoEmergenciaRequest r)` |
 | Controllers não acessam entidades (`@Entity`) nem repositórios: passam por um serviço | `controller → service → repository` |
-| DTOs não dependem de entidades; a conversão fica em um mapper do módulo | `ContatoEmergenciaMapper.paraResponse(contato)` |
+| DTOs não dependem de entidades; a conversão fica no pacote `mapper` | `PerfilEmergenciaMapper.paraResponse(contato)` |
 | Validação (`@NotBlank`, `@Valid`...) fica no DTO de entrada | `record ContatoEmergenciaRequest(@NotBlank String nome, ...)` |
 
 Essas regras são verificadas por testes de arquitetura com ArchUnit (`ArquiteturaDtoTest`): uma
-violação quebra o build. O contrato de erro também é um DTO: `comum.dto.ErroResponse`.
+violação quebra o build. O contrato de erro também é um DTO: `dto.ErroResponse`.
 
 ## Segurança
 
@@ -456,7 +456,7 @@ Os locais vêm de uma importação única de dados abertos do **OpenStreetMap** 
 ./scripts/importar-osm.sh -Pentrada=resposta-overpass.json  # a partir de uma resposta salva
 ```
 
-O importador (`atendimento.importacao`) classifica cada elemento pelo nome e pelas tags (ex.: "UPA" ou
+O importador (pacote `importer`) classifica cada elemento pelo nome e pelas tags (ex.: "UPA" ou
 "Pronto Atendimento" vira `UPA`; "UBS" ou "Unidade Básica" vira `UBS`; só delegacias e distritos policiais
 entram como `DELEGACIA`), converte a tag `wheelchair` (`yes`/`limited`/`no`) em `SIM`/`PARCIAL`/`NAO`, junta
 o mesmo local mapeado duas vezes e gera `R__carga_pontos_atendimento.sql`, uma migração repetível do Flyway
@@ -609,20 +609,31 @@ Nenhum segredo fica no repositório.
 
 ## Estrutura de pacotes
 
+Organização em camadas: o fluxo de uma requisição é **controller → service → repository**.
+
 ```
 br.com.fiap.vozviva
-├── usuario      cadastro, login e emissão do JWT
-├── golpe        assistente contra golpes (regras + RAG + Spring AI)
-├── voz          classificação de intenção por voz (Spring AI)
-├── perfil       perfil de emergência e contatos (cuidador)
-├── emergencia   botão de emergência assíncrono (RabbitMQ: publicador, consumidor, DLQ e reenvio)
-├── atendimento  atendimento acessível mais próximo e importador do OpenStreetMap
-├── seguranca    JWT e controle de acesso
-└── comum        erros, DTOs compartilhados e utilitários
+├── controller   endpoints REST (auth, voz, emergências, perfis, contatos, golpes, atendimentos)
+├── service      regras de negócio (um serviço por funcionalidade, aviso aos contatos, login)
+├── repository   acesso ao banco com Spring Data JPA
+├── model        entidades JPA e enums do domínio (Usuario, Emergencia, PerfilEmergencia, Intencao...)
+├── dto          records de entrada (Request) e saída (Response)
+├── mapper       conversão entidade → DTO
+├── messaging    RabbitMQ: publicador, consumidor, evento e reenvio automático
+├── ai           Spring AI, RAG (TF-IDF) e regras determinísticas (golpes e voz)
+├── security     emissão e validação do JWT, papéis e usuário autenticado
+├── config       Spring Security, OpenAPI, filas do RabbitMQ, propriedades e traceId
+├── exception    catálogo de erros, exceções e handler global
+├── importer     importador do OpenStreetMap (linha de comando)
+├── validation   validações próprias (@LimiteBytesUtf8)
+└── util         Geo (Haversine), links de rota, telefones, ordenação
 ```
 
-Dentro de cada módulo: `dto` (records de entrada e saída), controller, serviço, mapper, entidade e
-repositório.
+Os testes seguem as mesmas pastas. Os testes de arquitetura (ArchUnit) garantem as regras e quebram o build
+se alguma for violada:
+- **`ArquiteturaCamadasTest`:** controller só usa service, que só usa repository (a mensageria entra pelos
+  serviços). Cada `@RestController`, `@Service`, repositório e `@Entity` precisa estar na pasta da sua camada.
+- **`ArquiteturaDtoTest`:** o padrão DTO.
 
 ## Declaração de uso de IA generativa
 

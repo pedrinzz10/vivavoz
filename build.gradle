@@ -163,7 +163,7 @@ tasks.register('importarOsm', JavaExec) {
 	group = 'banco de dados'
 	description = 'Importa os locais de atendimento do OpenStreetMap e gera R__carga_pontos_atendimento.sql (-Pentrada=resposta.json usa uma resposta salva).'
 	classpath = sourceSets.main.runtimeClasspath
-	mainClass = 'br.com.fiap.vozviva.atendimento.importacao.ImportadorOsm'
+	mainClass = 'br.com.fiap.vozviva.importer.ImportadorOsm'
 	args file('src/main/resources/db/migration/R__carga_pontos_atendimento.sql').absolutePath
 	if (project.hasProperty('entrada')) {
 		args file(project.property('entrada')).absolutePath
