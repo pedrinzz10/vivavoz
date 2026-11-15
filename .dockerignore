@@ -1,0 +1,17 @@
+# Só o necessário para compilar entra no contexto do docker build.
+# Segredos locais nunca vão para a imagem.
+.env
+.env.*
+!.env.example
+.git
+.github
+.gradle
+.idea
+.vscode
+build
+**/build
+*.log
+specs
+*.md
+!src/**/*.md
+docker-compose.yml

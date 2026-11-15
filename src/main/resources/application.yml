@@ -118,3 +118,11 @@ management:
   endpoint:
     health:
       show-details: never
+      # /actuator/health/liveness: o processo está de pé (healthcheck do container e do App Service; não
+      # reinicia a API por causa de uma queda passageira do broker). /actuator/health/readiness: pronta para
+      # receber tráfego (inclui o banco).
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db

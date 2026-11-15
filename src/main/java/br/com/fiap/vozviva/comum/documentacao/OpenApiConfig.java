@@ -59,7 +59,7 @@ public class OpenApiConfig {
 						assistente contra golpes e atendimento acessível para pessoas idosas e com deficiência.
 
 						Para testar: faça `POST /api/v1/auth/login` (no perfil dev há os usuários \
-						`cidadao.teste@vozviva.dev` e `cuidador.teste@vozviva.dev`), copie o `token` da resposta e \
+						`cidadao.teste@vozviva.dev` e `cuidador.teste@vozviva.dev`), copie o `accessToken` da resposta e \
 						clique em **Authorize**. Todo erro segue o formato `ErroResponse`, com `mensagemFalada` para \
 						o app ler em voz alta.""")
 				.contact(new Contact().name("Equipe VozViva - FIAP Global Solution 2026/2")
