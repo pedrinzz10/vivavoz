@@ -56,6 +56,7 @@ Selecione com `SPRING_PROFILES_ACTIVE=prod`.
 | `OCI_GENAI_API_KEY` | API key do OCI Generative AI (sem ela, o assistente usa só as regras) |
 | `OCI_GENAI_BASE_URL` | Endpoint compatível com OpenAI da OCI (padrão `https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/openai/v1`) |
 | `OCI_GENAI_MODEL` | Modelo usado (padrão `openai.gpt-oss-120b`) |
+| `VOZ_CONFIANCA_MINIMA` | Confiança mínima para a IA decidir a intenção sozinha (padrão `0.6`) |
 | `DB_URL` | URL JDBC do banco (Azure SQL em produção; padrão do dev aponta para o SQL Server do docker-compose) |
 | `DB_USERNAME` / `DB_PASSWORD` | Credenciais do banco (no dev, usuário `sa` e a senha do `.env`) |
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` | Endereço do RabbitMQ |
@@ -136,7 +137,7 @@ configurado e um papel conhecido; valores desconhecidos nunca dão acesso.
 | `GET /actuator/health`, `GET /actuator/info` | Público |
 | `POST /api/v1/auth/cadastro`, `POST /api/v1/auth/login` | Público |
 | `GET /v3/api-docs/**`, `GET /swagger-ui/**` | Público |
-| Consumo de dados de suporte (atendimentos próximos, verificação de golpes...) | `CIDADAO` ou `CUIDADOR` |
+| Consumo de dados de suporte (atendimentos próximos, verificação de golpes, classificação por voz...) | `CIDADAO` ou `CUIDADOR` |
 | Alteração de perfil de emergência | `CUIDADOR` (vinculado ao cidadão) |
 | Qualquer outra rota | Token válido |
 
@@ -260,6 +261,62 @@ garante desempenho.
 **Limitações:** o modelo pode errar golpes novos ou muito bem escritos (por isso a resposta nunca afirma
 certeza e sempre indica o canal oficial); a base cobre os golpes mais comuns, não todos; a classificação não
 substitui a confirmação no canal oficial.
+## Classificação de intenção por voz (Spring AI + RAG)
+
+O app transcreve a fala do cidadão e envia o texto. A API devolve qual tela abrir, com os dados já extraídos.
+Ela só classifica e orienta: não executa nenhuma ação, e o socorro, por exemplo, é confirmado pela pessoa na tela.
+
+| Rota | Papel | O que faz |
+|---|---|---|
+| `POST /api/v1/voz/intencoes` | `CIDADAO` / `CUIDADOR` | `{ "texto": "...", "localizacao": { "latitude": -23.53, "longitude": -46.78 } }` (localização opcional) |
+| `GET /api/v1/voz/interacoes?page=0&size=10` | `CIDADAO` / `CUIDADOR` | Histórico do próprio usuário, das mais recentes para as mais antigas |
+
+| Intenção | Ação do app | Exemplo de fala |
+|---|---|---|
+| `SOCORRO` | `ACIONAR_SOCORRO` | "Caí e não consigo levantar" |
+| `BUSCAR_ATENDIMENTO` | `MOSTRAR_ATENDIMENTOS` | "Onde tem farmácia aqui perto?" |
+| `VERIFICAR_INFORMACAO` | `MOSTRAR_VERIFICACAO` | "Recebi uma mensagem do INSS, é golpe?" |
+| `ZELADORIA_REPORT` | `ABRIR_ZELADORIA_DOTNET` | "Tem um buraco na calçada e não passo com a cadeira" |
+| `DESCONHECIDA` | `PEDIR_REPETICAO` | "Bom dia" |
+
+A resposta traz `intencao`, `acao`, `urgencia` (`BAIXA` a `CRITICA`), `entidades` (`tipoAtendimento`,
+`exigeAcessibilidade`, `problemaRua`, `impedeCadeirante`, `referenciaLocal`), `mensagemFalada` (até 200
+caracteres), `confianca` e `analisadoPor`. Em `BUSCAR_ATENDIMENTO` com localização, ela já traz os
+atendimentos mais próximos (o mesmo resultado de `GET /api/v1/atendimentos/proximos`): um toque a menos.
+
+- **Saída estruturada:** o Spring AI mapeia a resposta do modelo direto para um record (`entity()`). A ação
+  não vem do modelo: ela é decidida no servidor a partir da intenção, então a IA nunca dispara uma ação
+  incoerente.
+- **RAG:** os exemplos curados mais parecidos com a fala (`conhecimento/exemplos-intencoes.json`, 29 falas,
+  recuperadas com o mesmo TF-IDF do assistente contra golpes) vão no prompt.
+- **Segurança:**
+  - Um pedido de socorro reconhecido pelas regras ou pelo modelo sempre vira `SOCORRO`, mesmo com pouca
+    confiança. Na dúvida o app oferece ajuda, e a pessoa confirma na tela.
+  - A fala vai delimitada e é tratada pelo modelo como dado (proteção contra *prompt injection*).
+- **Confiança:** abaixo de `VOZ_CONFIANCA_MINIMA` (padrão 0,6), a IA não decide sozinha: valem as regras ou o
+  app pede para repetir ("Você quer pedir ajuda, achar um atendimento perto, conferir uma mensagem ou avisar
+  de um problema na rua?").
+- **Sem IA:** as regras determinísticas respondem, sempre no mesmo contrato JSON. Isso vale com o modelo fora
+  do ar, sem chave ou com resposta malformada.
+- **LGPD:** o histórico guarda o texto, a intenção, a confiança e a latência, para o próprio usuário consultar
+  e para avaliar a IA. A localização nunca é gravada.
+
+### Avaliação
+
+Conjunto versionado de 32 falas rotuladas (`src/test/resources/avaliacao/frases-intencoes.json`), diferentes
+dos exemplos do RAG. Inclui transcrições sem acento e armadilhas, como "pronto socorro" (um lugar, não um pedido
+de socorro) e "a árvore caiu" (zeladoria, não queda de uma pessoa).
+
+| Configuração | Acurácia | Socorros reconhecidos | Socorros falsos | Como rodar |
+|---|---|---|---|---|
+| Só regras (linha de base) | 96,9% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-intencoes/`) |
+| IA + regras | meta ≥ 90% | meta 100% | — | `./gradlew avaliarIa` (exige `OCI_GENAI_API_KEY`; consome créditos da OCI) |
+
+Duas falhas das regras foram corrigidas depois da primeira medição: "alagou" não casava com "alaga", e
+"calçada está toda quebrada" tinha palavras no meio. As duas correções são de padrão, e não de frase do
+conjunto; mesmo assim, a linha de base fica otimista. A falha que sobrou ("meu remédio acabou, onde eu compro")
+é semântica, que é onde a IA agrega. Com 32 falas, o resultado indica tendência, não garante desempenho.
+
 ## Atendimento acessível mais próximo ("Ir até lá")
 
 Com um toque ("Hospital mais perto") ou por voz, o idoso ou a PcD encontra o atendimento do tipo desejado mais

@@ -153,7 +153,7 @@
       "modulo": "Voz / IA",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001", "SPEC-002"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Endpoint que recebe o texto transcrito da fala do cidadão e, usando Spring AI com saída estruturada (sem chatbot de texto livre), classifica a intenção, extrai entidades (local, gravidade, item, etc.) e devolve um comando JSON que muda a tela do app.",
       "oQueFaz": [
         "Expõe POST /api/v1/voz/intencoes recebendo { texto, localizacao?: {lon, lat}, idioma? }.",
@@ -164,12 +164,12 @@
         "Valida o texto de entrada (não vazio, tamanho máximo) e nunca executa ações sozinho: apenas classifica e orienta o app.",
         "Registra cada interação na tabela 'interacoes_voz' (Azure SQL) (usuarioId, texto, intencao, acao, urgencia, confianca, latencia, data) e expõe GET /api/v1/voz/interacoes paginado para o próprio usuário (histórico e avaliação da IA)."
       ],
-      "resultadoEsperado": "Para 'Tem um buraco gigante na minha calçada e não passo com a cadeira', a API retorna intencao=ZELADORIA_REPORT, acao=ABRIR_PROTOCOLO, urgencia=ALTA, com entidades {tipo: BURACO, impedeCadeirante: true} e uma mensagem falada curta.",
+      "resultadoEsperado": "Para 'Tem um buraco gigante na minha calçada e não passo com a cadeira', a API retorna intencao=ZELADORIA_REPORT, acao=ABRIR_ZELADORIA_DOTNET (a zeladoria fica na API .NET), urgencia=ALTA, com entidades {problemaRua: BURACO, impedeCadeirante: true} e uma mensagem falada curta.",
       "casosDeUso": [
         {
           "titulo": "Reportar buraco por voz",
           "ator": "Cidadão cadeirante",
-          "fluxo": "Fala o problema; o app transcreve e envia; a API retorna ABRIR_PROTOCOLO; o app abre a tela de confirmação de protocolo já preenchida."
+          "fluxo": "Fala o problema; o app transcreve e envia; a API retorna ABRIR_ZELADORIA_DOTNET; o app abre a tela de zeladoria (API .NET) já preenchida."
         },
         {
           "titulo": "Pedido de socorro por voz",
