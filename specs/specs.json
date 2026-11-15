@@ -949,14 +949,15 @@
       "modulo": "Qualidade",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Padrões transversais de testes para garantir a confiabilidade de um sistema que atende pessoas vulneráveis em situações críticas.",
       "oQueFaz": [
-        "Define as camadas: unitários (JUnit 5 + Mockito), integração (Spring Boot Test + Testcontainers MongoDB/RabbitMQ + WireMock) e testes com LLM real isolados pela tag 'llm'.",
+        "Define as camadas: unitários (JUnit 5 + Mockito), integração (Spring Boot Test + H2 no modo SQL Server + Testcontainers com SQL Server e RabbitMQ reais) e testes com LLM real isolados pela tag 'llm'.",
         "Mocka o ChatModel nos testes padrão, para que o build não dependa da API da OCI.",
         "Usa @ParameterizedTest para frases de intenção e casos de borda geográficos.",
         "Configura JaCoCo com relatório de cobertura.",
-        "Fornece fixtures/seed de dados geográficos (região de Osasco/SP) para testes e demonstração."
+        "Fornece dados para testes e demonstração: carga real do OpenStreetMap (Osasco/SP), usuários de teste no perfil dev e área de testes sem dados reais.",
+        "Verifica a cobertura no build: jacocoTestCoverageVerification no check (80% no total, 70% por serviço)."
       ],
       "resultadoEsperado": "Um build reprodutível e confiável, com cobertura mensurável e testes que não dependem de serviços pagos.",
       "casosDeUso": [
@@ -1119,7 +1120,7 @@
       "modulo": "Documentação",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-020", "SPEC-024"],
-      "status": "PENDENTE",
+      "status": "EM_ANDAMENTO",
       "descricao": "README completo com tudo o que as disciplinas exigem do repositório Java.",
       "oQueFaz": [
         "Problema, cidadão beneficiado, solução, ecossistema (Mobile, API Java, API .NET) e ODS atendidos (3, 10 e 11), com dados do relatório de dores.",

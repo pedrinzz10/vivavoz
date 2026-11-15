@@ -4,8 +4,11 @@ import br.com.fiap.vozviva.atendimento.Acessibilidade;
 import br.com.fiap.vozviva.atendimento.TipoAtendimento;
 import br.com.fiap.vozviva.atendimento.importacao.ImportadorOsm.Ponto;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 
@@ -60,6 +63,31 @@ class ImportadorOsmTest {
 					+ "N'OpenStreetMap (ODbL)', '2026-07-28 02:16:18'),")
 			.contains("N'Drogaria Central', N'FARMACIA', NULL, NULL, -23.560000, -46.770000, N'DESCONHECIDA', NULL, 1,")
 			.endsWith("origem.atualizado_em);\n");
+	}
+
+	@Test
+	void linhaDeComandoGeraACargaAPartirDeUmaRespostaSalva(@TempDir Path pasta) throws Exception {
+		Path entrada = Files.writeString(pasta.resolve("overpass.json"), RESPOSTA);
+		Path saida = pasta.resolve("R__carga.sql");
+
+		ImportadorOsm.main(new String[] { saida.toString(), entrada.toString() });
+
+		assertThat(Files.readString(saida)).contains("MERGE INTO pontos_atendimento", "N'Drogaria Central'");
+	}
+
+	@Test
+	void respostaSemElementosNaoSubstituiACarga(@TempDir Path pasta) throws Exception {
+		Path entrada = Files.writeString(pasta.resolve("overpass.json"), "{\"remark\": \"runtime error: timeout\"}");
+		Path saida = pasta.resolve("R__carga.sql");
+
+		assertThatThrownBy(() -> ImportadorOsm.main(new String[] { saida.toString(), entrada.toString() }))
+			.hasMessageContaining("não será substituída");
+		assertThat(saida).doesNotExist();
+	}
+
+	@Test
+	void semArgumentosExplicaOUso() {
+		assertThatThrownBy(() -> ImportadorOsm.main(new String[0])).hasMessageContaining("Uso:");
 	}
 
 	@Test

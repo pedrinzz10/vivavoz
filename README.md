@@ -6,6 +6,61 @@ com aviso à rede de apoio, assistente contra golpes e atendimento acessível ma
 
 As especificações das funcionalidades estão em [`specs/specs.json`](specs/specs.json).
 
+| | |
+|---|---|
+| **API publicada (Azure)** | _a preencher depois do deploy_: `https://<webAppName>.azurewebsites.net/swagger-ui.html` |
+| **Swagger local** | http://localhost:8080/swagger-ui.html |
+| **Vídeo pitch** | _a preencher_ |
+| **Requisito 5 (Java Advanced)** | **Opção A: RabbitMQ.** O botão de emergência publica o evento e um consumidor assíncrono avisa os contatos ([detalhes](#botão-de-emergência-arquitetura-distribuída--opção-a-rabbitmq)) |
+
+## Integrantes
+
+| Nome | RM | Turma |
+|---|---|---|
+| _a preencher_ | _a preencher_ | _a preencher_ |
+
+## O problema e quem a solução atende
+
+O Brasil tem **32,1 milhões de pessoas com 60 anos ou mais**, 56% a mais que em 2010, e **14,4 milhões de
+pessoas com deficiência** (7,3% da população), segundo o Censo 2022 do IBGE. A cidade não acompanha essa
+população:
+- 68,8% dos moradores de áreas urbanas vivem em ruas sem nenhuma rampa para cadeirantes;
+- só 18,8% moram em ruas com calçadas livres de obstáculos;
+- a pobreza é maior entre as pessoas com deficiência.
+
+O resultado é um "confinamento domiciliar involuntário": a pessoa deixa de ir ao posto de saúde e passa a
+depender de terceiros. Ela também fica mais exposta a golpes digitais, porque usa o celular com pouco letramento
+digital. Os dados vêm do relatório de dores do grupo, em [`Dores Dos Grupos CitizenTech.md`](Dores%20Dos%20Grupos%20CitizenTech.md).
+
+**Quem a solução atende:** idosos e pessoas com deficiência (mobilidade reduzida, deficiência visual ou
+auditiva) e os cuidadores deles, com o piloto em Osasco/SP.
+
+## A solução
+
+O VozViva é a API Java do ecossistema **Fala Cidadão**. A pessoa usa o app por **voz** ou com **um toque**, sem
+menus complicados:
+
+| Funcionalidade | Dor que resolve |
+|---|---|
+| **Classificação por voz** (Spring AI + RAG) | Quem não consegue digitar ou navegar em menus diz o que precisa e o app abre a tela certa |
+| **Botão de emergência** (RabbitMQ) | Quedas e mal-estar em casa: os contatos são avisados em segundos, com localização e informações de saúde |
+| **Perfil de emergência e contatos** | O cuidador organiza a rede de apoio e as informações que vão na mensagem de socorro |
+| **Assistente contra golpes** (Spring AI + RAG) | Golpes do falso INSS, falso parente e falsa central: "isso é golpe?", com orientação oficial e canal para confirmar |
+| **Atendimento acessível mais próximo** | Hospital, UPA, UBS ou farmácia mais perto, de preferência com acessibilidade, e a rota aberta no Google Maps ou no Waze |
+
+**Ecossistema:**
+- **App mobile** (React Native): voz, toque e rota.
+- **API Java**, este repositório: identidade e JWT, voz, socorro, golpes e atendimentos, com Azure SQL.
+- **API .NET**: zeladoria e cadastros oficiais, com Oracle, validando o mesmo JWT.
+
+**ODS atendidos:**
+
+| ODS | Como |
+|---|---|
+| **3 – Saúde e bem-estar** | Socorro rápido com a rede de apoio, caminho até o atendimento de saúde e orientação de ligar 192 |
+| **10 – Redução das desigualdades** | Acesso por voz para quem tem baixo letramento digital ou deficiência, e proteção contra golpes que atingem os mais vulneráveis |
+| **11 – Cidades e comunidades sustentáveis** | Prioriza destinos acessíveis e encaminha problemas da calçada para a zeladoria |
+
 ## Stack
 
 - Java 21 · Spring Boot 4 · Gradle
@@ -82,6 +137,18 @@ de emergência, Assistente contra golpes e Atendimento acessível. Cada operaç�
 requisição. As respostas de erro documentadas são as que a operação pode devolver (400, 401, 403, 404, 409,
 429, 500), com o formato `ErroResponse` e um exemplo com `mensagemFalada`. O teste `OpenApiDocumentacaoTest`
 quebra o build se um endpoint ficar fora do contrato ou sem descrição.
+
+### Endpoints principais
+
+| Módulo | Endpoints |
+|---|---|
+| Autenticação | `POST /api/v1/auth/cadastro` · `POST /api/v1/auth/login` · `GET /api/v1/auth/eu` |
+| Voz | `POST /api/v1/voz/intencoes` · `GET /api/v1/voz/interacoes` |
+| Botão de emergência | `POST /api/v1/emergencias` · `GET /api/v1/emergencias` · `GET /api/v1/emergencias/{id}` · `GET /api/v1/emergencias/{id}/avisos` · `PATCH /api/v1/emergencias/{id}/cancelar` · `PATCH /api/v1/emergencias/{id}/atender` |
+| Perfil de emergência (CRUD) | `POST`, `GET` (paginado), `GET /meu`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}` em `/api/v1/perfis-emergencia` |
+| Contatos de emergência (CRUD) | `POST`, `GET` (paginado), `GET /{contatoId}`, `PUT /{contatoId}`, `DELETE /{contatoId}` em `/api/v1/perfis-emergencia/{perfilId}/contatos` |
+| Assistente contra golpes | `POST /api/v1/verificacoes` · `GET /api/v1/verificacoes/estatisticas` |
+| Atendimento acessível | `GET /api/v1/atendimentos/proximos` · `GET /api/v1/atendimentos` · `GET /api/v1/atendimentos/{id}` |
 
 ## Variáveis de ambiente
 
@@ -508,12 +575,33 @@ docker run --rm -p 8081:8080 --network vozviva_default \
 
 ```bash
 ./gradlew test                    # unitários + integração
-./gradlew test jacocoTestReport   # com relatório de cobertura em build/reports/jacoco
+./gradlew check                   # testes + cobertura mínima + script do banco atualizado (o que o CI roda)
+./gradlew test jacocoTestReport   # relatório de cobertura em build/reports/jacoco
+./gradlew avaliarIa               # avaliação com o modelo real da OCI (opcional; exige OCI_GENAI_API_KEY)
 ```
 
-Os testes comuns usam H2 em memória (modo SQL Server). Os testes de integração sobem SQL Server (mesmo motor
-do Azure SQL) e RabbitMQ reais com Testcontainers. Sem Docker, eles são ignorados automaticamente e os demais
-testes continuam rodando.
+| Camada | Ferramentas | Exemplos |
+|---|---|---|
+| Unitários | JUnit 5, Mockito, AssertJ, `@ParameterizedTest` | regras de golpe e de intenção, Haversine contra Vincenty, classificação do OSM, frases faladas |
+| IA com modelo simulado | `ChatModel` mockado | saída estruturada, resposta malformada, falha da API, ausência de chave, *prompt injection* |
+| Integração da API | Spring Boot Test + MockMvc + H2 (modo SQL Server) | contratos, validação 400, segurança 401/403, paginação e ordenação |
+| Integração com infraestrutura real | Testcontainers: SQL Server e RabbitMQ | evento atravessando a fila, DLQ, falha parcial de contatos, migrações e carga no SQL Server |
+| Concorrência | threads simultâneas com `CountDownLatch` | toque duplo, cancelar e atender ao mesmo tempo, limite de contatos (cada um falha sem a trava) |
+| Arquitetura e contrato | ArchUnit; teste do OpenAPI | padrão DTO; todo endpoint documentado |
+| Avaliação de IA | conjuntos rotulados versionados (tag `llm` para o modelo real) | 30 mensagens de golpe e 32 falas, com relatório em `build/reports/` |
+
+**Qualidade:**
+- Cobertura de linhas: 95% no total, acima de 90% em todos os serviços.
+- O `check` falha se a cobertura cair abaixo de 80% no total ou de 70% em qualquer serviço (regra do JaCoCo).
+- A suíte completa passou 3 vezes seguidas sem falhas. Os testes de concorrência usam 10 threads, porque com 2
+  eles não pegavam a condição de corrida de forma estável.
+
+**Dados para a demonstração:** o perfil dev cria os usuários de teste e o Flyway aplica a carga real de 237
+locais de Osasco/SP do OpenStreetMap. Os testes de atendimento usam uma área sem dados reais (latitude e
+longitude 10), para não depender da carga.
+
+Os testes de integração com infraestrutura real precisam de Docker. Sem Docker, eles são ignorados
+automaticamente e os demais testes continuam rodando.
 
 Nos testes, o segredo JWT é gerado aleatoriamente a cada execução (`SegredoJwtDeTeste`), e
 `TokenDeTeste` assina tokens no formato do .NET, como em `TokenDeTeste.cuidador("42").bearer()`.
@@ -535,6 +623,17 @@ br.com.fiap.vozviva
 
 Dentro de cada módulo: `dto` (records de entrada e saída), controller, serviço, mapper, entidade e
 repositório.
+
+## Declaração de uso de IA generativa
+
+| Ferramenta | Para quê |
+|---|---|
+| **Claude Code** (Anthropic) | Assistente de programação. Usado para escrever as especificações a partir do relatório de dores, implementar o código e os testes, revisar segurança e concorrência, configurar CI/CD, Docker e scripts da Azure e redigir a documentação, inclusive este README e o desenho da arquitetura. Tudo foi revisado pela equipe e validado pelos testes automatizados |
+| **Devin Review** (Cognition) | Revisão automática dos pull requests. Os apontamentos (por exemplo, condições de corrida e casos de borda) foram analisados um a um e corrigidos com testes de regressão |
+| **OCI Generative AI** (Oracle), via Spring AI | Faz parte do produto: o modelo de linguagem do assistente contra golpes e da classificação de intenção por voz. A avaliação está nas seções dessas funcionalidades |
+
+As decisões de escopo, arquitetura e prioridade foram da equipe. A IA nunca recebeu credenciais reais, e os
+segredos ficam só em variáveis de ambiente.
 
 ## Fluxo de contribuição
 
