@@ -1,8 +1,10 @@
 package br.com.fiap.vozviva.exception;
 
-import br.com.fiap.vozviva.dto.ErroResponse.CampoInvalido;
 import br.com.fiap.vozviva.dto.ErroResponse;
+import br.com.fiap.vozviva.dto.ErroResponse.CampoInvalido;
 import jakarta.servlet.http.HttpServletRequest;
+import org.hibernate.exception.ConstraintViolationException;
+import org.hibernate.exception.ConstraintViolationException.ConstraintKind;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,14 +68,30 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	}
 
 	/**
-	 * Rede de segurança para restrições do banco (unicidade, chave estrangeira) que escapem das
-	 * verificações dos serviços, por exemplo em requisições simultâneas. Nunca expõe o SQL.
+	 * Rede de segurança para restrições do banco que escapem das verificações dos serviços, por exemplo em
+	 * requisições simultâneas. Nunca expõe o SQL. Só a violação de unicidade é conflito (409, "já existe");
+	 * chave estrangeira, CHECK ou NOT NULL indicam dados que referenciam algo inexistente ou fora das regras
+	 * (400), sem dizer ao cidadão que algo "já foi registrado".
 	 */
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	ResponseEntity<ErroResponse> tratarRestricaoDoBanco(DataIntegrityViolationException ex, HttpServletRequest request) {
 		log.warn("Restrição do banco violada em {} {}", paraLog(request.getMethod()), paraLog(request.getRequestURI()), ex);
-		return responder(erros.criar(CodigoErro.CONFLITO,
-				"A operação conflita com dados já existentes.", request.getRequestURI()), null);
+		if (tipoDaRestricao(ex) == ConstraintKind.UNIQUE) {
+			return responder(erros.criar(CodigoErro.CONFLITO,
+					"A operação conflita com dados já existentes.", request.getRequestURI()), null);
+		}
+		return responder(erros.criar(CodigoErro.REQUISICAO_INVALIDA,
+				"A operação faz referência a dados que não existem ou não são permitidos.", request.getRequestURI()), null);
+	}
+
+	private static ConstraintKind tipoDaRestricao(Throwable ex) {
+		for (Throwable causa = ex; causa != null; causa = causa.getCause()) {
+			if (causa instanceof ConstraintViolationException violacao) {
+				return violacao.getKind();
+			}
+		}
+		// Sem a causa do Hibernate (ex.: DataIntegrityViolation lançada direto), mantém o comportamento de conflito.
+		return ConstraintKind.UNIQUE;
 	}
 
 	/**

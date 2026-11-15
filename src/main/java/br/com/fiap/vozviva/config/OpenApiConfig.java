@@ -88,6 +88,8 @@ public class OpenApiConfig {
 	@Bean
 	OpenApiCustomizer respostasDeErroPadrao() {
 		return openApi -> {
+			// A API do swagger-core devolve Schema sem tipo genérico; não há como evitar o tipo bruto aqui.
+			@SuppressWarnings("rawtypes")
 			Map<String, Schema> esquemas = ModelConverters.getInstance().readAll(ErroResponse.class);
 			esquemas.forEach(openApi.getComponents()::addSchemas);
 			openApi.getPaths().forEach((caminho, item) -> item.readOperationsMap()

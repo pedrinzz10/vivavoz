@@ -149,6 +149,17 @@ class VozIntegrationTest {
 		assertThat(jdbc.queryForList("select * from interacoes_voz").toString()).doesNotContain("23.111111", "46.222222");
 	}
 
+	/** Bug encontrado no teste exploratório: a falha do histórico (FK) virava 409 "já foi registrado". */
+	@Test
+	void contaQueNaoExisteMaisAindaRecebeAClassificacaoDoSocorro() throws Exception {
+		mvc.perform(post(INTENCOES).header(HttpHeaders.AUTHORIZATION, TokenDeTeste.cidadao("999999").bearer())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"texto\": \"socorro, caí\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.intencao").value("SOCORRO"))
+			.andExpect(jsonPath("$.acao").value("ACIONAR_SOCORRO"));
+	}
+
 	@Test
 	void exigeLogin() throws Exception {
 		mvc.perform(post(INTENCOES).contentType(MediaType.APPLICATION_JSON).content("{\"texto\": \"oi\"}"))

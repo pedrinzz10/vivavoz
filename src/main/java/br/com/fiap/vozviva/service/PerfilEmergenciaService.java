@@ -7,6 +7,7 @@ import br.com.fiap.vozviva.dto.PaginaResponse;
 import br.com.fiap.vozviva.dto.PerfilEmergenciaRequest;
 import br.com.fiap.vozviva.dto.PerfilEmergenciaResponse;
 import br.com.fiap.vozviva.exception.ConflitoException;
+import br.com.fiap.vozviva.exception.ContaInexistenteException;
 import br.com.fiap.vozviva.exception.RecursoNaoEncontradoException;
 import br.com.fiap.vozviva.exception.RequisicaoInvalidaException;
 import br.com.fiap.vozviva.mapper.PerfilEmergenciaMapper;
@@ -68,7 +69,7 @@ public class PerfilEmergenciaService {
 		if (perfis.existsByCidadaoId(cidadao.getId())) {
 			throw new ConflitoException("Este cidadão já tem um perfil de emergência.");
 		}
-		Usuario cuidador = usuarios.getReferenceById(cuidadorId);
+		Usuario cuidador = usuarios.findById(cuidadorId).orElseThrow(ContaInexistenteException::new);
 		PerfilEmergencia perfil = new PerfilEmergencia(cidadao, cuidador);
 		perfil.atualizar(request.mobilidade(), request.condicoesSaude(), request.medicamentos(), request.observacoes());
 		PerfilEmergencia salvo;

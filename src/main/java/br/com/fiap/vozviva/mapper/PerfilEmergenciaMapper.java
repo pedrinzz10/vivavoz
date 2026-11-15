@@ -1,8 +1,8 @@
 package br.com.fiap.vozviva.mapper;
 
 import br.com.fiap.vozviva.dto.ContatoEmergenciaResponse;
-import br.com.fiap.vozviva.dto.PerfilEmergenciaResponse.PessoaResumo;
 import br.com.fiap.vozviva.dto.PerfilEmergenciaResponse;
+import br.com.fiap.vozviva.dto.PerfilEmergenciaResponse.PessoaResumo;
 import br.com.fiap.vozviva.model.ContatoEmergencia;
 import br.com.fiap.vozviva.model.PerfilEmergencia;
 import br.com.fiap.vozviva.model.Usuario;
