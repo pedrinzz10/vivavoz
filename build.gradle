@@ -85,16 +85,19 @@ tasks.named('jacocoTestReport') {
 }
 
 // /scripts/script-bd.sql (exigido pela disciplina de DevOps) é a concatenação das migrações do
-// Flyway em ordem de versão. gerarScriptBd atualiza o arquivo; verificarScriptBd roda no check
-// e falha o build se alguém criar uma migração sem regenerar o script.
-def migracoesFlyway = fileTree('src/main/resources/db/migration') { include 'V*.sql' }
+// Flyway: as versionadas (V*) em ordem de versão e depois as repetíveis (R__*, carga de dados) por nome.
+// gerarScriptBd atualiza o arquivo; verificarScriptBd roda no check e falha o build se alguém criar
+// uma migração sem regenerar o script.
+def migracoesFlyway = fileTree('src/main/resources/db/migration') { include 'V*.sql', 'R__*.sql' }
 def scriptBd = file('scripts/script-bd.sql')
 def montarScriptBd = {
 	def versao = { File f -> (f.name =~ /^V(\d+)__/)[0][1] as int }
+	def versionadas = migracoesFlyway.files.findAll { it.name.startsWith('V') }.sort { versao(it) }
+	def repetiveis = migracoesFlyway.files.findAll { it.name.startsWith('R__') }.sort { it.name }
 	def conteudo = new StringBuilder()
-	conteudo << '-- VozViva - DDL do banco relacional (Azure SQL / SQL Server)\n'
+	conteudo << '-- VozViva - DDL e carga de dados do banco relacional (Azure SQL / SQL Server)\n'
 	conteudo << '-- Gerado por ./gradlew gerarScriptBd a partir de src/main/resources/db/migration. Não edite à mão.\n'
-	migracoesFlyway.files.sort { versao(it) }.each { f ->
+	(versionadas + repetiveis).each { f ->
 		conteudo << '\n-- ' << f.name << '\n' << f.getText('UTF-8').replace('\r\n', '\n').trim() << '\n'
 	}
 	conteudo.toString()
@@ -122,6 +125,18 @@ tasks.register('verificarScriptBd') {
 			throw new GradleException('scripts/script-bd.sql está desatualizado. Rode ./gradlew gerarScriptBd e faça commit.')
 		}
 	}
+}
+
+tasks.register('importarOsm', JavaExec) {
+	group = 'banco de dados'
+	description = 'Importa os locais de atendimento do OpenStreetMap e gera R__carga_pontos_atendimento.sql (-Pentrada=resposta.json usa uma resposta salva).'
+	classpath = sourceSets.main.runtimeClasspath
+	mainClass = 'br.com.fiap.vozviva.atendimento.importacao.ImportadorOsm'
+	args file('src/main/resources/db/migration/R__carga_pontos_atendimento.sql').absolutePath
+	if (project.hasProperty('entrada')) {
+		args file(project.property('entrada')).absolutePath
+	}
+	finalizedBy tasks.named('gerarScriptBd')
 }
 
 tasks.named('check') {

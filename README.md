@@ -260,12 +260,72 @@ garante desempenho.
 **Limitações:** o modelo pode errar golpes novos ou muito bem escritos (por isso a resposta nunca afirma
 certeza e sempre indica o canal oficial); a base cobre os golpes mais comuns, não todos; a classificação não
 substitui a confirmação no canal oficial.
+## Atendimento acessível mais próximo ("Ir até lá")
+
+Com um toque ("Hospital mais perto") ou por voz, o idoso ou a PcD encontra o atendimento do tipo desejado mais
+perto de onde está, de preferência acessível, e abre a rota no Google Maps, no Waze ou em qualquer app que
+entenda `geo:`. Não usa API paga de mapas: os links de rota não exigem chave.
+
+| Rota | Papel | O que faz |
+|---|---|---|
+| `GET /api/v1/atendimentos/proximos?tipo=HOSPITAL&latitude=-23.53&longitude=-46.78&acessivel=true` | `CIDADAO` / `CUIDADOR` | Mais próximos no raio (`raioMetros`, padrão 5 km, até 20 km), até `limite` itens (padrão 3, máximo 10) |
+| `GET /api/v1/atendimentos?tipo=UBS&page=0&size=10&sort=nome` | `CIDADAO` / `CUIDADOR` | Lista paginada (ordenação por `nome` ou `tipo`) |
+| `GET /api/v1/atendimentos/{id}` | `CIDADAO` / `CUIDADOR` | Detalhe do local |
+
+Tipos: `HOSPITAL`, `UPA`, `UBS`, `FARMACIA`, `CRAS`, `DELEGACIA`, `DEFENSORIA`.
+
+- **Busca:** pré-filtro por área no banco (índice em tipo + latitude + longitude) e distância exata por
+  Haversine, do mais próximo para o mais distante. A base inteira tem poucas centenas de linhas, então a
+  resposta fica bem abaixo de 1 s.
+- **Acessibilidade primeiro:** com `acessivel=true`, só entram locais com acessibilidade `SIM` ou `PARCIAL`,
+  mesmo que estejam mais longe. Se não houver nenhum no raio, a resposta traz os de acessibilidade
+  `DESCONHECIDA` com `semAcessivelNoRaio=true`, um aviso em cada item e a orientação de ligar antes. Um local
+  sem informação nunca é apresentado como acessível.
+- **Cada item** traz distância, acessibilidade, telefone, banheiro adaptado, 24 h e os links prontos
+  (`rotas.googleMaps`, `rotas.waze`, `rotas.geo`), além de uma `mensagemFalada` curta
+  ("O hospital mais perto com acessibilidade fica a 1,2 km. Se for urgência, ligue 192. Quer que eu abra o caminho?").
+- **Urgência:** buscas por `HOSPITAL` e `UPA` sempre trazem `telefoneEmergencia: "192"` e a orientação de
+  ligar para o SAMU em vez de ir sozinho.
+- **LGPD:** a localização do usuário só é usada no cálculo e nunca é gravada.
+
+### Dados (OpenStreetMap)
+
+Os locais vêm de uma importação única de dados abertos do **OpenStreetMap** para Osasco/SP e arredores
+(bairros vizinhos de São Paulo, Carapicuíba e Barueri):
+
+```bash
+./scripts/importar-osm.sh                                 # consulta a Overpass API (com espelhos de reserva)
+./scripts/importar-osm.sh -Pentrada=resposta-overpass.json  # a partir de uma resposta salva
+```
+
+O importador (`atendimento.importacao`) classifica cada elemento pelo nome e pelas tags (ex.: "UPA" ou
+"Pronto Atendimento" vira `UPA`; "UBS" ou "Unidade Básica" vira `UBS`; só delegacias e distritos policiais
+entram como `DELEGACIA`), converte a tag `wheelchair` (`yes`/`limited`/`no`) em `SIM`/`PARCIAL`/`NAO`, junta
+o mesmo local mapeado duas vezes e gera `R__carga_pontos_atendimento.sql`, uma migração repetível do Flyway
+(reaplicada quando o conteúdo muda).
+
+Carga atual (base OSM de 28/07/2026): 237 locais, sendo 130 farmácias, 40 hospitais, 38 UBS, 25 delegacias
+e 4 UPAs. Só 28 têm a acessibilidade informada no OSM; os demais aparecem como "acessibilidade não
+informada".
+
+**Dados © colaboradores do OpenStreetMap**, sob a licença [ODbL](https://www.openstreetmap.org/copyright).
+O crédito também vai em toda resposta da busca (`creditoDados`), para o app exibir.
+
+**Limitações:**
+- O destino é filtrado pela acessibilidade, mas a rota calculada pelo app de navegação pode passar por
+  calçadas ou travessias sem acessibilidade. A resposta avisa isso em `observacao`.
+- A qualidade depende do mapeamento colaborativo: muitos locais não têm acessibilidade nem telefone
+  informados.
+- CRAS e Defensoria Pública ainda não estão mapeados no OSM na região. Os tipos existem e passam a aparecer
+  quando forem mapeados e a carga for refeita.
+
 ## Banco de dados
 
 O esquema é versionado com **Flyway** em `src/main/resources/db/migration` (`V1__descricao.sql`, `V2__...`).
+A carga dos locais de atendimento é a migração repetível `R__carga_pontos_atendimento.sql`.
 O Hibernate apenas valida as entidades (`ddl-auto=validate`); nunca cria tabelas sozinho.
 
-`scripts/script-bd.sql` reúne todas as migrações num único DDL (exigência da disciplina de DevOps). Depois de
+`scripts/script-bd.sql` reúne todas as migrações (DDL e carga) num único script (exigência da disciplina de DevOps). Depois de
 criar ou alterar uma migração, rode `./gradlew gerarScriptBd`: o `check` (e o CI) falha se o arquivo estiver
 desatualizado.
 
@@ -293,11 +353,10 @@ br.com.fiap.vozviva
 ├── voz          classificação de intenção por voz (Spring AI)
 ├── perfil       perfil de emergência e contatos (cuidador)
 ├── emergencia   botão de emergência assíncrono (RabbitMQ: publicador, consumidor, DLQ e reenvio)
+├── atendimento  atendimento acessível mais próximo e importador do OpenStreetMap
 ├── seguranca    JWT e controle de acesso
 └── comum        erros, DTOs compartilhados e utilitários
 ```
-
-O módulo do atendimento mais próximo entra com a sua spec.
 
 Dentro de cada módulo: `dto` (records de entrada e saída), controller, serviço, mapper, entidade e
 repositório.
