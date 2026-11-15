@@ -1,7 +1,7 @@
 package br.com.fiap.vozviva.service;
 
-import br.com.fiap.vozviva.ai.AnaliseIaGolpe.RespostaIa;
 import br.com.fiap.vozviva.ai.AnaliseIaGolpe;
+import br.com.fiap.vozviva.ai.AnaliseIaGolpe.RespostaIa;
 import br.com.fiap.vozviva.ai.BaseConhecimentoGolpes;
 import br.com.fiap.vozviva.dto.VerificacaoRequest;
 import br.com.fiap.vozviva.dto.VerificacaoResponse;

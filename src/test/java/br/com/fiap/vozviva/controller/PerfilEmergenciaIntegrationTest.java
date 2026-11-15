@@ -105,6 +105,16 @@ class PerfilEmergenciaIntegrationTest {
 			.andExpect(status().isForbidden());
 	}
 
+	/** Bug encontrado no teste exploratório: a FK do cuidador inexistente virava 409 "já foi registrado". */
+	@Test
+	void cuidadorComContaQueNaoExisteMaisRecebe401() throws Exception {
+		mvc.perform(post(PERFIS).header(HttpHeaders.AUTHORIZATION, TokenDeTeste.cuidador("999999").bearer())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(perfilJson(cidadao.getEmail(), "CADEIRANTE")))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.codigo").value("NAO_AUTENTICADO"));
+	}
+
 	@Test
 	void cidadaoSemPerfilRecebe404NoMeu() throws Exception {
 		mvc.perform(como(cidadao, get(PERFIS + "/meu")))

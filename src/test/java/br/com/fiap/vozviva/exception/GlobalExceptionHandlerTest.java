@@ -3,6 +3,8 @@ package br.com.fiap.vozviva.exception;
 import br.com.fiap.vozviva.config.TraceIdFilter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
@@ -16,6 +18,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.emptyOrNullString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
@@ -108,6 +111,23 @@ class GlobalExceptionHandlerTest {
 		mvc.perform(get("/teste-erros/conflito"))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.codigo").value("CONFLITO"));
+	}
+
+	@Test
+	void restricaoDeUnicidadeDoBancoE409() throws Exception {
+		mvc.perform(get("/teste-erros/restricao/UNIQUE"))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.codigo").value("CONFLITO"));
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = { "FOREIGN_KEY", "CHECK", "NOT_NULL" })
+	void outrasRestricoesDoBancoSao400NaoConflito(String tipo) throws Exception {
+		mvc.perform(get("/teste-erros/restricao/" + tipo))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.codigo").value("REQUISICAO_INVALIDA"))
+			.andExpect(jsonPath("$.mensagemFalada").value(not(containsString("já foi registrado"))))
+			.andExpect(jsonPath("$.detail").value(not(containsString("restricao_x"))));
 	}
 
 	@Test

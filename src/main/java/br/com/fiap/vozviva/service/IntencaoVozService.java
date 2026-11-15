@@ -1,7 +1,7 @@
 package br.com.fiap.vozviva.service;
 
-import br.com.fiap.vozviva.ai.AnaliseIaIntencao.RespostaIa;
 import br.com.fiap.vozviva.ai.AnaliseIaIntencao;
+import br.com.fiap.vozviva.ai.AnaliseIaIntencao.RespostaIa;
 import br.com.fiap.vozviva.ai.ExemplosIntencao;
 import br.com.fiap.vozviva.ai.RegrasIntencao;
 import br.com.fiap.vozviva.dto.AtendimentosProximosResponse;
@@ -16,7 +16,10 @@ import br.com.fiap.vozviva.model.TipoAtendimento;
 import br.com.fiap.vozviva.model.Urgencia;
 import br.com.fiap.vozviva.repository.InteracaoVozRepository;
 import br.com.fiap.vozviva.util.Ordenacao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -38,6 +41,8 @@ import java.util.Set;
  */
 @Service
 public class IntencaoVozService {
+
+	private static final Logger log = LoggerFactory.getLogger(IntencaoVozService.class);
 
 	static final int MAXIMO_MENSAGEM_FALADA = 200;
 	static final String PERGUNTA_REPETICAO = "Não entendi bem. Você quer pedir ajuda, achar um atendimento perto, "
@@ -84,8 +89,8 @@ public class IntencaoVozService {
 		String analisadoPor = respostaIa.isPresent() ? "IA_E_REGRAS" : "REGRAS";
 
 		int latenciaMs = (int) ((System.nanoTime() - inicio) / 1_000_000);
-		interacoes.save(new InteracaoVoz(usuarioId, fala, decisao.intencao(), decisao.urgencia(), decisao.confianca(),
-				latenciaMs, analisadoPor, Instant.now()));
+		registrarNoHistorico(new InteracaoVoz(usuarioId, fala, decisao.intencao(), decisao.urgencia(),
+				decisao.confianca(), latenciaMs, analisadoPor, Instant.now()));
 
 		return new IntencaoResponse(decisao.intencao(), decisao.intencao().acao(), decisao.urgencia(),
 				decisao.entidades(), mensagemFalada, decisao.confianca(), analisadoPor, proximos);
@@ -124,6 +129,20 @@ public class IntencaoVozService {
 					FRASES_PADRAO.get(regras.intencao()), RegrasIntencao.CONFIANCA_REGRAS);
 		}
 		return new Decisao(Intencao.DESCONHECIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA, PERGUNTA_REPETICAO, confiancaIa);
+	}
+
+	/**
+	 * O histórico é secundário: se não puder ser gravado (ex.: a conta do token não existe mais), a resposta
+	 * sai mesmo assim. Um pedido de socorro nunca se perde por causa do histórico.
+	 */
+	private void registrarNoHistorico(InteracaoVoz interacao) {
+		try {
+			interacoes.save(interacao);
+		}
+		catch (DataIntegrityViolationException ex) {
+			log.warn("Interação de voz não gravada no histórico (usuário {}): {}", interacao.getUsuarioId(),
+					ex.getClass().getSimpleName());
+		}
 	}
 
 	/** Em "farmácia perto" com localização, a resposta já traz os locais: um toque a menos para o cidadão. */
