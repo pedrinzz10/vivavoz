@@ -1,11 +1,18 @@
 package br.com.fiap.vozviva.perfil;
 
+import br.com.fiap.vozviva.comum.documentacao.OpenApiConfig;
 import br.com.fiap.vozviva.comum.dto.PaginaResponse;
 import br.com.fiap.vozviva.perfil.dto.AtualizarPerfilEmergenciaRequest;
 import br.com.fiap.vozviva.perfil.dto.PerfilEmergenciaRequest;
 import br.com.fiap.vozviva.perfil.dto.PerfilEmergenciaResponse;
 import br.com.fiap.vozviva.seguranca.UsuarioAutenticado;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -25,6 +32,7 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/perfis-emergencia")
+@Tag(name = OpenApiConfig.TAG_PERFIL)
 public class PerfilEmergenciaController {
 
 	private final PerfilEmergenciaService perfis;
@@ -36,7 +44,15 @@ public class PerfilEmergenciaController {
 	}
 
 	@PostMapping
+	@ApiResponse(responseCode = "409", description = "O cidadão já tem perfil de emergência")
+	@ApiResponse(responseCode = "201", description = "Perfil criado (header Location aponta para ele)")
 	@PreAuthorize("hasRole('CUIDADOR')")
+	@Operation(summary = "Criar perfil de emergência", description = "O cuidador cria o perfil do cidadão (pelo e-mail da conta "
+			+ "dele) com mobilidade e informações de saúde, que vão na mensagem de socorro. Um perfil por cidadão (409 se já existir).")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "cadeirante",
+			value = """
+					{"cidadaoEmail": "maria@exemplo.com", "mobilidade": "CADEIRANTE", "condicoesSaude": "Hipertensão",
+					 "medicamentos": "Losartana 50 mg", "observacoes": "Mora no térreo, portão azul"}""")))
 	public ResponseEntity<PerfilEmergenciaResponse> criar(@Valid @RequestBody PerfilEmergenciaRequest request) {
 		PerfilEmergenciaResponse criado = perfis.criar(usuario.idNumerico(), request);
 		URI local = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(criado.id()).toUri();
@@ -46,32 +62,42 @@ public class PerfilEmergenciaController {
 	/** Perfis que o cuidador gerencia. Ordenação padrão: mais recentes primeiro. */
 	@GetMapping
 	@PreAuthorize("hasRole('CUIDADOR')")
+	@Operation(summary = "Perfis do cuidador", description = "Paginado; ordenação por criadoEm (padrão, mais recentes primeiro) ou id.")
 	public PaginaResponse<PerfilEmergenciaResponse> listar(
-			@PageableDefault(size = 10, sort = "criadoEm", direction = Sort.Direction.DESC) Pageable pageable) {
+			@ParameterObject @PageableDefault(size = 10, sort = "criadoEm", direction = Sort.Direction.DESC) Pageable pageable) {
 		return perfis.listarDoCuidador(usuario.idNumerico(), pageable);
 	}
 
 	@GetMapping("/meu")
 	@PreAuthorize("hasRole('CIDADAO')")
+	@Operation(summary = "Meu perfil", description = "O cidadão consulta o próprio perfil de emergência.")
 	public PerfilEmergenciaResponse meu() {
 		return perfis.buscarDoCidadao(usuario.idNumerico());
 	}
 
 	@GetMapping("/{id}")
 	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
+	@Operation(summary = "Detalhar perfil", description = "Visível para o próprio cidadão e para o cuidador responsável.")
 	public PerfilEmergenciaResponse buscar(@PathVariable Long id) {
 		return perfis.buscar(id, usuario.idNumerico());
 	}
 
 	@PutMapping("/{id}")
 	@PreAuthorize("hasRole('CUIDADOR')")
+	@Operation(summary = "Atualizar perfil", description = "Só o cuidador responsável.")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "andador",
+			value = """
+					{"mobilidade": "ANDADOR", "condicoesSaude": "Hipertensão e diabetes", "medicamentos": "Losartana, metformina",
+					 "observacoes": "Usa andador desde 2025"}""")))
 	public PerfilEmergenciaResponse atualizar(@PathVariable Long id,
 			@Valid @RequestBody AtualizarPerfilEmergenciaRequest request) {
 		return perfis.atualizar(id, usuario.idNumerico(), request);
 	}
 
 	@DeleteMapping("/{id}")
+	@ApiResponse(responseCode = "204", description = "Perfil excluído")
 	@PreAuthorize("hasRole('CUIDADOR')")
+	@Operation(summary = "Excluir perfil", description = "Remove o perfil e os contatos. Só o cuidador responsável.")
 	public ResponseEntity<Void> excluir(@PathVariable Long id) {
 		perfis.excluir(id, usuario.idNumerico());
 		return ResponseEntity.noContent().build();

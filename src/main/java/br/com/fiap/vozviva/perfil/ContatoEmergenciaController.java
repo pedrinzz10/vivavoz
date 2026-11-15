@@ -1,10 +1,17 @@
 package br.com.fiap.vozviva.perfil;
 
+import br.com.fiap.vozviva.comum.documentacao.OpenApiConfig;
 import br.com.fiap.vozviva.comum.dto.PaginaResponse;
 import br.com.fiap.vozviva.perfil.dto.ContatoEmergenciaRequest;
 import br.com.fiap.vozviva.perfil.dto.ContatoEmergenciaResponse;
 import br.com.fiap.vozviva.seguranca.UsuarioAutenticado;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +30,7 @@ import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/perfis-emergencia/{perfilId}/contatos")
+@Tag(name = OpenApiConfig.TAG_CONTATOS)
 public class ContatoEmergenciaController {
 
 	private final PerfilEmergenciaService perfis;
@@ -34,7 +42,14 @@ public class ContatoEmergenciaController {
 	}
 
 	@PostMapping
+	@ApiResponse(responseCode = "409", description = "Limite de 10 contatos atingido")
+	@ApiResponse(responseCode = "201", description = "Contato criado (header Location aponta para ele)")
 	@PreAuthorize("hasRole('CUIDADOR')")
+	@Operation(summary = "Adicionar contato", description = "Até 10 contatos por perfil. O telefone é normalizado para "
+			+ "+55DDDNUMERO. A prioridade (1 a 10) define a ordem de aviso no socorro.")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "filha",
+			value = """
+					{"nome": "Ana Souza", "telefone": "(11) 91234-5678", "parentesco": "filha", "prioridade": 1}""")))
 	public ResponseEntity<ContatoEmergenciaResponse> adicionar(@PathVariable Long perfilId,
 			@Valid @RequestBody ContatoEmergenciaRequest request) {
 		ContatoEmergenciaResponse criado = perfis.adicionarContato(perfilId, usuario.idNumerico(), request);
@@ -45,26 +60,34 @@ public class ContatoEmergenciaController {
 	/** Contatos do perfil. Ordenação padrão: prioridade (1 primeiro). */
 	@GetMapping
 	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
+	@Operation(summary = "Listar contatos", description = "Paginado; ordenação por prioridade (padrão), nome ou id.")
 	public PaginaResponse<ContatoEmergenciaResponse> listar(@PathVariable Long perfilId,
-			@PageableDefault(size = 10, sort = "prioridade") Pageable pageable) {
+			@ParameterObject @PageableDefault(size = 10, sort = "prioridade") Pageable pageable) {
 		return perfis.listarContatos(perfilId, usuario.idNumerico(), pageable);
 	}
 
 	@GetMapping("/{contatoId}")
 	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
+	@Operation(summary = "Detalhar contato")
 	public ContatoEmergenciaResponse buscar(@PathVariable Long perfilId, @PathVariable Long contatoId) {
 		return perfis.buscarContato(perfilId, contatoId, usuario.idNumerico());
 	}
 
 	@PutMapping("/{contatoId}")
 	@PreAuthorize("hasRole('CUIDADOR')")
+	@Operation(summary = "Atualizar contato", description = "Só o cuidador responsável pelo perfil.")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "filha",
+			value = """
+					{"nome": "Ana Souza", "telefone": "(11) 91234-5678", "parentesco": "filha", "prioridade": 1}""")))
 	public ContatoEmergenciaResponse atualizar(@PathVariable Long perfilId, @PathVariable Long contatoId,
 			@Valid @RequestBody ContatoEmergenciaRequest request) {
 		return perfis.atualizarContato(perfilId, contatoId, usuario.idNumerico(), request);
 	}
 
 	@DeleteMapping("/{contatoId}")
+	@ApiResponse(responseCode = "204", description = "Contato excluído")
 	@PreAuthorize("hasRole('CUIDADOR')")
+	@Operation(summary = "Excluir contato", description = "Só o cuidador responsável pelo perfil.")
 	public ResponseEntity<Void> excluir(@PathVariable Long perfilId, @PathVariable Long contatoId) {
 		perfis.excluirContato(perfilId, contatoId, usuario.idNumerico());
 		return ResponseEntity.noContent().build();

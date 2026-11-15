@@ -918,12 +918,12 @@
       "modulo": "Núcleo",
       "prioridade": "ALTA",
       "dependencias": ["SPEC-001"],
-      "status": "PENDENTE",
+      "status": "CONCLUIDA",
       "descricao": "Documentação interativa e contrato OpenAPI de todos os endpoints, para integração com o app React Native e com a equipe .NET.",
       "oQueFaz": [
         "Adiciona springdoc-openapi e expõe /swagger-ui e /v3/api-docs.",
         "Documenta os esquemas de segurança (Bearer JWT), exemplos de request/response e códigos de erro.",
-        "Agrupa os endpoints por módulo (Voz, Zeladoria, Rede, Emergência, Clima, Saúde, Economia, Perfil, Notificações, Dados)."
+        "Agrupa os endpoints por módulo (Autenticação, Voz, Botão de emergência, Perfil de emergência, Contatos de emergência, Assistente contra golpes, Atendimento acessível)."
       ],
       "resultadoEsperado": "O time mobile consegue integrar todos os endpoints usando apenas o Swagger.",
       "casosDeUso": [
