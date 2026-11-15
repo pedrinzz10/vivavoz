@@ -42,16 +42,16 @@
     "padraoDto": {
       "descricao": "Toda entrada e saída da API é um DTO; entidades, Map e Object nunca são expostos pelos controllers.",
       "regras": [
-        "DTOs ficam no subpacote dto do módulo (ex.: zeladoria.dto)",
+        "DTOs ficam no pacote dto (organização em camadas: controller, service, repository, model, dto, mapper...)",
         "DTOs são records imutáveis",
         "Entrada termina em Request e saída em Response",
         "Endpoints recebem DTO no @RequestBody e devolvem DTO, ResponseEntity de DTO ou List de DTO",
         "Controllers não acessam entidades (@Entity/@Document) nem repositórios; o fluxo é controller -> service -> repository",
-        "DTOs não dependem de entidades; a conversão fica em um mapper do módulo",
+        "DTOs não dependem de entidades; a conversão fica no pacote mapper",
         "Validações (Bean Validation) ficam no DTO de entrada",
-        "Erros usam o DTO comum.dto.ErroResponse"
+        "Erros usam o DTO dto.ErroResponse"
       ],
-      "verificacao": "Testes de arquitetura com ArchUnit (ArquiteturaDtoTest) quebram o build em caso de violação"
+      "verificacao": "Testes de arquitetura com ArchUnit (ArquiteturaDtoTest e ArquiteturaCamadasTest) quebram o build em caso de violação"
     }
   },
   "specs": [
