@@ -45,8 +45,9 @@ public class ContatoEmergenciaController {
 	@PostMapping
 	@ApiResponse(responseCode = "409", description = "Limite de 10 contatos atingido")
 	@ApiResponse(responseCode = "201", description = "Contato criado (header Location aponta para ele)")
-	@PreAuthorize("hasRole('CUIDADOR')")
-	@Operation(summary = "Adicionar contato", description = "Até 10 contatos por perfil. O telefone é normalizado para "
+	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
+	@Operation(summary = "Adicionar contato", description = "O cidadão dono do perfil ou o cuidador responsável. "
+			+ "Até 10 contatos por perfil. O telefone é normalizado para "
 			+ "+55DDDNUMERO. A prioridade (1 a 10) define a ordem de aviso no socorro.")
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "filha",
 			value = """
@@ -75,8 +76,8 @@ public class ContatoEmergenciaController {
 	}
 
 	@PutMapping("/{contatoId}")
-	@PreAuthorize("hasRole('CUIDADOR')")
-	@Operation(summary = "Atualizar contato", description = "Só o cuidador responsável pelo perfil.")
+	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
+	@Operation(summary = "Atualizar contato", description = "O cidadão dono do perfil ou o cuidador responsável.")
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "filha",
 			value = """
 					{"nome": "Ana Souza", "telefone": "(11) 91234-5678", "parentesco": "filha", "prioridade": 1}""")))
@@ -87,8 +88,8 @@ public class ContatoEmergenciaController {
 
 	@DeleteMapping("/{contatoId}")
 	@ApiResponse(responseCode = "204", description = "Contato excluído")
-	@PreAuthorize("hasRole('CUIDADOR')")
-	@Operation(summary = "Excluir contato", description = "Só o cuidador responsável pelo perfil.")
+	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
+	@Operation(summary = "Excluir contato", description = "O cidadão dono do perfil ou o cuidador responsável.")
 	public ResponseEntity<Void> excluir(@PathVariable Long perfilId, @PathVariable Long contatoId) {
 		perfis.excluirContato(perfilId, contatoId, usuario.idNumerico());
 		return ResponseEntity.noContent().build();

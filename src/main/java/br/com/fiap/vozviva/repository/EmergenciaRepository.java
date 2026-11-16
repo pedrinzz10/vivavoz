@@ -32,7 +32,7 @@ public interface EmergenciaRepository extends JpaRepository<Emergencia, Long> {
 
 	/** Para cancelar ou atender: trava a linha, assim duas alterações simultâneas não se sobrescrevem. */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select e from Emergencia e join fetch e.perfil p join fetch p.cidadao join fetch p.cuidador where e.id = :id")
+	@Query("select e from Emergencia e join fetch e.perfil p join fetch p.cidadao where e.id = :id")
 	Optional<Emergencia> findParaAlterarById(@Param("id") Long id);
 
 	@EntityGraph(attributePaths = { "perfil", "perfil.cidadao" })

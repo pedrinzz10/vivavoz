@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,10 +41,12 @@ public class AutenticacaoController {
 	@ApiResponse(responseCode = "201", description = "Conta criada")
 	@SecurityRequirements
 	@Operation(summary = "Cadastrar usuário", description = "Cria a conta de um cidadão (idoso ou PcD) ou de um cuidador. "
-			+ "A senha precisa de 8 caracteres ou mais, com pelo menos uma letra e um número.")
+			+ "A senha precisa de 8 caracteres ou mais, com pelo menos uma letra e um número. O consentimento com os termos "
+			+ "de uso e privacidade é obrigatório (consentimento = true) e fica gravado com a data do aceite (LGPD).")
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "cidadão",
 			value = """
-					{"nome": "Maria da Silva", "email": "maria@exemplo.com", "senha": "girassol2026", "papel": "CIDADAO"}""")))
+					{"nome": "Maria da Silva", "email": "maria@exemplo.com", "senha": "girassol2026", "papel": "CIDADAO",
+					 "consentimento": true}""")))
 	public ResponseEntity<UsuarioResponse> cadastrar(@Valid @RequestBody CadastroUsuarioRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(autenticacao.cadastrar(request));
 	}
@@ -57,6 +60,16 @@ public class AutenticacaoController {
 					{"email": "cidadao.teste@vozviva.dev", "senha": "a senha definida em USUARIOS_TESTE_SENHA"}""")))
 	public TokenResponse login(@Valid @RequestBody LoginRequest request) {
 		return autenticacao.login(request);
+	}
+
+	@DeleteMapping("/eu")
+	@ApiResponse(responseCode = "204", description = "Conta e dados apagados")
+	@Operation(summary = "Excluir minha conta (LGPD)", description = "Apaga a conta do token e o que depende dela: o perfil "
+			+ "de emergência do cidadão, com contatos, emergências e avisos, e o histórico de voz. Os perfis que um cuidador "
+			+ "cuidava continuam com os cidadãos, sem o vínculo. As estatísticas de golpe já são anônimas.")
+	public ResponseEntity<Void> excluirConta() {
+		autenticacao.excluirConta(usuarioAutenticado.idNumerico());
+		return ResponseEntity.noContent().build();
 	}
 
 	@GetMapping("/eu")

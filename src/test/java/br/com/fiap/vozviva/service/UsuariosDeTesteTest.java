@@ -55,7 +55,7 @@ class UsuariosDeTesteTest {
 
 	@Test
 	void senhaNaoApareceNoToStringDosDtos() {
-		assertThat(new CadastroUsuarioRequest("Maria", "m@x.com", "SenhaSecreta1", Papel.CIDADAO).toString())
+		assertThat(new CadastroUsuarioRequest("Maria", "m@x.com", "SenhaSecreta1", Papel.CIDADAO, true).toString())
 			.doesNotContain("SenhaSecreta1");
 		assertThat(new LoginRequest("m@x.com", "SenhaSecreta1").toString()).doesNotContain("SenhaSecreta1");
 	}

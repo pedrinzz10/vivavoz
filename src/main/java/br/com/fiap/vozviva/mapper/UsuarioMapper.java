@@ -9,7 +9,8 @@ public final class UsuarioMapper {
 	}
 
 	public static UsuarioResponse paraResponse(Usuario usuario) {
-		return new UsuarioResponse(usuario.getId(), usuario.getNome(), usuario.getEmail(), usuario.getPapel());
+		return new UsuarioResponse(usuario.getId(), usuario.getNome(), usuario.getEmail(), usuario.getPapel(),
+				usuario.getConsentimentoEm() == null ? null : usuario.getConsentimentoEm().toString());
 	}
 
 }

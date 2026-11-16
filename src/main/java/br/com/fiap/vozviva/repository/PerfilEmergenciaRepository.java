@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -30,7 +31,12 @@ public interface PerfilEmergenciaRepository extends JpaRepository<PerfilEmergenc
 	 * inclusões simultâneas passam a acontecer uma depois da outra, e o limite de contatos é respeitado.
 	 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("select p from PerfilEmergencia p join fetch p.cidadao join fetch p.cuidador where p.id = :id")
+	@Query("select p from PerfilEmergencia p join fetch p.cidadao where p.id = :id")
 	Optional<PerfilEmergencia> findParaAlterarById(@Param("id") Long id);
+
+	/** O cuidador excluiu a conta: os perfis que ele cuidava continuam com os cidadãos, sem o vínculo. */
+	@Modifying
+	@Query("update PerfilEmergencia p set p.cuidador = null where p.cuidador.id = :cuidadorId")
+	int desvincularCuidador(@Param("cuidadorId") Long cuidadorId);
 
 }

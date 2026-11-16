@@ -2,6 +2,7 @@ package br.com.fiap.vozviva.dto;
 
 import br.com.fiap.vozviva.model.Papel;
 import br.com.fiap.vozviva.validation.LimiteBytesUtf8;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -9,7 +10,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
- * Dados para criar uma conta. A senha tem no máximo 72 bytes em UTF-8, limite do BCrypt.
+ * Dados para criar uma conta. A senha tem no máximo 72 bytes em UTF-8, limite do BCrypt. O consentimento com os
+ * termos de uso e privacidade é obrigatório (LGPD) e fica gravado com a data do aceite.
  */
 public record CadastroUsuarioRequest(
 		@NotBlank @Size(max = 120) String nome,
@@ -17,7 +19,10 @@ public record CadastroUsuarioRequest(
 		@NotBlank @Size(min = 8) @LimiteBytesUtf8(max = 72)
 		@Pattern(regexp = "^(?=.*[A-Za-zÀ-ÿ])(?=.*\\d).+$", message = "deve ter pelo menos uma letra e um número")
 		String senha,
-		@NotNull Papel papel) {
+		@NotNull Papel papel,
+		@NotNull(message = "é preciso aceitar os termos de uso e privacidade")
+		@AssertTrue(message = "é preciso aceitar os termos de uso e privacidade")
+		Boolean consentimento) {
 
 	@Override
 	public String toString() {

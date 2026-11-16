@@ -30,8 +30,9 @@ public final class PerfilEmergenciaMapper {
 				contato.getParentesco(), contato.getPrioridade());
 	}
 
+	/** {@code null} quando não há a pessoa (ex.: perfil mantido pelo próprio cidadão, sem cuidador). */
 	private static PessoaResumo resumo(Usuario usuario) {
-		return new PessoaResumo(usuario.getId(), usuario.getNome());
+		return usuario == null ? null : new PessoaResumo(usuario.getId(), usuario.getNome());
 	}
 
 }

@@ -10,5 +10,7 @@ public enum Mobilidade {
 	BENGALA,
 	DEFICIENCIA_VISUAL,
 	DEFICIENCIA_AUDITIVA,
-	NENHUMA
+	NENHUMA,
+	/** A pessoa preferiu não informar (dado de saúde, LGPD). É o padrão quando o campo não vem. */
+	NAO_INFORMADO
 }

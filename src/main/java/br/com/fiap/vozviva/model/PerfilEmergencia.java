@@ -37,8 +37,9 @@ public class PerfilEmergencia {
 	@JoinColumn(name = "cidadao_id", nullable = false, unique = true)
 	private Usuario cidadao;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "cuidador_id", nullable = false)
+	/** Opcional: o cidadão pode manter o próprio perfil, sem cuidador. */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "cuidador_id")
 	private Usuario cuidador;
 
 	@Enumerated(EnumType.STRING)
@@ -73,14 +74,24 @@ public class PerfilEmergencia {
 	}
 
 	public void atualizar(Mobilidade mobilidade, String condicoesSaude, String medicamentos, String observacoes) {
-		this.mobilidade = mobilidade;
+		this.mobilidade = mobilidade == null ? Mobilidade.NAO_INFORMADO : mobilidade;
 		this.condicoesSaude = condicoesSaude;
 		this.medicamentos = medicamentos;
 		this.observacoes = observacoes;
 	}
 
 	public boolean ehGerenciadoPor(Long usuarioId) {
-		return cuidador.getId().equals(usuarioId);
+		return cuidador != null && cuidador.getId().equals(usuarioId);
+	}
+
+	/** O cuidador responsável ou o próprio cidadão (quem mora sozinho cadastra quem avisar). */
+	public boolean podeSerAlteradoPor(Long usuarioId) {
+		return ehGerenciadoPor(usuarioId) || pertenceAo(usuarioId);
+	}
+
+	/** O cuidador excluiu a conta: o perfil continua com o cidadão, só sem o vínculo. */
+	public void removerCuidador() {
+		this.cuidador = null;
 	}
 
 	public boolean pertenceAo(Long usuarioId) {
