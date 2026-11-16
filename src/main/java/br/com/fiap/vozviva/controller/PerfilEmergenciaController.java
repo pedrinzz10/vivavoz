@@ -5,6 +5,7 @@ import br.com.fiap.vozviva.dto.AtualizarPerfilEmergenciaRequest;
 import br.com.fiap.vozviva.dto.PaginaResponse;
 import br.com.fiap.vozviva.dto.PerfilEmergenciaRequest;
 import br.com.fiap.vozviva.dto.PerfilEmergenciaResponse;
+import br.com.fiap.vozviva.model.Papel;
 import br.com.fiap.vozviva.security.UsuarioAutenticado;
 import br.com.fiap.vozviva.service.PerfilEmergenciaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,15 +48,20 @@ public class PerfilEmergenciaController {
 	@PostMapping
 	@ApiResponse(responseCode = "409", description = "O cidadão já tem perfil de emergência")
 	@ApiResponse(responseCode = "201", description = "Perfil criado (header Location aponta para ele)")
-	@PreAuthorize("hasRole('CUIDADOR')")
-	@Operation(summary = "Criar perfil de emergência", description = "O cuidador cria o perfil do cidadão (pelo e-mail da conta "
-			+ "dele) com mobilidade e informações de saúde, que vão na mensagem de socorro. Um perfil por cidadão (409 se já existir).")
-	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "cadeirante",
-			value = """
+	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
+	@Operation(summary = "Criar perfil de emergência", description = "O cidadão cria o próprio perfil (sem cidadaoEmail: vale o "
+			+ "dono do token). O cuidador cria o perfil de um cidadão pelo e-mail da conta dele. A mobilidade é opcional "
+			+ "(dado de saúde): sem ela, fica NAO_INFORMADO. Os dados vão na mensagem de socorro. Um perfil por cidadão "
+			+ "(409 se já existir).")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = {
+			@ExampleObject(name = "cidadão cria o próprio", value = """
+					{"condicoesSaude": "Hipertensão", "medicamentos": "Losartana 50 mg"}"""),
+			@ExampleObject(name = "cuidador cria para o cidadão", value = """
 					{"cidadaoEmail": "maria@exemplo.com", "mobilidade": "CADEIRANTE", "condicoesSaude": "Hipertensão",
-					 "medicamentos": "Losartana 50 mg", "observacoes": "Mora no térreo, portão azul"}""")))
+					 "medicamentos": "Losartana 50 mg", "observacoes": "Mora no térreo, portão azul"}""") }))
 	public ResponseEntity<PerfilEmergenciaResponse> criar(@Valid @RequestBody PerfilEmergenciaRequest request) {
-		PerfilEmergenciaResponse criado = perfis.criar(usuario.idNumerico(), request);
+		Papel papel = usuario.possui(Papel.CUIDADOR) ? Papel.CUIDADOR : Papel.CIDADAO;
+		PerfilEmergenciaResponse criado = perfis.criar(usuario.idNumerico(), papel, request);
 		URI local = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(criado.id()).toUri();
 		return ResponseEntity.created(local).body(criado);
 	}
@@ -84,8 +90,9 @@ public class PerfilEmergenciaController {
 	}
 
 	@PutMapping("/{id}")
-	@PreAuthorize("hasRole('CUIDADOR')")
-	@Operation(summary = "Atualizar perfil", description = "Só o cuidador responsável.")
+	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
+	@Operation(summary = "Atualizar perfil", description = "O cidadão dono do perfil ou o cuidador responsável. Mobilidade "
+			+ "opcional (sem ela, NAO_INFORMADO).")
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "andador",
 			value = """
 					{"mobilidade": "ANDADOR", "condicoesSaude": "Hipertensão e diabetes", "medicamentos": "Losartana, metformina",
@@ -97,8 +104,9 @@ public class PerfilEmergenciaController {
 
 	@DeleteMapping("/{id}")
 	@ApiResponse(responseCode = "204", description = "Perfil excluído")
-	@PreAuthorize("hasRole('CUIDADOR')")
-	@Operation(summary = "Excluir perfil", description = "Remove o perfil e os contatos. Só o cuidador responsável.")
+	@PreAuthorize("hasAnyRole('CIDADAO', 'CUIDADOR')")
+	@Operation(summary = "Excluir perfil", description = "Remove o perfil e os contatos. O cidadão dono do perfil ou o "
+			+ "cuidador responsável.")
 	public ResponseEntity<Void> excluir(@PathVariable Long id) {
 		perfis.excluir(id, usuario.idNumerico());
 		return ResponseEntity.noContent().build();

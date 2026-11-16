@@ -14,6 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.Instant;
+
 /**
  * Cria um cidadão e um cuidador de teste para a demonstração e para o README. Só roda com
  * {@code vozviva.usuarios-teste.habilitado=true}, e a senha vem do ambiente (nunca do código).
@@ -51,7 +53,9 @@ public class UsuariosDeTeste implements ApplicationRunner {
 
 	private void criarSeNaoExiste(String nome, String email, Papel papel) {
 		if (!usuarios.existsByEmail(email)) {
-			usuarios.save(new Usuario(nome, email, senhas.encode(senha), papel));
+			Usuario usuario = new Usuario(nome, email, senhas.encode(senha), papel);
+			usuario.registrarConsentimento(Instant.now());
+			usuarios.save(usuario);
 			log.info("Usuário de teste criado: {} ({})", email, papel);
 		}
 	}

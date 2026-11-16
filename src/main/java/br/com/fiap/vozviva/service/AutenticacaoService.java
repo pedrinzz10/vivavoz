@@ -5,6 +5,7 @@ import br.com.fiap.vozviva.dto.LoginRequest;
 import br.com.fiap.vozviva.dto.TokenResponse;
 import br.com.fiap.vozviva.dto.UsuarioResponse;
 import br.com.fiap.vozviva.exception.ConflitoException;
+import br.com.fiap.vozviva.exception.ContaInexistenteException;
 import br.com.fiap.vozviva.exception.CredenciaisInvalidasException;
 import br.com.fiap.vozviva.exception.RecursoNaoEncontradoException;
 import br.com.fiap.vozviva.mapper.UsuarioMapper;
@@ -17,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,6 +32,8 @@ public class AutenticacaoService {
 	private final PasswordEncoder senhas;
 	private final EmissorToken emissor;
 	private final LimitadorTentativasLogin limitador;
+	private final PerfilEmergenciaService perfis;
+	private final ContasExcluidas contasExcluidas;
 
 	/**
 	 * Hash usado quando o e-mail não existe: a verificação de senha roda do mesmo jeito, para que o
@@ -38,11 +42,13 @@ public class AutenticacaoService {
 	private final String hashFicticio;
 
 	public AutenticacaoService(UsuarioRepository usuarios, PasswordEncoder senhas, EmissorToken emissor,
-			LimitadorTentativasLogin limitador) {
+			LimitadorTentativasLogin limitador, PerfilEmergenciaService perfis, ContasExcluidas contasExcluidas) {
 		this.usuarios = usuarios;
 		this.senhas = senhas;
 		this.emissor = emissor;
 		this.limitador = limitador;
+		this.perfis = perfis;
+		this.contasExcluidas = contasExcluidas;
 		// Valor aleatório a cada inicialização: não existe texto fixo que corresponda a esse hash.
 		this.hashFicticio = senhas.encode(UUID.randomUUID().toString());
 	}
@@ -54,6 +60,8 @@ public class AutenticacaoService {
 			throw new ConflitoException("Já existe uma conta com este e-mail.");
 		}
 		Usuario usuario = new Usuario(request.nome().trim(), email, senhas.encode(request.senha()), request.papel());
+		// O DTO só deixa passar consentimento = true; a data do aceite é a prova para a LGPD.
+		usuario.registrarConsentimento(Instant.now());
 		try {
 			return UsuarioMapper.paraResponse(usuarios.saveAndFlush(usuario));
 		}
@@ -88,6 +96,22 @@ public class AutenticacaoService {
 		return usuarios.findById(id)
 			.map(UsuarioMapper::paraResponse)
 			.orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
+	}
+
+	/**
+	 * Exclusão da conta (LGPD): apaga o usuário do token e o que depende dele. O perfil do cidadão vai junto
+	 * (com contatos, emergências e avisos); os perfis que um cuidador cuidava continuam com os cidadãos, sem o
+	 * vínculo. O histórico de voz é apagado pelo banco (ON DELETE CASCADE). As estatísticas de golpe já são
+	 * anônimas e não têm usuário.
+	 */
+	@Transactional
+	public void excluirConta(Long id) {
+		Usuario usuario = usuarios.findById(id).orElseThrow(ContaInexistenteException::new);
+		perfis.removerDadosDoUsuario(id);
+		usuarios.delete(usuario);
+		usuarios.flush();
+		// O JWT continua válido até expirar: a lista de contas excluídas faz o token parar de valer agora.
+		contasExcluidas.registrar(id);
 	}
 
 	static String normalizarEmail(String email) {

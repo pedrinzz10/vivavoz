@@ -41,6 +41,13 @@ public class Usuario {
 	@Column(nullable = false)
 	private boolean ativo = true;
 
+	/** Aceite dos termos de uso e privacidade no cadastro (prova do consentimento, LGPD). */
+	@Column(nullable = false)
+	private boolean consentimento;
+
+	@Column(name = "consentimento_em")
+	private Instant consentimentoEm;
+
 	@Column(name = "criado_em", nullable = false, updatable = false)
 	private Instant criadoEm;
 
@@ -91,6 +98,19 @@ public class Usuario {
 
 	public Papel getPapel() {
 		return papel;
+	}
+
+	public void registrarConsentimento(Instant quando) {
+		this.consentimento = true;
+		this.consentimentoEm = quando;
+	}
+
+	public boolean isConsentimento() {
+		return consentimento;
+	}
+
+	public Instant getConsentimentoEm() {
+		return consentimentoEm;
 	}
 
 	public boolean isAtivo() {

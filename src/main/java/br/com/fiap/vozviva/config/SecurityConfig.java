@@ -1,7 +1,9 @@
 package br.com.fiap.vozviva.config;
 
+import br.com.fiap.vozviva.security.ContaExcluidaValidator;
 import br.com.fiap.vozviva.security.ErroSegurancaHandler;
 import br.com.fiap.vozviva.security.PapeisJwtConverter;
+import br.com.fiap.vozviva.service.ContasExcluidas;
 import jakarta.servlet.DispatcherType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,9 +105,13 @@ public class SecurityConfig {
 		return repositorio;
 	}
 
+	/** Além das regras do token, recusa contas excluídas (o token de quem excluiu a conta para de valer na hora). */
 	@Bean
-	JwtDecoder jwtDecoder(JwtProperties propriedades) {
-		return criarDecoder(propriedades);
+	JwtDecoder jwtDecoder(JwtProperties propriedades, ContasExcluidas contasExcluidas) {
+		NimbusJwtDecoder decoder = criarDecoder(propriedades);
+		decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(validador(propriedades),
+				new ContaExcluidaValidator(contasExcluidas)));
+		return decoder;
 	}
 
 	@Bean
@@ -122,7 +128,7 @@ public class SecurityConfig {
 		return PasswordEncoderFactories.createDelegatingPasswordEncoder();
 	}
 
-	public static JwtDecoder criarDecoder(JwtProperties propriedades) {
+	public static NimbusJwtDecoder criarDecoder(JwtProperties propriedades) {
 		MacAlgorithm algoritmo = algoritmo(propriedades);
 		NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(chave(propriedades, algoritmo))
 			.macAlgorithm(algoritmo)

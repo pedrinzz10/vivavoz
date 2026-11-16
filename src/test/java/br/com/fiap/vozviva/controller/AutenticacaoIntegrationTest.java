@@ -197,7 +197,7 @@ class AutenticacaoIntegrationTest {
 	private static org.springframework.test.web.servlet.RequestBuilder cadastro(String nome, String email, String senha,
 			String papel) {
 		return post("/api/v1/auth/cadastro").contentType(MediaType.APPLICATION_JSON).content("""
-				{"nome": "%s", "email": "%s", "senha": "%s", "papel": "%s"}
+				{"nome": "%s", "email": "%s", "senha": "%s", "papel": "%s", "consentimento": true}
 				""".formatted(nome, email, senha, papel));
 	}
 

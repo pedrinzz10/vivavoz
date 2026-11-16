@@ -25,6 +25,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.Locale;
 import java.util.Set;
@@ -32,8 +33,9 @@ import java.util.Set;
 /**
  * Regras do perfil de emergência e dos contatos:
  * <ul>
- *   <li>só o cuidador que criou o perfil pode alterá-lo, excluí-lo e mexer nos contatos;</li>
- *   <li>o cidadão dono do perfil pode consultá-lo (e os contatos), mas não alterar;</li>
+ *   <li>o cidadão cria e mantém o próprio perfil e os contatos (quem mora sozinho cadastra quem avisar);</li>
+ *   <li>o cuidador cria o perfil de um cidadão pelo e-mail dele e também pode alterá-lo, excluí-lo e mexer
+ *   nos contatos; um perfil pode não ter cuidador;</li>
  *   <li>cada cidadão tem no máximo um perfil, com até {@value #MAXIMO_CONTATOS} contatos.</li>
  * </ul>
  */
@@ -58,18 +60,38 @@ public class PerfilEmergenciaService {
 
 	// --- Perfil -------------------------------------------------------------
 
+	/**
+	 * O cidadão cria o próprio perfil (vale o dono do token; quem mora sozinho cadastra quem avisar). O cuidador
+	 * cria o perfil de um cidadão pelo e-mail da conta dele e fica responsável pelo perfil.
+	 */
 	@Transactional
-	public PerfilEmergenciaResponse criar(Long cuidadorId, PerfilEmergenciaRequest request) {
-		String email = request.cidadaoEmail().trim().toLowerCase(Locale.ROOT);
-		Usuario cidadao = usuarios.findByEmail(email)
-			.orElseThrow(() -> new RecursoNaoEncontradoException("Não existe conta com o e-mail informado."));
-		if (cidadao.getPapel() != Papel.CIDADAO) {
-			throw new RequisicaoInvalidaException("O e-mail informado não é de uma conta de cidadão.");
+	public PerfilEmergenciaResponse criar(Long usuarioId, Papel papel, PerfilEmergenciaRequest request) {
+		Usuario autor = usuarios.findById(usuarioId).orElseThrow(ContaInexistenteException::new);
+		String email = StringUtils.hasText(request.cidadaoEmail())
+				? request.cidadaoEmail().trim().toLowerCase(Locale.ROOT) : null;
+		Usuario cidadao;
+		Usuario cuidador;
+		if (papel == Papel.CIDADAO) {
+			if (email != null && !email.equals(autor.getEmail())) {
+				throw new AccessDeniedException("O cidadão só cria o próprio perfil.");
+			}
+			cidadao = autor;
+			cuidador = null;
+		}
+		else {
+			if (email == null) {
+				throw new RequisicaoInvalidaException("Informe o e-mail da conta do cidadão.");
+			}
+			cidadao = usuarios.findByEmail(email)
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Não existe conta com o e-mail informado."));
+			if (cidadao.getPapel() != Papel.CIDADAO) {
+				throw new RequisicaoInvalidaException("O e-mail informado não é de uma conta de cidadão.");
+			}
+			cuidador = autor;
 		}
 		if (perfis.existsByCidadaoId(cidadao.getId())) {
 			throw new ConflitoException("Este cidadão já tem um perfil de emergência.");
 		}
-		Usuario cuidador = usuarios.findById(cuidadorId).orElseThrow(ContaInexistenteException::new);
 		PerfilEmergencia perfil = new PerfilEmergencia(cidadao, cuidador);
 		perfil.atualizar(request.mobilidade(), request.condicoesSaude(), request.medicamentos(), request.observacoes());
 		PerfilEmergencia salvo;
@@ -102,27 +124,37 @@ public class PerfilEmergenciaService {
 	}
 
 	@Transactional
-	public PerfilEmergenciaResponse atualizar(Long perfilId, Long cuidadorId, AtualizarPerfilEmergenciaRequest request) {
-		PerfilEmergencia perfil = perfilGerenciadoPor(perfilId, cuidadorId);
+	public PerfilEmergenciaResponse atualizar(Long perfilId, Long usuarioId, AtualizarPerfilEmergenciaRequest request) {
+		PerfilEmergencia perfil = perfilAlteravelPor(perfilId, usuarioId);
 		perfil.atualizar(request.mobilidade(), request.condicoesSaude(), request.medicamentos(), request.observacoes());
 		perfis.flush();
 		return PerfilEmergenciaMapper.paraResponse(perfil);
 	}
 
 	@Transactional
-	public void excluir(Long perfilId, Long cuidadorId) {
-		perfis.delete(perfilGerenciadoPor(perfilId, cuidadorId));
+	public void excluir(Long perfilId, Long usuarioId) {
+		perfis.delete(perfilAlteravelPor(perfilId, usuarioId));
+	}
+
+	/**
+	 * Exclusão da conta (LGPD): apaga o perfil do próprio cidadão (com contatos, emergências e avisos) e tira o
+	 * vínculo do cuidador com os perfis que ele cuidava. Esses perfis são de outras pessoas e continuam com elas.
+	 */
+	@Transactional
+	public void removerDadosDoUsuario(Long usuarioId) {
+		perfis.findByCidadaoId(usuarioId).ifPresent(perfis::delete);
+		perfis.desvincularCuidador(usuarioId);
 	}
 
 	// --- Contatos -----------------------------------------------------------
 
 	@Transactional
-	public ContatoEmergenciaResponse adicionarContato(Long perfilId, Long cuidadorId, ContatoEmergenciaRequest request) {
+	public ContatoEmergenciaResponse adicionarContato(Long perfilId, Long usuarioId, ContatoEmergenciaRequest request) {
 		// Trava o perfil: inclusões simultâneas não conseguem passar do limite de contatos.
 		PerfilEmergencia perfil = perfis.findParaAlterarById(perfilId)
 			.orElseThrow(() -> new RecursoNaoEncontradoException("Perfil de emergência não encontrado."));
-		if (!perfil.ehGerenciadoPor(cuidadorId)) {
-			throw new AccessDeniedException("Perfil gerenciado por outro cuidador.");
+		if (!perfil.podeSerAlteradoPor(usuarioId)) {
+			throw new AccessDeniedException("Só o cidadão dono do perfil ou o cuidador responsável alteram os contatos.");
 		}
 		if (contatos.countByPerfilId(perfilId) >= MAXIMO_CONTATOS) {
 			throw new ConflitoException("O perfil já tem o máximo de " + MAXIMO_CONTATOS + " contatos.");
@@ -146,9 +178,9 @@ public class PerfilEmergenciaService {
 	}
 
 	@Transactional
-	public ContatoEmergenciaResponse atualizarContato(Long perfilId, Long contatoId, Long cuidadorId,
+	public ContatoEmergenciaResponse atualizarContato(Long perfilId, Long contatoId, Long usuarioId,
 			ContatoEmergenciaRequest request) {
-		perfilGerenciadoPor(perfilId, cuidadorId);
+		perfilAlteravelPor(perfilId, usuarioId);
 		ContatoEmergencia contato = contatoDoPerfil(perfilId, contatoId);
 		preencher(contato, request);
 		contatos.flush();
@@ -156,8 +188,8 @@ public class PerfilEmergenciaService {
 	}
 
 	@Transactional
-	public void excluirContato(Long perfilId, Long contatoId, Long cuidadorId) {
-		perfilGerenciadoPor(perfilId, cuidadorId);
+	public void excluirContato(Long perfilId, Long contatoId, Long usuarioId) {
+		perfilAlteravelPor(perfilId, usuarioId);
 		contatos.delete(contatoDoPerfil(perfilId, contatoId));
 	}
 
@@ -177,11 +209,11 @@ public class PerfilEmergenciaService {
 		return perfil;
 	}
 
-	/** Só o cuidador responsável altera o perfil e os contatos. */
-	private PerfilEmergencia perfilGerenciadoPor(Long perfilId, Long cuidadorId) {
+	/** O cuidador responsável e o cidadão dono do perfil alteram o perfil e os contatos. */
+	private PerfilEmergencia perfilAlteravelPor(Long perfilId, Long usuarioId) {
 		PerfilEmergencia perfil = carregar(perfilId);
-		if (!perfil.ehGerenciadoPor(cuidadorId)) {
-			throw new AccessDeniedException("Perfil gerenciado por outro cuidador.");
+		if (!perfil.podeSerAlteradoPor(usuarioId)) {
+			throw new AccessDeniedException("Só o cidadão dono do perfil ou o cuidador responsável podem alterá-lo.");
 		}
 		return perfil;
 	}

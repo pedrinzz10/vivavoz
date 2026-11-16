@@ -44,7 +44,7 @@ class PerfilEmergenciaConcorrenciaTest {
 	void inclusoesSimultaneasNaoPassamDoLimiteDeContatos() throws Exception {
 		Usuario cuidador = usuario(Papel.CUIDADOR);
 		Usuario cidadao = usuario(Papel.CIDADAO);
-		Long perfil = servico.criar(cuidador.getId(), perfilDe(cidadao)).id();
+		Long perfil = servico.criar(cuidador.getId(), Papel.CUIDADOR, perfilDe(cidadao)).id();
 		for (int i = 1; i < PerfilEmergenciaService.MAXIMO_CONTATOS; i++) {
 			servico.adicionarContato(perfil, cuidador.getId(), contato(i));
 		}
@@ -68,7 +68,7 @@ class PerfilEmergenciaConcorrenciaTest {
 			@Override
 			public Object call() {
 				Usuario cuidador = (vez++ % 2 == 0) ? cuidadorA : cuidadorB;
-				return servico.criar(cuidador.getId(), perfilDe(cidadao));
+				return servico.criar(cuidador.getId(), Papel.CUIDADOR, perfilDe(cidadao));
 			}
 		});
 

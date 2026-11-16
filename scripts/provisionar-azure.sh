@@ -18,7 +18,8 @@
 #   export JWT_SECRET='...'                # 32+ caracteres, o mesmo da API .NET
 #   ./scripts/provisionar-azure.sh
 #
-# Opcionais: LOCALIZACAO (padrão brazilsouth), GRUPO, JWT_ISSUER, OCI_GENAI_API_KEY, OCI_GENAI_BASE_URL,
+# Opcionais: LOCALIZACAO (padrão brazilsouth), GRUPO, JWT_ISSUER (padrão voz-e-via-java), JWT_AUDIENCE (padrão
+# voz-e-via; os dois iguais aos da API .NET), OCI_GENAI_API_KEY, OCI_GENAI_BASE_URL,
 # OCI_GENAI_MODEL, USUARIOS_TESTE_SENHA (cria os usuários de teste, útil na demonstração) e
 # LIBERAR_MEU_IP=sim (libera o seu IP no firewall do Azure SQL, para o Query editor e o SELECT do vídeo).
 # Nenhuma senha fica neste arquivo.
@@ -49,7 +50,8 @@ ACI_RABBITMQ="aci-vozviva-rabbitmq"
 RABBITMQ_USUARIO="vozviva"
 PLANO="plan-vozviva"
 WEBAPP="app-vozviva-${SUFIXO_LIMPO}"
-JWT_ISSUER="${JWT_ISSUER:-vozviva}"
+JWT_ISSUER="${JWT_ISSUER:-voz-e-via-java}"
+JWT_AUDIENCE="${JWT_AUDIENCE:-voz-e-via}"
 IMAGEM_INICIAL="mcr.microsoft.com/appsvc/staticsite:latest"
 
 passo() { printf '\n==> %s\n' "$*"; }
@@ -230,6 +232,7 @@ CONFIGURACOES=(
   "RABBITMQ_PASSWORD=${RABBITMQ_SENHA}"
   "JWT_SECRET=${JWT_SECRET}"
   "JWT_ISSUER=${JWT_ISSUER}"
+  "JWT_AUDIENCE=${JWT_AUDIENCE}"
 )
 [ -n "${OCI_GENAI_API_KEY:-}" ] && CONFIGURACOES+=("OCI_GENAI_API_KEY=${OCI_GENAI_API_KEY}")
 [ -n "${OCI_GENAI_BASE_URL:-}" ] && CONFIGURACOES+=("OCI_GENAI_BASE_URL=${OCI_GENAI_BASE_URL}")

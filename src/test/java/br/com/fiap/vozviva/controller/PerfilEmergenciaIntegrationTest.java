@@ -90,19 +90,83 @@ class PerfilEmergenciaIntegrationTest {
 	}
 
 	@Test
-	void cidadaoConsultaOProprioPerfilMasNaoAltera() throws Exception {
+	void cidadaoConsultaEAlteraOPerfilQueOCuidadorCriou() throws Exception {
 		long id = criarPerfil(cuidador, cidadao);
 
 		mvc.perform(como(cidadao, get(PERFIS + "/meu")))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.id").value(id));
-		mvc.perform(como(cidadao, get(PERFIS + "/" + id))).andExpect(status().isOk());
-
 		mvc.perform(como(cidadao, put(PERFIS + "/" + id)).content("{\"mobilidade\": \"NENHUMA\"}"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.mobilidade").value("NENHUMA"))
+			.andExpect(jsonPath("$.cuidador.id").value(cuidador.getId()));
+		mvc.perform(como(cidadao, post(PERFIS)).content("{}"))
+			.andExpect(status().isConflict());
+	}
+
+	// --- Perfil mantido pelo próprio cidadão (quem mora sozinho) -------------
+
+	@Test
+	void cidadaoCriaOProprioPerfilSemEmailNemMobilidade() throws Exception {
+		mvc.perform(como(cidadao, post(PERFIS)).content("{\"medicamentos\": \"Losartana\"}"))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.cidadao.id").value(cidadao.getId()))
+			.andExpect(jsonPath("$.cuidador").doesNotExist())
+			.andExpect(jsonPath("$.mobilidade").value("NAO_INFORMADO"))
+			.andExpect(jsonPath("$.medicamentos").value("Losartana"));
+
+		mvc.perform(como(cidadao, get(PERFIS + "/meu"))).andExpect(status().isOk());
+		mvc.perform(como(cidadao, post(PERFIS)).content("{}")).andExpect(status().isConflict());
+	}
+
+	@Test
+	void cidadaoNaoCriaPerfilParaOutraPessoa() throws Exception {
+		Usuario vizinha = usuario("Ana", Papel.CIDADAO);
+
+		mvc.perform(como(cidadao, post(PERFIS)).content(perfilJson(vizinha.getEmail(), "ANDADOR")))
 			.andExpect(status().isForbidden());
-		mvc.perform(como(cidadao, delete(PERFIS + "/" + id))).andExpect(status().isForbidden());
-		mvc.perform(como(cidadao, post(PERFIS)).content(perfilJson(cidadao.getEmail(), "NENHUMA")))
+		mvc.perform(como(cidadao, post(PERFIS)).content(perfilJson(cidadao.getEmail().toUpperCase(), "ANDADOR")))
+			.andExpect(status().isCreated());
+	}
+
+	@Test
+	void cuidadorPrecisaInformarOEmailDoCidadao() throws Exception {
+		mvc.perform(como(cuidador, post(PERFIS)).content("{\"mobilidade\": \"ANDADOR\"}"))
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void cidadaoGerenciaOsProprioContatosEOutroCidadaoNao() throws Exception {
+		long perfil = id(mvc.perform(como(cidadao, post(PERFIS)).content("{}")).andReturn());
+		String contatos = PERFIS + "/" + perfil + "/contatos";
+
+		long contato = id(mvc.perform(como(cidadao, post(contatos)).content(contatoJson("Ana", "(11) 91234-5678", 1)))
+			.andExpect(status().isCreated())
+			.andReturn());
+		mvc.perform(como(cidadao, put(contatos + "/" + contato)).content(contatoJson("Ana Souza", "(11) 91234-5678", 2)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.prioridade").value(2));
+
+		Usuario vizinha = usuario("Bia", Papel.CIDADAO);
+		mvc.perform(como(vizinha, post(contatos)).content(contatoJson("Intrusa", "(11) 95555-5555", 1)))
 			.andExpect(status().isForbidden());
+		mvc.perform(como(vizinha, delete(contatos + "/" + contato))).andExpect(status().isForbidden());
+		mvc.perform(como(outroCuidador, put(contatos + "/" + contato)).content(contatoJson("X", "(11) 95555-5555", 1)))
+			.andExpect(status().isForbidden());
+
+		mvc.perform(como(cidadao, delete(contatos + "/" + contato))).andExpect(status().isNoContent());
+		mvc.perform(como(cidadao, delete(PERFIS + "/" + perfil))).andExpect(status().isNoContent());
+	}
+
+	@Test
+	void cidadaoComPerfilProprioAcionaOSocorro() throws Exception {
+		long perfil = id(mvc.perform(como(cidadao, post(PERFIS)).content("{}")).andReturn());
+		mvc.perform(como(cidadao, post(PERFIS + "/" + perfil + "/contatos")).content(contatoJson("Ana", "(11) 91234-5678", 1)))
+			.andExpect(status().isCreated());
+
+		mvc.perform(como(cidadao, post("/api/v1/emergencias")).content("{}"))
+			.andExpect(status().isAccepted())
+			.andExpect(jsonPath("$.status").value("ACIONADA"));
 	}
 
 	/** Bug encontrado no teste exploratório: a FK do cuidador inexistente virava 409 "já foi registrado". */

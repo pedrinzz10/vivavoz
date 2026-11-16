@@ -44,7 +44,7 @@ menus complicados:
 |---|---|
 | **Classificação por voz** (Spring AI + RAG) | Quem não consegue digitar ou navegar em menus diz o que precisa e o app abre a tela certa |
 | **Botão de emergência** (RabbitMQ) | Quedas e mal-estar em casa: os contatos são avisados em segundos, com localização e informações de saúde |
-| **Perfil de emergência e contatos** | O cuidador organiza a rede de apoio e as informações que vão na mensagem de socorro |
+| **Perfil de emergência e contatos** | Quem mora sozinho (ou o cuidador) organiza a rede de apoio e as informações que vão na mensagem de socorro |
 | **Assistente contra golpes** (Spring AI + RAG) | Golpes do falso INSS, falso parente e falsa central: "isso é golpe?", com orientação oficial e canal para confirmar |
 | **Atendimento acessível mais próximo** | Hospital, UPA, UBS ou farmácia mais perto, de preferência com acessibilidade, e a rota aberta no Google Maps ou no Waze |
 
@@ -142,7 +142,7 @@ quebra o build se um endpoint ficar fora do contrato ou sem descrição.
 
 | Módulo | Endpoints |
 |---|---|
-| Autenticação | `POST /api/v1/auth/cadastro` · `POST /api/v1/auth/login` · `GET /api/v1/auth/eu` |
+| Autenticação | `POST /api/v1/auth/cadastro` · `POST /api/v1/auth/login` · `GET /api/v1/auth/eu` · `DELETE /api/v1/auth/eu` |
 | Voz | `POST /api/v1/voz/intencoes` · `GET /api/v1/voz/interacoes` |
 | Botão de emergência | `POST /api/v1/emergencias` · `GET /api/v1/emergencias` · `GET /api/v1/emergencias/{id}` · `GET /api/v1/emergencias/{id}/avisos` · `PATCH /api/v1/emergencias/{id}/cancelar` · `PATCH /api/v1/emergencias/{id}/atender` |
 | Perfil de emergência (CRUD) | `POST`, `GET` (paginado), `GET /meu`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}` em `/api/v1/perfis-emergencia` |
@@ -163,8 +163,8 @@ quebra o build se um endpoint ficar fora do contrato ou sem descrição.
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` | Endereço do RabbitMQ |
 | `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | Credenciais do RabbitMQ |
 | `JWT_SECRET` | Segredo de assinatura do JWT, compartilhado com a API .NET (mínimo de 32 caracteres). Obrigatório, exceto se `JWT_JWKS_URI` for usado |
-| `JWT_ISSUER` | Emissor esperado no token (claim `iss`). Recomendado |
-| `JWT_AUDIENCE` | Audiência esperada no token (claim `aud`). Opcional |
+| `JWT_ISSUER` | Emissor do token (claim `iss`): `voz-e-via-java`, o mesmo que a API .NET espera |
+| `JWT_AUDIENCE` | Audiência do token (claim `aud`): `voz-e-via`, a mesma que a API .NET espera |
 | `JWT_ALGORITMO` | `HS256` (padrão), `HS384` ou `HS512` |
 | `JWT_EXPIRACAO` | Validade do token emitido no login (padrão `2h`) |
 | `USUARIOS_TESTE_HABILITADO` | Cria os usuários de teste ao iniciar (padrão `true` no dev e `false` no prod) |
@@ -195,9 +195,10 @@ token, com o mesmo segredo e emissor.
 
 | Endpoint | Acesso | O que faz |
 |---|---|---|
-| `POST /api/v1/auth/cadastro` | Público | Cria a conta (`nome`, `email`, `senha`, `papel`: `CIDADAO` ou `CUIDADOR`) |
+| `POST /api/v1/auth/cadastro` | Público | Cria a conta (`nome`, `email`, `senha`, `papel`: `CIDADAO` ou `CUIDADOR`, `consentimento`: `true`) |
 | `POST /api/v1/auth/login` | Público | Devolve `accessToken`, `tokenType`, `expiraEm` e os dados do usuário |
-| `GET /api/v1/auth/eu` | Token | Dados do usuário autenticado |
+| `GET /api/v1/auth/eu` | Token | Dados do usuário autenticado (com `consentimentoEm`) |
+| `DELETE /api/v1/auth/eu` | Token | Exclui a própria conta (LGPD): 204, ou 401 sem token válido |
 
 Use o token em todas as outras chamadas:
 
@@ -222,7 +223,8 @@ de 5 erros seguidos no mesmo e-mail.
 | Item | Valor |
 |---|---|
 | Algoritmo | HS256, com o mesmo `JWT_SECRET` (mínimo de 32 caracteres) |
-| `iss` | Valor de `JWT_ISSUER` |
+| `iss` | Valor de `JWT_ISSUER` (`voz-e-via-java`) |
+| `aud` | Valor de `JWT_AUDIENCE` (`voz-e-via`) |
 | `sub` | Id do usuário |
 | `role` | `CIDADAO` ou `CUIDADOR` |
 | `name` | Nome do usuário |
@@ -239,7 +241,7 @@ configurado e um papel conhecido; valores desconhecidos nunca dão acesso.
 | `POST /api/v1/auth/cadastro`, `POST /api/v1/auth/login` | Público |
 | `GET /v3/api-docs/**`, `GET /swagger-ui/**` | Público |
 | Consumo de dados de suporte (atendimentos próximos, verificação de golpes, classificação por voz...) | `CIDADAO` ou `CUIDADOR` |
-| Alteração de perfil de emergência | `CUIDADOR` (vinculado ao cidadão) |
+| Perfil de emergência e contatos (criar e alterar) | O próprio cidadão ou o cuidador responsável |
 | Qualquer outra rota | Token válido |
 
 As regras por papel ficam nos endpoints com `@PreAuthorize`. Respostas 401 e 403 seguem o formato de
@@ -256,24 +258,37 @@ o que já protege um eventual login por cookie no futuro. Uma escrita sem JWT re
 
 ## Perfil de emergência e contatos
 
-O cuidador mantém pelo app o perfil de emergência do cidadão (mobilidade, condições de saúde, medicamentos) e
-os contatos avisados quando ele aciona o socorro.
+O perfil de emergência guarda a mobilidade, as condições de saúde, os medicamentos e os contatos avisados
+quando o cidadão aciona o socorro. Quem mora sozinho cria e mantém o próprio perfil. Um cuidador também pode
+criar o perfil de um cidadão e mantê-lo. O perfil pode não ter cuidador.
 
 | Endpoint | Acesso | O que faz |
 |---|---|---|
-| `POST /api/v1/perfis-emergencia` | `CUIDADOR` | Cria o perfil informando o e-mail da conta do cidadão (`cidadaoEmail`) |
+| `POST /api/v1/perfis-emergencia` | `CIDADAO` ou `CUIDADOR` | O cidadão cria o próprio perfil (sem `cidadaoEmail`); o cuidador informa o e-mail da conta do cidadão |
 | `GET /api/v1/perfis-emergencia` | `CUIDADOR` | Lista paginada dos perfis que ele gerencia |
 | `GET /api/v1/perfis-emergencia/meu` | `CIDADAO` | O perfil do próprio cidadão |
 | `GET /api/v1/perfis-emergencia/{id}` | Cuidador responsável ou o cidadão | Detalhe do perfil |
-| `PUT` / `DELETE /api/v1/perfis-emergencia/{id}` | Cuidador responsável | Atualiza / exclui |
-| `POST /api/v1/perfis-emergencia/{id}/contatos` | Cuidador responsável | Adiciona contato (até 10) |
+| `PUT` / `DELETE /api/v1/perfis-emergencia/{id}` | O cidadão dono ou o cuidador responsável | Atualiza / exclui |
+| `POST /api/v1/perfis-emergencia/{id}/contatos` | O cidadão dono ou o cuidador responsável | Adiciona contato (até 10) |
 | `GET /api/v1/perfis-emergencia/{id}/contatos` | Cuidador responsável ou o cidadão | Lista paginada dos contatos |
-| `GET` / `PUT` / `DELETE /api/v1/perfis-emergencia/{id}/contatos/{contatoId}` | Leitura: ambos; alteração: cuidador | Detalhe / atualiza / exclui |
+| `GET` / `PUT` / `DELETE /api/v1/perfis-emergencia/{id}/contatos/{contatoId}` | O cidadão dono ou o cuidador responsável | Detalhe / atualiza / exclui |
 
 **Paginação:** `?page=0&size=10&sort=nome,asc` (a primeira página é a 0; no máximo 50 itens). A ordenação só
 aceita campos públicos (perfis: `id`, `mobilidade`, `criadoEm`, `atualizadoEm`; contatos: `id`, `nome`,
 `prioridade`, `parentesco`). Telefones aceitam os formatos brasileiros comuns e são devolvidos no padrão
 `+55DDDNUMERO`, pronto para o app ligar.
+
+**LGPD:**
+- A mobilidade é dado de saúde e é opcional: sem ela, o perfil fica `NAO_INFORMADO` e a mensagem de socorro só
+  não cita a mobilidade.
+- O cadastro exige `consentimento: true` e grava a data do aceite (`consentimentoEm`).
+- `DELETE /api/v1/auth/eu` exclui a conta e o que depende dela:
+  - do cidadão, apaga o perfil, os contatos, as emergências, os avisos e o histórico de voz;
+  - do cuidador, os perfis que ele cuidava continuam com os cidadãos, só sem o vínculo;
+  - as estatísticas de golpe já são anônimas e não guardam o usuário;
+  - o token da conta excluída para de valer na hora em toda a API Java. Fica guardado só o id numérico da
+    conta, sem dados pessoais, em `contas_excluidas`. A API .NET só confere a assinatura, então aceita o token
+    até ele expirar (no máximo `JWT_EXPIRACAO`, 2 h).
 
 **Limitação conhecida:** o cuidador vincula o perfil pelo e-mail da conta do cidadão, sem confirmação do
 cidadão. Num sistema em produção, o vínculo seria confirmado por convite.
