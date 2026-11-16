@@ -73,6 +73,9 @@ menus complicados:
 
 ![Arquitetura macro do VozViva](docs/arquitetura.svg)
 
+Versão editável no draw.io: [`docs/arquitetura.drawio`](docs/arquitetura.drawio). Abra em https://app.diagrams.net
+(Arquivo → Abrir de → Dispositivo) ou arraste o arquivo para a página.
+
 | # | Fluxo |
 |---|---|
 | 1 | O app (React Native) transcreve a fala ou recebe o toque e chama a API Java por HTTPS, com o JWT no header `Authorization` |
