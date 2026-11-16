@@ -33,6 +33,7 @@ public class AutenticacaoService {
 	private final EmissorToken emissor;
 	private final LimitadorTentativasLogin limitador;
 	private final PerfilEmergenciaService perfis;
+	private final ContasExcluidas contasExcluidas;
 
 	/**
 	 * Hash usado quando o e-mail não existe: a verificação de senha roda do mesmo jeito, para que o
@@ -41,12 +42,13 @@ public class AutenticacaoService {
 	private final String hashFicticio;
 
 	public AutenticacaoService(UsuarioRepository usuarios, PasswordEncoder senhas, EmissorToken emissor,
-			LimitadorTentativasLogin limitador, PerfilEmergenciaService perfis) {
+			LimitadorTentativasLogin limitador, PerfilEmergenciaService perfis, ContasExcluidas contasExcluidas) {
 		this.usuarios = usuarios;
 		this.senhas = senhas;
 		this.emissor = emissor;
 		this.limitador = limitador;
 		this.perfis = perfis;
+		this.contasExcluidas = contasExcluidas;
 		// Valor aleatório a cada inicialização: não existe texto fixo que corresponda a esse hash.
 		this.hashFicticio = senhas.encode(UUID.randomUUID().toString());
 	}
@@ -108,6 +110,8 @@ public class AutenticacaoService {
 		perfis.removerDadosDoUsuario(id);
 		usuarios.delete(usuario);
 		usuarios.flush();
+		// O JWT continua válido até expirar: a lista de contas excluídas faz o token parar de valer agora.
+		contasExcluidas.registrar(id);
 	}
 
 	static String normalizarEmail(String email) {

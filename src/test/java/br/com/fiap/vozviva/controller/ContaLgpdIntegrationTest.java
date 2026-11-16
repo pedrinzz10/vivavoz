@@ -93,6 +93,23 @@ class ContaLgpdIntegrationTest {
 		mvc.perform(com(cidadao, delete("/api/v1/auth/eu"))).andExpect(status().isUnauthorized());
 	}
 
+	/** Apontamento da revisão do PR #24: o token de uma conta excluída não pode seguir valendo até expirar. */
+	@Test
+	void tokenDaContaExcluidaParaDeValerEmTodasAsRotas() throws Exception {
+		Conta cidadao = cadastrar("CIDADAO");
+		mvc.perform(com(cidadao, post("/api/v1/verificacoes")).content("{\"texto\": \"oi\"}")).andExpect(status().isOk());
+
+		mvc.perform(com(cidadao, delete("/api/v1/auth/eu"))).andExpect(status().isNoContent());
+
+		mvc.perform(com(cidadao, post("/api/v1/verificacoes")).content("{\"texto\": \"oi\"}"))
+			.andExpect(status().isUnauthorized());
+		mvc.perform(com(cidadao, get("/api/v1/atendimentos/proximos?tipo=UBS&latitude=10&longitude=10")))
+			.andExpect(status().isUnauthorized());
+		mvc.perform(com(cidadao, post("/api/v1/voz/intencoes")).content("{\"texto\": \"socorro\"}"))
+			.andExpect(status().isUnauthorized());
+		assertThat(contar("contas_excluidas", "usuario_id", cidadao.id())).isEqualTo(1);
+	}
+
 	@Test
 	void cuidadorExcluiAContaEOPerfilContinuaComOCidadao() throws Exception {
 		Conta cidadao = cadastrar("CIDADAO");

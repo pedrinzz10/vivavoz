@@ -285,7 +285,10 @@ aceita campos públicos (perfis: `id`, `mobilidade`, `criadoEm`, `atualizadoEm`;
 - `DELETE /api/v1/auth/eu` exclui a conta e o que depende dela:
   - do cidadão, apaga o perfil, os contatos, as emergências, os avisos e o histórico de voz;
   - do cuidador, os perfis que ele cuidava continuam com os cidadãos, só sem o vínculo;
-  - as estatísticas de golpe já são anônimas e não guardam o usuário.
+  - as estatísticas de golpe já são anônimas e não guardam o usuário;
+  - o token da conta excluída para de valer na hora em toda a API Java. Fica guardado só o id numérico da
+    conta, sem dados pessoais, em `contas_excluidas`. A API .NET só confere a assinatura, então aceita o token
+    até ele expirar (no máximo `JWT_EXPIRACAO`, 2 h).
 
 **Limitação conhecida:** o cuidador vincula o perfil pelo e-mail da conta do cidadão, sem confirmação do
 cidadão. Num sistema em produção, o vínculo seria confirmado por convite.

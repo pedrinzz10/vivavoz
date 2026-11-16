@@ -184,6 +184,15 @@ ALTER TABLE perfis_emergencia ADD CONSTRAINT ck_perfis_emergencia_mobilidade CHE
 ALTER TABLE usuarios ADD consentimento BIT NOT NULL DEFAULT 0;
 ALTER TABLE usuarios ADD consentimento_em DATETIME2 NULL;
 
+-- V8__contas_excluidas.sql
+-- Contas excluídas (LGPD): só o id numérico, sem nenhum dado pessoal. O validador do JWT recusa tokens ainda
+-- válidos de uma conta que já foi excluída. Ids de IDENTITY nunca são reaproveitados.
+CREATE TABLE contas_excluidas (
+    usuario_id   BIGINT     NOT NULL,
+    excluida_em  DATETIME2  NOT NULL,
+    CONSTRAINT pk_contas_excluidas PRIMARY KEY (usuario_id)
+);
+
 -- R__carga_pontos_atendimento.sql
 -- SPEC-007: carga dos locais de atendimento de Osasco/SP e arredores.
 -- Gerado por ./gradlew importarOsm a partir da Overpass API. Não edite à mão.
