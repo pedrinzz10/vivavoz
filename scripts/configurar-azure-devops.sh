@@ -14,14 +14,15 @@
 # As service connections (Azure e ACR) são criadas pelo portal depois do provisionamento: ver README.
 #
 # Uso (Cloud Shell da Azure, logado com a conta da FIAP):
-#   ORGANIZACAO=vozviva-rm562312 REVISOR_EMAIL=RM562312@fiap.com.br ./scripts/configurar-azure-devops.sh
-# Opcionais: PROJETO (padrão VozViva), REPO_GITHUB, PROFESSOR_DEVOPS_EMAIL, PROFESSOR_QA_EMAIL,
+#   ORGANIZACAO=vozviva REVISOR_EMAIL=RM562312@fiap.com.br ./scripts/configurar-azure-devops.sh
+# Opcionais: PROJETO (padrão VozViva-GS), REPOSITORIO (padrão vozviva), REPO_GITHUB, PROFESSOR_DEVOPS_EMAIL, PROFESSOR_QA_EMAIL,
 #   WEBAPP_NAME, ACR_LOGIN_SERVER.
 set -euo pipefail
 
 : "${ORGANIZACAO:?informe ORGANIZACAO (nome criado em https://aex.dev.azure.com)}"
 : "${REVISOR_EMAIL:?informe REVISOR_EMAIL (o seu e-mail RM, revisor obrigatório da main)}"
-PROJETO="${PROJETO:-VozViva}"
+PROJETO="${PROJETO:-VozViva-GS}"
+REPOSITORIO="${REPOSITORIO:-vozviva}"
 REPO_GITHUB="${REPO_GITHUB:-https://github.com/pedrinzz10/vivavoz.git}"
 PIPELINE="vozviva-ci-cd"
 GRUPO_VARIAVEIS="vozviva-azure"
@@ -53,23 +54,27 @@ else
   criado "$PROJETO"
 fi
 
-passo "Repositório ${PROJETO} (importado de ${REPO_GITHUB})"
-REPO_ID=$(adop repos show --repository "$PROJETO" --query id -o tsv)
-TAMANHO=$(adop repos show --repository "$PROJETO" --query size -o tsv)
+passo "Repositório ${REPOSITORIO} (importado de ${REPO_GITHUB})"
+if ! adop repos show --repository "$REPOSITORIO" > /dev/null 2>&1; then
+  adop repos create --name "$REPOSITORIO" -o none
+  criado "repositório ${REPOSITORIO}"
+fi
+REPO_ID=$(adop repos show --repository "$REPOSITORIO" --query id -o tsv)
+TAMANHO=$(adop repos show --repository "$REPOSITORIO" --query size -o tsv)
 if [ "${TAMANHO:-0}" != "0" ]; then
   reaproveitado "repositório com código"
 else
-  adop repos import create --repository "$PROJETO" --git-source-url "$REPO_GITHUB" -o none
+  adop repos import create --repository "$REPOSITORIO" --git-source-url "$REPO_GITHUB" -o none
   criado "importação do GitHub"
 fi
-DEFAULT=$(adop repos show --repository "$PROJETO" --query defaultBranch -o tsv)
-[ "$DEFAULT" = "refs/heads/main" ] || adop repos update --repository "$PROJETO" --default-branch main -o none
+DEFAULT=$(adop repos show --repository "$REPOSITORIO" --query defaultBranch -o tsv)
+[ "$DEFAULT" = "refs/heads/main" ] || adop repos update --repository "$REPOSITORIO" --default-branch main -o none
 
 passo "Pipeline ${PIPELINE} (azure-pipeline.yml)"
 if adop pipelines show --name "$PIPELINE" > /dev/null 2>&1; then
   reaproveitado "$PIPELINE"
 else
-  adop pipelines create --name "$PIPELINE" --repository "$PROJETO" --repository-type tfsgit --branch main \
+  adop pipelines create --name "$PIPELINE" --repository "$REPOSITORIO" --repository-type tfsgit --branch main \
     --yml-path azure-pipeline.yml --skip-first-run true -o none
   criado "$PIPELINE (a primeira execução fica para depois do provisionamento)"
 fi

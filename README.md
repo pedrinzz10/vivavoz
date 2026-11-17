@@ -570,7 +570,7 @@ desatualizado.
 3. **Azure DevOps:** crie a organização em https://aex.dev.azure.com e rode, no Cloud Shell da Azure:
 
    ```bash
-   export ORGANIZACAO=<nome> REVISOR_EMAIL=<seu RM>@fiap.com.br
+   export ORGANIZACAO=<nome> PROJETO=<projeto Scrum> REVISOR_EMAIL=<seu RM>@fiap.com.br
    export PROFESSOR_DEVOPS_EMAIL=... PROFESSOR_QA_EMAIL=...
    export WEBAPP_NAME=<do passo 2> ACR_LOGIN_SERVER=<do passo 2>
    ./scripts/configurar-azure-devops.sh
