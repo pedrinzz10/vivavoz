@@ -8,7 +8,9 @@ import br.com.fiap.vozviva.exception.ConflitoException;
 import br.com.fiap.vozviva.exception.ContaInexistenteException;
 import br.com.fiap.vozviva.exception.CredenciaisInvalidasException;
 import br.com.fiap.vozviva.exception.RecursoNaoEncontradoException;
+import br.com.fiap.vozviva.exception.RequisicaoInvalidaException;
 import br.com.fiap.vozviva.mapper.UsuarioMapper;
+import br.com.fiap.vozviva.model.Papel;
 import br.com.fiap.vozviva.model.Usuario;
 import br.com.fiap.vozviva.repository.UsuarioRepository;
 import br.com.fiap.vozviva.security.EmissorToken;
@@ -55,6 +57,10 @@ public class AutenticacaoService {
 
 	@Transactional
 	public UsuarioResponse cadastrar(CadastroUsuarioRequest request) {
+		if (request.papel() == Papel.GESTOR) {
+			throw new RequisicaoInvalidaException(
+					"Contas de gestor são criadas pela prefeitura. No app, escolha cidadão ou cuidador.");
+		}
 		String email = normalizarEmail(request.email());
 		if (usuarios.existsByEmail(email)) {
 			throw new ConflitoException("Já existe uma conta com este e-mail.");
@@ -87,7 +93,8 @@ public class AutenticacaoService {
 		limitador.registrarSucesso(email);
 
 		Usuario usuario = encontrado.get();
-		TokenEmitido token = emissor.emitir(usuario.getId().toString(), usuario.getNome(), usuario.getPapel());
+		TokenEmitido token = emissor.emitir(usuario.getId().toString(), usuario.getNome(), usuario.getPapel(),
+				usuario.getOrgao());
 		return new TokenResponse(token.valor(), TIPO_TOKEN, token.expiraEm().toString(), UsuarioMapper.paraResponse(usuario));
 	}
 

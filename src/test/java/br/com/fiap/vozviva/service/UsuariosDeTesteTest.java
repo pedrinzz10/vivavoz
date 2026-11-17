@@ -2,6 +2,7 @@ package br.com.fiap.vozviva.service;
 
 import br.com.fiap.vozviva.dto.CadastroUsuarioRequest;
 import br.com.fiap.vozviva.dto.LoginRequest;
+import br.com.fiap.vozviva.model.AreaOrgao;
 import br.com.fiap.vozviva.model.Papel;
 import br.com.fiap.vozviva.model.Usuario;
 import br.com.fiap.vozviva.repository.UsuarioRepository;
@@ -22,17 +23,21 @@ class UsuariosDeTesteTest {
 	private final UsuarioRepository usuarios = mock(UsuarioRepository.class);
 
 	@Test
-	void criaCidadaoECuidadorQuandoHaSenha() {
+	void criaCidadaoCuidadorEGestoresQuandoHaSenha() {
 		when(usuarios.existsByEmail(any())).thenReturn(false);
 
 		new UsuariosDeTeste(usuarios, PasswordEncoderFactories.createDelegatingPasswordEncoder(), "SenhaDeTeste1")
 			.run(null);
 
 		ArgumentCaptor<Usuario> salvos = ArgumentCaptor.forClass(Usuario.class);
-		verify(usuarios, times(2)).save(salvos.capture());
-		assertThat(salvos.getAllValues()).extracting(Usuario::getPapel).containsExactly(Papel.CIDADAO, Papel.CUIDADOR);
+		verify(usuarios, times(4)).save(salvos.capture());
+		assertThat(salvos.getAllValues()).extracting(Usuario::getPapel)
+			.containsExactly(Papel.CIDADAO, Papel.CUIDADOR, Papel.GESTOR, Papel.GESTOR);
 		assertThat(salvos.getAllValues()).extracting(Usuario::getEmail)
-			.containsExactly(UsuariosDeTeste.EMAIL_CIDADAO, UsuariosDeTeste.EMAIL_CUIDADOR);
+			.containsExactly(UsuariosDeTeste.EMAIL_CIDADAO, UsuariosDeTeste.EMAIL_CUIDADOR,
+					UsuariosDeTeste.EMAIL_GESTOR_OBRAS, UsuariosDeTeste.EMAIL_GESTOR_ILUMINACAO);
+		assertThat(salvos.getAllValues()).extracting(Usuario::getOrgao)
+			.containsExactly(null, null, AreaOrgao.OBRAS, AreaOrgao.ILUMINACAO);
 		assertThat(salvos.getAllValues()).allSatisfy(u -> assertThat(u.getSenhaHash()).startsWith("{bcrypt}"));
 	}
 

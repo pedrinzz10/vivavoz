@@ -2,6 +2,7 @@ package br.com.fiap.vozviva.security;
 
 import br.com.fiap.vozviva.config.JwtProperties;
 import br.com.fiap.vozviva.config.SecurityConfig;
+import br.com.fiap.vozviva.model.AreaOrgao;
 import br.com.fiap.vozviva.model.Papel;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -37,6 +38,18 @@ class EmissorTokenTest {
 		assertThat(jwt.getClaimAsString("iss")).isEqualTo(TokenDeTeste.ISSUER);
 		assertThat(jwt.getAudience()).containsExactly("vozviva-api");
 		assertThat(jwt.getHeaders()).containsEntry("alg", "HS256").containsEntry("typ", "JWT");
+	}
+
+	@Test
+	void gestorLevaOOrgaoNoTokenEOsOutrosPapeisNao() {
+		JwtDecoder decoder = SecurityConfig.criarDecoder(propriedades);
+
+		Jwt gestor = decoder.decode(emissor.emitir("9", "Carlos", Papel.GESTOR, AreaOrgao.OBRAS).valor());
+		Jwt cidadao = decoder.decode(emissor.emitir("10", "Maria", Papel.CIDADAO).valor());
+
+		assertThat(gestor.getClaimAsString("role")).isEqualTo("GESTOR");
+		assertThat(gestor.getClaimAsString("orgao")).isEqualTo("OBRAS");
+		assertThat(cidadao.hasClaim("orgao")).isFalse();
 	}
 
 	@Test

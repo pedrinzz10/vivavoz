@@ -1,5 +1,6 @@
 package br.com.fiap.vozviva.service;
 
+import br.com.fiap.vozviva.model.AreaOrgao;
 import br.com.fiap.vozviva.model.Papel;
 import br.com.fiap.vozviva.model.Usuario;
 import br.com.fiap.vozviva.repository.UsuarioRepository;
@@ -17,7 +18,8 @@ import org.springframework.util.StringUtils;
 import java.time.Instant;
 
 /**
- * Cria um cidadão e um cuidador de teste para a demonstração e para o README. Só roda com
+ * Cria um cidadão, um cuidador e dois gestores (obras e iluminação) de teste para a demonstração e para o README.
+ * Os gestores são a única forma de existir conta de gestor: o cadastro público não aceita esse papel. Só roda com
  * {@code vozviva.usuarios-teste.habilitado=true}, e a senha vem do ambiente (nunca do código).
  */
 @Component
@@ -26,6 +28,8 @@ public class UsuariosDeTeste implements ApplicationRunner {
 
 	static final String EMAIL_CIDADAO = "cidadao.teste@vozviva.dev";
 	static final String EMAIL_CUIDADOR = "cuidador.teste@vozviva.dev";
+	static final String EMAIL_GESTOR_OBRAS = "gestor.obras@vozviva.dev";
+	static final String EMAIL_GESTOR_ILUMINACAO = "gestor.iluminacao@vozviva.dev";
 
 	private static final Logger log = LoggerFactory.getLogger(UsuariosDeTeste.class);
 
@@ -49,15 +53,26 @@ public class UsuariosDeTeste implements ApplicationRunner {
 		}
 		criarSeNaoExiste("Maria (cidadã de teste)", EMAIL_CIDADAO, Papel.CIDADAO);
 		criarSeNaoExiste("João (cuidador de teste)", EMAIL_CUIDADOR, Papel.CUIDADOR);
+		criarGestorSeNaoExiste("Carlos (gestor de obras de teste)", EMAIL_GESTOR_OBRAS, AreaOrgao.OBRAS);
+		criarGestorSeNaoExiste("Ana (gestora de iluminação de teste)", EMAIL_GESTOR_ILUMINACAO, AreaOrgao.ILUMINACAO);
 	}
 
 	private void criarSeNaoExiste(String nome, String email, Papel papel) {
 		if (!usuarios.existsByEmail(email)) {
-			Usuario usuario = new Usuario(nome, email, senhas.encode(senha), papel);
-			usuario.registrarConsentimento(Instant.now());
-			usuarios.save(usuario);
-			log.info("Usuário de teste criado: {} ({})", email, papel);
+			salvar(new Usuario(nome, email, senhas.encode(senha), papel));
 		}
+	}
+
+	private void criarGestorSeNaoExiste(String nome, String email, AreaOrgao orgao) {
+		if (!usuarios.existsByEmail(email)) {
+			salvar(Usuario.gestor(nome, email, senhas.encode(senha), orgao));
+		}
+	}
+
+	private void salvar(Usuario usuario) {
+		usuario.registrarConsentimento(Instant.now());
+		usuarios.save(usuario);
+		log.info("Usuário de teste criado: {} ({})", usuario.getEmail(), usuario.getPapel());
 	}
 
 }
