@@ -208,7 +208,7 @@ quebra o build se um endpoint ficar fora do contrato ou sem descrição.
 | Variável | Descrição |
 |---|---|
 | `OCI_GENAI_API_KEY` | API key do OCI Generative AI (sem ela, o assistente usa só as regras) |
-| `OCI_GENAI_BASE_URL` | Endpoint compatível com OpenAI da OCI (padrão `https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/openai/v1`) |
+| `OCI_GENAI_BASE_URL` | Endpoint compatível com OpenAI da OCI (padrão `https://inference.generativeai.sa-saopaulo-1.oci.oraclecloud.com/openai/v1`) |
 | `OCI_GENAI_MODEL` | Modelo usado (padrão `openai.gpt-oss-120b`) |
 | `VOZ_CONFIANCA_MINIMA` | Confiança mínima para a IA decidir a intenção sozinha (padrão `0.6`) |
 | `DB_URL` | URL JDBC do banco (Azure SQL em produção; padrão do dev aponta para o SQL Server do docker-compose) |
@@ -595,7 +595,18 @@ desatualizado.
 
 **Passo a passo:**
 
-1. **Provisionar** (Azure Cloud Shell ou Azure CLI com `az login`):
+1. **IA na OCI** (Cloud Shell da OCI, região `sa-saopaulo-1`): compartimento `vozviva`, API key do Generative AI,
+   orçamento com alerta e uma chamada de teste ao modelo. A chave fica só em `~/.vozviva/oci-genai.env`, sem
+   aparecer na tela.
+
+   ```bash
+   ORCAMENTO_EMAIL=voce@fiap.com.br ./scripts/provisionar-oci.sh
+   ```
+
+   No Cloud Shell da Azure, antes do próximo passo, informe a chave sem deixá-la no histórico:
+   `read -rs OCI_GENAI_API_KEY && export OCI_GENAI_API_KEY`.
+2. **Provisionar a Azure** (Azure Cloud Shell ou Azure CLI com `az login`). O script registra os provedores que
+   faltarem na assinatura (Microsoft.Sql, Microsoft.ContainerInstance e outros):
 
    ```bash
    export SUFIXO=rm556677 SQL_ADMIN_SENHA='...' APP_SQL_SENHA='...' RABBITMQ_SENHA='...' JWT_SECRET='...'
@@ -606,13 +617,25 @@ desatualizado.
 
    O script pode rodar de novo: ele só cria o que falta e mostra o que criou ou reaproveitou. No fim, imprime
    as URLs e os nomes para o próximo passo.
-2. **Azure DevOps:**
-   - Importe o repositório no Azure Repos.
-   - Em Project settings → Service connections, crie `vozviva-azure` (Azure Resource Manager, grupo
-     `rg-vozviva`) e `vozviva-acr` (Docker Registry → Azure Container Registry).
-   - Em Pipelines → Library, crie o grupo de variáveis `vozviva-azure` com `webAppName` e `acrLoginServer`.
-   - Crie a pipeline a partir do `azure-pipeline.yml` da raiz.
-3. **Backlog e casos de teste** (Compliance, QA & Tests), já prontos em [`docs/azure-boards/`](docs/azure-boards):
+3. **Azure DevOps:** crie a organização em https://aex.dev.azure.com e rode, no Cloud Shell da Azure:
+
+   ```bash
+   export ORGANIZACAO=<nome> PROJETO=<projeto Scrum> REVISOR_EMAIL=<seu RM>@fiap.com.br
+   export PROFESSOR_DEVOPS_EMAIL=... PROFESSOR_QA_EMAIL=...
+   export WEBAPP_NAME=<do passo 2> ACR_LOGIN_SERVER=<do passo 2>
+   ./scripts/configurar-azure-devops.sh
+   ```
+
+   O script cria o projeto (privado, Git, Scrum), importa o repositório do GitHub, cria a pipeline a partir do
+   `azure-pipeline.yml`, as políticas da main (passo 5), a tarefa inicial e o grupo de variáveis `vozviva-azure`
+   (`webAppName` e `acrLoginServer`), e convida os professores (Basic na organização e Project Administrators no
+   projeto). Pelo portal ficam:
+   - Project settings → Service connections: `vozviva-azure` (Azure Resource Manager, grupo `rg-vozviva`) e
+     `vozviva-acr` (Docker Registry → Azure Container Registry).
+   - Organization settings → Pipelines → Parallel jobs: organização nova pode vir sem job gratuito; peça a cota
+     em https://aka.ms/azpipelines-parallelism-request ou use um agente self-hosted.
+   - Organization settings → Billing: trial de Test Plans, para executar os testes manuais.
+4. **Backlog e casos de teste** (Compliance, QA & Tests), já prontos em [`docs/azure-boards/`](docs/azure-boards):
    - Boards → Work items → **Import Work Items** com [`backlog.csv`](docs/azure-boards/backlog.csv) (processo
      Scrum): 5 Epics, 9 Features e 22 Product Backlog Items, com descrição e critérios de aceite.
    - Test Plans → crie um plano com uma suíte por Feature e, em cada suíte, **Import test cases** com o CSV da
@@ -620,9 +643,9 @@ desatualizado.
      sumário (objetivo, preparação, entradas e saída esperada) e passos.
    - Os CSVs são gerados por [`gerar_csv.py`](docs/azure-boards/gerar_csv.py); para mudar um item, edite o script
      e rode `python docs/azure-boards/gerar_csv.py`.
-4. **Branch principal protegida** (Repos → Branches → main → Branch policies): revisor obrigatório (o
+5. **Branch principal protegida** (Repos → Branches → main → Branch policies): revisor obrigatório (o
    próprio autor pode aprovar), vínculo obrigatório com Work Item e o RM como revisor padrão.
-5. **Fluxo da entrega:**
+6. **Fluxo da entrega:**
    1. Tarefa no Boards.
    2. Branch nova.
    3. Alteração no código.
@@ -630,11 +653,12 @@ desatualizado.
    5. Merge.
    6. Build: testes publicados na aba Tests, cobertura e pacote `vozviva` com o jar, o contrato OpenAPI e o script do banco.
    7. Release automática no App Service, que confere o `/actuator/health` no fim.
-6. **CRUD no banco em nuvem:** pelo Swagger publicado (`https://<webAppName>.azurewebsites.net/swagger-ui.html`),
+7. **CRUD no banco em nuvem:** pelo Swagger publicado (`https://<webAppName>.azurewebsites.net/swagger-ui.html`),
    crie, leia, altere e exclua perfis de emergência (`perfis_emergencia`) e contatos (`contatos_emergencia`).
    Confira cada operação com `SELECT` no Query editor do Azure SQL, por exemplo:
    `SELECT * FROM contatos_emergencia ORDER BY id DESC;`.
-7. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro.
+8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro. Na OCI, exclua a API key, o orçamento e o
+   compartimento `vozviva` pelo console.
 
 Para testar a imagem localmente, com o SQL Server e o RabbitMQ do `docker compose` (o mesmo teste foi feito
 antes da entrega: health `UP` e fluxo de cadastro, login, atendimentos e voz funcionando no perfil `prod`):
