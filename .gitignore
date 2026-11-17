@@ -48,3 +48,6 @@ out/
 application-local.properties
 application-local.yml
 application-secret.*
+
+# Python (scripts de docs/azure-boards)
+__pycache__/
