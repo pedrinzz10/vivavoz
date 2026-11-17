@@ -654,6 +654,11 @@ desatualizado.
      sumário (objetivo, preparação, entradas e saída esperada) e passos.
    - Os CSVs são gerados por [`gerar_csv.py`](docs/azure-boards/gerar_csv.py); para mudar um item, edite o script
      e rode `python docs/azure-boards/gerar_csv.py`.
+   - Sem passar pelos CSVs: [`publicar_azure_devops.py`](docs/azure-boards/publicar_azure_devops.py) cria tudo pela
+     API do Azure DevOps (backlog com hierarquia, casos de teste ligados às Features, Test Plan e suítes), a partir
+     do mesmo conteúdo. Pode rodar de novo sem duplicar; `--simular` só mostra o que faria. Requer
+     `az login --scope 499b84ac-1321-427f-aa17-267ca6975798/.default`. O Test Plan exige a licença de Test Plans
+     (trial do Azure Test Plans); sem ela, o script cria o resto e avisa.
 5. **Branch principal protegida** (Repos → Branches → main → Branch policies): revisor obrigatório (o
    próprio autor pode aprovar), vínculo obrigatório com Work Item e o RM como revisor padrão.
 6. **Fluxo da entrega:**
