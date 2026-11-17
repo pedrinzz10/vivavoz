@@ -56,9 +56,10 @@ spring:
         transcription: none
       moderation: none
     # OCI Generative AI pelo endpoint compatível com a API da OpenAI (o Spring AI usa o SDK oficial da OpenAI).
-    # A chave é uma "API key" do OCI Generative AI, criada na mesma região do modelo.
+    # A chave é uma "API key" do OCI Generative AI, criada na mesma região do modelo (São Paulo, a mesma região
+    # da Azure brazilsouth, onde fica a API).
     openai:
-      base-url: ${OCI_GENAI_BASE_URL:https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/openai/v1}
+      base-url: ${OCI_GENAI_BASE_URL:https://inference.generativeai.sa-saopaulo-1.oci.oraclecloud.com/openai/v1}
       api-key: ${OCI_GENAI_API_KEY:}
       # Sem resposta da IA em 30 s, o assistente responde só com as regras determinísticas.
       timeout: ${OCI_GENAI_TIMEOUT:30s}

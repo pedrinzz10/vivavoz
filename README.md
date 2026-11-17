@@ -158,7 +158,7 @@ quebra o build se um endpoint ficar fora do contrato ou sem descrição.
 | Variável | Descrição |
 |---|---|
 | `OCI_GENAI_API_KEY` | API key do OCI Generative AI (sem ela, o assistente usa só as regras) |
-| `OCI_GENAI_BASE_URL` | Endpoint compatível com OpenAI da OCI (padrão `https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/openai/v1`) |
+| `OCI_GENAI_BASE_URL` | Endpoint compatível com OpenAI da OCI (padrão `https://inference.generativeai.sa-saopaulo-1.oci.oraclecloud.com/openai/v1`) |
 | `OCI_GENAI_MODEL` | Modelo usado (padrão `openai.gpt-oss-120b`) |
 | `VOZ_CONFIANCA_MINIMA` | Confiança mínima para a IA decidir a intenção sozinha (padrão `0.6`) |
 | `DB_URL` | URL JDBC do banco (Azure SQL em produção; padrão do dev aponta para o SQL Server do docker-compose) |
