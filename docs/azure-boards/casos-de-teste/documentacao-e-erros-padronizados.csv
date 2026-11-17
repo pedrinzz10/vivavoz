@@ -1,0 +1,6 @@
+﻿ID,Work Item Type,Title,Test Step,Step Action,Step Expected,Priority,Description,Tags
+,Test Case,[Positivo] Swagger público e completo,1,"Abrir /swagger-ui.html no navegador, sem login",Página do Swagger carregada,2,"<b>Objetivo:</b> Verificar a documentação da API.<br><b>Preparação:</b> API no ar.<br><b>Entradas:</b> Abrir /swagger-ui.html<br><b>Saída esperada:</b> Todos os módulos, com Authorize e exemplos",VozViva; Documentação e erros padronizados; Positivo
+,,,2,Clicar em Authorize e informar o token,Rotas protegidas passam a responder 200,,,
+,,,3,Abrir uma operação e conferir exemplos e respostas de erro,Exemplos de requisição e erros no formato ErroResponse,,,
+,Test Case,[Negativo] Formato padronizado de erro,1,Enviar JSON malformado no cadastro,"400 com codigo, mensagemFalada e traceId",2,"<b>Objetivo:</b> Verificar o contrato de erro.<br><b>Preparação:</b> API no ar.<br><b>Entradas:</b> GET em uma rota inexistente e um JSON malformado<br><b>Saída esperada:</b> ErroResponse com codigo, mensagemFalada e traceId, sem stack trace",VozViva; Documentação e erros padronizados; Negativo
+,,,2,Conferir o corpo do erro,Sem stack trace nem nomes de classes,,,

@@ -1,0 +1,11 @@
+﻿ID,Work Item Type,Title,Test Step,Step Action,Step Expected,Priority,Description,Tags
+,Test Case,[Negativo] Cadastro sem consentimento,1,Enviar cadastro com consentimento false,400 com o campo consentimento,2,"<b>Objetivo:</b> Verificar que o aceite dos termos é obrigatório.<br><b>Preparação:</b> Nenhuma.<br><b>Entradas:</b> Cadastro com ""consentimento"": false e sem o campo<br><b>Saída esperada:</b> 400 listando o campo consentimento",VozViva; Privacidade (LGPD); Negativo
+,,,2,Enviar cadastro sem o campo consentimento,400 com o campo consentimento,,,
+,Test Case,[Positivo] Data do consentimento,1,Cadastrar com consentimento true,201 com consentimentoEm,2,"<b>Objetivo:</b> Verificar a prova do aceite.<br><b>Preparação:</b> Nenhuma.<br><b>Entradas:</b> Cadastro com consentimento true<br><b>Saída esperada:</b> consentimentoEm preenchido no cadastro, no login e no /eu",VozViva; Privacidade (LGPD); Positivo
+,,,2,Enviar GET /api/v1/auth/eu,200 com o mesmo consentimentoEm,,,
+,Test Case,[Positivo] Cidadão exclui a conta,1,Enviar DELETE /api/v1/auth/eu,204,2,"<b>Objetivo:</b> Verificar a exclusão da conta e dos dados.<br><b>Preparação:</b> Cidadão com perfil, contato, emergência e fala registrada.<br><b>Entradas:</b> DELETE /api/v1/auth/eu<br><b>Saída esperada:</b> 204; dados apagados; token antigo 401",VozViva; Privacidade (LGPD); Positivo
+,,,2,Enviar GET /api/v1/auth/eu com o mesmo token,401,,,
+,,,3,Tentar login com a conta excluída,401,,,
+,,,4,"No banco, SELECT nas tabelas do perfil, contatos e emergências da conta",Nenhuma linha,,,
+,Test Case,[Positivo] Cuidador exclui a conta,1,"Como cuidador, enviar DELETE /api/v1/auth/eu",204,2,"<b>Objetivo:</b> Verificar que o perfil do cidadão não some com o cuidador.<br><b>Preparação:</b> Perfil criado pelo cuidador.<br><b>Entradas:</b> DELETE /api/v1/auth/eu como cuidador<br><b>Saída esperada:</b> 204; o cidadão continua com o perfil, sem cuidador",VozViva; Privacidade (LGPD); Positivo
+,,,2,"Como cidadão, enviar GET /api/v1/perfis-emergencia/meu",200 sem o campo cuidador,,,
