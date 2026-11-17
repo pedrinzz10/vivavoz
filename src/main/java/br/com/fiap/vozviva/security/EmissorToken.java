@@ -1,6 +1,7 @@
 package br.com.fiap.vozviva.security;
 
 import br.com.fiap.vozviva.config.JwtProperties;
+import br.com.fiap.vozviva.model.AreaOrgao;
 import br.com.fiap.vozviva.model.Papel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -38,6 +39,14 @@ public class EmissorToken {
 	}
 
 	public TokenEmitido emitir(String usuarioId, String nome, Papel papel) {
+		return emitir(usuarioId, nome, papel, null);
+	}
+
+	/**
+	 * @param orgao órgão do gestor; vai na claim {@code orgao}, que a API .NET usa para montar a fila de
+	 *              reportes. Para os outros papéis é {@code null} e a claim não existe.
+	 */
+	public TokenEmitido emitir(String usuarioId, String nome, Papel papel, AreaOrgao orgao) {
 		Instant agora = Instant.now(clock);
 		Instant expiraEm = agora.plus(propriedades.expiracao());
 		JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
@@ -46,6 +55,9 @@ public class EmissorToken {
 			.claim("name", nome)
 			.issuedAt(agora)
 			.expiresAt(expiraEm);
+		if (orgao != null) {
+			claims.claim("orgao", orgao.name());
+		}
 		if (StringUtils.hasText(propriedades.issuer())) {
 			claims.issuer(propriedades.issuer());
 		}

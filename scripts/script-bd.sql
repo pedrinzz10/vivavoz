@@ -193,6 +193,19 @@ CREATE TABLE contas_excluidas (
     CONSTRAINT pk_contas_excluidas PRIMARY KEY (usuario_id)
 );
 
+-- V9__papel_gestor.sql
+-- Papel GESTOR: servidor da prefeitura que atende a zeladoria na API .NET. O órgão vai no token (claim "orgao").
+ALTER TABLE usuarios DROP CONSTRAINT ck_usuarios_papel;
+ALTER TABLE usuarios ADD CONSTRAINT ck_usuarios_papel CHECK (papel IN ('CIDADAO', 'CUIDADOR', 'GESTOR'));
+ALTER TABLE usuarios ADD orgao NVARCHAR(20) NULL
+    CONSTRAINT ck_usuarios_orgao CHECK (orgao IN ('OBRAS', 'ILUMINACAO', 'MOBILIDADE', 'LIMPEZA'));
+
+-- V10__orgao_so_do_gestor.sql
+-- Separado da V9: no SQL Server, uma restrição que cita a coluna criada no mesmo lote falha na compilação do lote.
+-- Todo gestor tem órgão, e só o gestor tem.
+ALTER TABLE usuarios ADD CONSTRAINT ck_usuarios_orgao_do_gestor
+    CHECK ((papel = 'GESTOR' AND orgao IS NOT NULL) OR (papel <> 'GESTOR' AND orgao IS NULL));
+
 -- R__carga_pontos_atendimento.sql
 -- SPEC-007: carga dos locais de atendimento de Osasco/SP e arredores.
 -- Gerado por ./gradlew importarOsm a partir da Overpass API. Não edite à mão.

@@ -180,8 +180,8 @@ Com a aplicação no ar:
   `build/openapi/openapi.json`, para o time mobile e o time .NET.
 
 Para testar pelo Swagger:
-1. Chame `POST /api/v1/auth/login`. No perfil dev existem `cidadao.teste@vozviva.dev` e
-   `cuidador.teste@vozviva.dev`, com a senha de `USUARIOS_TESTE_SENHA`.
+1. Chame `POST /api/v1/auth/login`. No perfil dev existem `cidadao.teste@vozviva.dev`,
+   `cuidador.teste@vozviva.dev` e os gestores da tabela de usuários de teste, com a senha de `USUARIOS_TESTE_SENHA`.
 2. Copie o `accessToken` da resposta e clique em **Authorize**.
 3. Experimente os endpoints. O token fica guardado entre recarregamentos da página.
 
@@ -266,6 +266,8 @@ senha definida em `USUARIOS_TESTE_SENHA`:
 |---|---|
 | `cidadao.teste@vozviva.dev` | `CIDADAO` |
 | `cuidador.teste@vozviva.dev` | `CUIDADOR` |
+| `gestor.obras@vozviva.dev` | `GESTOR` (Secretaria de Obras), para a API .NET |
+| `gestor.iluminacao@vozviva.dev` | `GESTOR` (Iluminação Pública), para a API .NET |
 
 Proteções do login: senha com BCrypt (mínimo de 8 caracteres, com letra e número); a mesma resposta para
 e-mail inexistente e senha errada, inclusive no tempo de resposta; bloqueio de 15 minutos (HTTP 429) depois
@@ -279,7 +281,8 @@ de 5 erros seguidos no mesmo e-mail.
 | `iss` | Valor de `JWT_ISSUER` (`voz-e-via-java`) |
 | `aud` | Valor de `JWT_AUDIENCE` (`voz-e-via`) |
 | `sub` | Id do usuário |
-| `role` | `CIDADAO` ou `CUIDADOR` |
+| `role` | `CIDADAO`, `CUIDADOR` ou `GESTOR` |
+| `orgao` | Só no token do gestor: `OBRAS`, `ILUMINACAO`, `MOBILIDADE` ou `LIMPEZA` (a API .NET monta a fila do gestor com ele) |
 | `name` | Nome do usuário |
 | `iat` / `exp` | Emissão e expiração (validade de `JWT_EXPIRACAO`) |
 
@@ -295,7 +298,13 @@ configurado e um papel conhecido; valores desconhecidos nunca dão acesso.
 | `GET /v3/api-docs/**`, `GET /swagger-ui/**` | Público |
 | Consumo de dados de suporte (atendimentos próximos, verificação de golpes, classificação por voz...) | `CIDADAO` ou `CUIDADOR` |
 | Perfil de emergência e contatos (criar e alterar) | O próprio cidadão ou o cuidador responsável |
+| `GET /api/v1/auth/eu`, `DELETE /api/v1/auth/eu` | Qualquer papel, inclusive `GESTOR` |
 | Qualquer outra rota | Token válido |
+
+O `GESTOR` é o servidor da prefeitura que atende a zeladoria na API .NET. Aqui ele só faz login e cuida da
+própria conta: todas as rotas de dados de cidadão respondem 403 para ele. Não existe cadastro público de gestor
+(`papel: GESTOR` no cadastro responde 400); as contas são criadas pelo sistema, e o banco exige o órgão de todo
+gestor (e só dele).
 
 As regras por papel ficam nos endpoints com `@PreAuthorize`. Respostas 401 e 403 seguem o formato de
 erro padrão da API, com `mensagemFalada` e `traceId`.
@@ -610,7 +619,7 @@ desatualizado.
 
    ```bash
    export SUFIXO=rm556677 SQL_ADMIN_SENHA='...' APP_SQL_SENHA='...' RABBITMQ_SENHA='...' JWT_SECRET='...'
-   export USUARIOS_TESTE_SENHA='...'   # opcional: cria cidadao.teste@ e cuidador.teste@ para a demonstração
+   export USUARIOS_TESTE_SENHA='...'   # opcional: cria cidadao.teste@, cuidador.teste@ e os gestores para a demonstração
    export LIBERAR_MEU_IP=sim           # opcional: libera o seu IP no Azure SQL (Query editor e SELECT)
    ./scripts/provisionar-azure.sh
    ```
