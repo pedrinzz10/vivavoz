@@ -15,13 +15,13 @@
 #
 # Uso (Cloud Shell da Azure, logado com a conta da FIAP):
 #   ORGANIZACAO=vozviva REVISOR_EMAIL=RM562312@fiap.com.br ./scripts/configurar-azure-devops.sh
-# Opcionais: PROJETO (padrão VozViva-GS), REPOSITORIO (padrão vozviva), REPO_GITHUB, PROFESSOR_DEVOPS_EMAIL, PROFESSOR_QA_EMAIL,
+# Opcionais: PROJETO (padrão vozviva), REPOSITORIO (padrão vozviva), REPO_GITHUB, PROFESSOR_DEVOPS_EMAIL, PROFESSOR_QA_EMAIL,
 #   WEBAPP_NAME, ACR_LOGIN_SERVER.
 set -euo pipefail
 
 : "${ORGANIZACAO:?informe ORGANIZACAO (nome criado em https://aex.dev.azure.com)}"
 : "${REVISOR_EMAIL:?informe REVISOR_EMAIL (o seu e-mail RM, revisor obrigatório da main)}"
-PROJETO="${PROJETO:-VozViva-GS}"
+PROJETO="${PROJETO:-vozviva}"
 REPOSITORIO="${REPOSITORIO:-vozviva}"
 REPO_GITHUB="${REPO_GITHUB:-https://github.com/pedrinzz10/vivavoz.git}"
 PIPELINE="vozviva-ci-cd"
