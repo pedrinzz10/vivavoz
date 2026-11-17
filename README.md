@@ -545,7 +545,18 @@ desatualizado.
 
 **Passo a passo:**
 
-1. **Provisionar** (Azure Cloud Shell ou Azure CLI com `az login`):
+1. **IA na OCI** (Cloud Shell da OCI, região `sa-saopaulo-1`): compartimento `vozviva`, API key do Generative AI,
+   orçamento com alerta e uma chamada de teste ao modelo. A chave fica só em `~/.vozviva/oci-genai.env`, sem
+   aparecer na tela.
+
+   ```bash
+   ORCAMENTO_EMAIL=voce@fiap.com.br ./scripts/provisionar-oci.sh
+   ```
+
+   No Cloud Shell da Azure, antes do próximo passo, informe a chave sem deixá-la no histórico:
+   `read -rs OCI_GENAI_API_KEY && export OCI_GENAI_API_KEY`.
+2. **Provisionar a Azure** (Azure Cloud Shell ou Azure CLI com `az login`). O script registra os provedores que
+   faltarem na assinatura (Microsoft.Sql, Microsoft.ContainerInstance e outros):
 
    ```bash
    export SUFIXO=rm556677 SQL_ADMIN_SENHA='...' APP_SQL_SENHA='...' RABBITMQ_SENHA='...' JWT_SECRET='...'
@@ -556,15 +567,15 @@ desatualizado.
 
    O script pode rodar de novo: ele só cria o que falta e mostra o que criou ou reaproveitou. No fim, imprime
    as URLs e os nomes para o próximo passo.
-2. **Azure DevOps:**
+3. **Azure DevOps:**
    - Importe o repositório no Azure Repos.
    - Em Project settings → Service connections, crie `vozviva-azure` (Azure Resource Manager, grupo
      `rg-vozviva`) e `vozviva-acr` (Docker Registry → Azure Container Registry).
    - Em Pipelines → Library, crie o grupo de variáveis `vozviva-azure` com `webAppName` e `acrLoginServer`.
    - Crie a pipeline a partir do `azure-pipeline.yml` da raiz.
-3. **Branch principal protegida** (Repos → Branches → main → Branch policies): revisor obrigatório (o
+4. **Branch principal protegida** (Repos → Branches → main → Branch policies): revisor obrigatório (o
    próprio autor pode aprovar), vínculo obrigatório com Work Item e o RM como revisor padrão.
-4. **Fluxo da entrega:**
+5. **Fluxo da entrega:**
    1. Tarefa no Boards.
    2. Branch nova.
    3. Alteração no código.
@@ -572,11 +583,12 @@ desatualizado.
    5. Merge.
    6. Build: testes publicados na aba Tests, cobertura e pacote `vozviva` com o jar, o contrato OpenAPI e o script do banco.
    7. Release automática no App Service, que confere o `/actuator/health` no fim.
-5. **CRUD no banco em nuvem:** pelo Swagger publicado (`https://<webAppName>.azurewebsites.net/swagger-ui.html`),
+6. **CRUD no banco em nuvem:** pelo Swagger publicado (`https://<webAppName>.azurewebsites.net/swagger-ui.html`),
    crie, leia, altere e exclua perfis de emergência (`perfis_emergencia`) e contatos (`contatos_emergencia`).
    Confira cada operação com `SELECT` no Query editor do Azure SQL, por exemplo:
    `SELECT * FROM contatos_emergencia ORDER BY id DESC;`.
-6. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro.
+7. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro. Na OCI, exclua a API key, o orçamento e o
+   compartimento `vozviva` pelo console.
 
 Para testar a imagem localmente, com o SQL Server e o RabbitMQ do `docker compose` (o mesmo teste foi feito
 antes da entrega: health `UP` e fluxo de cadastro, login, atendimentos e voz funcionando no perfil `prod`):
