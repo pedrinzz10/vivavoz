@@ -583,6 +583,7 @@ desatualizado.
 | Rede virtual `vnet-vozviva` (2 sub-redes) | Liga o App Service ao RabbitMQ por IP privado |
 | Container Instance com RabbitMQ | Fila do botão de emergência, sem IP público |
 | App Service Linux B1 (container) | API Java; HTTPS obrigatório e health check em `/actuator/health/liveness` |
+| Segundo app no mesmo plano B1 (.NET 8, sem custo extra) + banco `zeladoria` (Basic) | API .NET de zeladoria, que o app mobile também usa; compilada a partir do repositório da equipe .NET e publicada pelo próprio script. Para pular: `PUBLICAR_DOTNET=nao` |
 
 **Segurança do ambiente:**
 - O App Service puxa a imagem do ACR com identidade gerenciada (`AcrPull`), sem senha de registry.
@@ -615,7 +616,8 @@ desatualizado.
    No Cloud Shell da Azure, antes do próximo passo, informe a chave sem deixá-la no histórico:
    `read -rs OCI_GENAI_API_KEY && export OCI_GENAI_API_KEY`.
 2. **Provisionar a Azure** (Azure Cloud Shell ou Azure CLI com `az login`). O script registra os provedores que
-   faltarem na assinatura (Microsoft.Sql, Microsoft.ContainerInstance e outros):
+   faltarem na assinatura (Microsoft.Sql, Microsoft.ContainerInstance e outros) e também publica a API .NET de
+   zeladoria, com o mesmo `JWT_SECRET`, para o app mobile ter as duas APIs no ar:
 
    ```bash
    export SUFIXO=rm556677 SQL_ADMIN_SENHA='...' APP_SQL_SENHA='...' RABBITMQ_SENHA='...' JWT_SECRET='...'

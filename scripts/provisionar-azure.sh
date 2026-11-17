@@ -4,8 +4,10 @@
 #   Resource Group -> Azure SQL (servidor, banco e usuário da aplicação) -> Container Registry (ACR)
 #   -> rede virtual -> RabbitMQ em container (ACI, só IP privado) -> App Service para containers (Linux)
 #   ligado à rede virtual e puxando a imagem do ACR
+#   -> API .NET de zeladoria (outro app no mesmo plano, sem custo extra, com o próprio banco "zeladoria")
 #
-# Requer o sqlcmd (já vem no Azure Cloud Shell) para criar o usuário da aplicação no banco.
+# Requer o sqlcmd (já vem no Azure Cloud Shell) para criar o usuário da aplicação no banco, e git, dotnet e zip
+# (também no Cloud Shell) para publicar a API .NET.
 #
 # Idempotente: cada recurso é conferido antes de ser criado; rodar de novo só cria o que falta e
 # atualiza as configurações do App Service. O modelo de IA fica na OCI (fora da Azure).
@@ -22,6 +24,8 @@
 # voz-e-via; os dois iguais aos da API .NET), OCI_GENAI_API_KEY, OCI_GENAI_BASE_URL,
 # OCI_GENAI_MODEL, USUARIOS_TESTE_SENHA (cria os usuários de teste, útil na demonstração) e
 # LIBERAR_MEU_IP=sim (libera o seu IP no firewall do Azure SQL, para o Query editor e o SELECT do vídeo).
+# API .NET: PUBLICAR_DOTNET (padrão sim; o banco "zeladoria" Basic custa cerca de US$ 5 por mês), DOTNET_REPO e
+# DOTNET_BRANCH (padrão main do repositório da equipe .NET).
 # Nenhuma senha fica neste arquivo.
 set -euo pipefail
 
@@ -53,6 +57,11 @@ WEBAPP="app-vozviva-${SUFIXO_LIMPO}"
 JWT_ISSUER="${JWT_ISSUER:-voz-e-via-java}"
 JWT_AUDIENCE="${JWT_AUDIENCE:-voz-e-via}"
 IMAGEM_INICIAL="mcr.microsoft.com/appsvc/staticsite:latest"
+PUBLICAR_DOTNET="${PUBLICAR_DOTNET:-sim}"
+DOTNET_REPO="${DOTNET_REPO:-https://github.com/Fabriciopereira-sp/DOTNETGS.git}"
+DOTNET_BRANCH="${DOTNET_BRANCH:-main}"
+SQL_BANCO_DOTNET="zeladoria"
+WEBAPP_DOTNET="app-zeladoria-${SUFIXO_LIMPO}"
 
 passo() { printf '\n==> %s\n' "$*"; }
 existe() { "$@" > /dev/null 2>&1; }
@@ -116,7 +125,19 @@ else
   criado "$SQL_BANCO"
 fi
 
-passo "Azure SQL: usuário da aplicação ${SQL_APP_USUARIO} (privilégio mínimo, só neste banco)"
+if [ "$PUBLICAR_DOTNET" = "sim" ]; then
+  passo "Azure SQL: banco ${SQL_BANCO_DOTNET} da API .NET (Basic)"
+  if existe az sql db show -g "$GRUPO" -s "$SQL_SERVIDOR" -n "$SQL_BANCO_DOTNET"; then
+    reaproveitado "$SQL_BANCO_DOTNET"
+  else
+    # Banco próprio: a API .NET cria as tabelas no primeiro start (EF Core), o que só acontece em banco vazio.
+    az sql db create -g "$GRUPO" -s "$SQL_SERVIDOR" -n "$SQL_BANCO_DOTNET" --service-objective Basic \
+      --backup-storage-redundancy Local -o none
+    criado "$SQL_BANCO_DOTNET"
+  fi
+fi
+
+passo "Azure SQL: usuário da aplicação ${SQL_APP_USUARIO} (privilégio mínimo, só nos bancos das APIs)"
 # A API não usa o administrador do servidor: o usuário contido no banco só lê, grava e altera o esquema
 # deste banco (o Flyway precisa de DDL). O administrador fica só para o provisionamento.
 if ! command -v sqlcmd > /dev/null 2>&1; then
@@ -127,7 +148,11 @@ IP_PROVISIONAMENTO="$(curl -fsS https://api.ipify.org)"
 az sql server firewall-rule create -g "$GRUPO" -s "$SQL_SERVIDOR" -n ProvisionamentoTemporario \
   --start-ip-address "$IP_PROVISIONAMENTO" --end-ip-address "$IP_PROVISIONAMENTO" -o none
 SENHA_APP_SQL_ESCAPADA="${APP_SQL_SENHA//\'/\'\'}"
-SQLCMDPASSWORD="$SQL_ADMIN_SENHA" sqlcmd -S "tcp:${SQL_SERVIDOR}.database.windows.net,1433" -d "$SQL_BANCO" \
+BANCOS_DA_APLICACAO=("$SQL_BANCO")
+[ "$PUBLICAR_DOTNET" = "sim" ] && BANCOS_DA_APLICACAO+=("$SQL_BANCO_DOTNET")
+# Usuário contido: cada banco tem o seu, com o mesmo nome e a mesma senha, e um não enxerga o outro banco.
+for banco in "${BANCOS_DA_APLICACAO[@]}"; do
+SQLCMDPASSWORD="$SQL_ADMIN_SENHA" sqlcmd -S "tcp:${SQL_SERVIDOR}.database.windows.net,1433" -d "$banco" \
   -U "$SQL_ADMIN" -b -Q "
 IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${SQL_APP_USUARIO}')
     CREATE USER [${SQL_APP_USUARIO}] WITH PASSWORD = N'${SENHA_APP_SQL_ESCAPADA}';
@@ -137,8 +162,9 @@ ALTER ROLE db_datareader ADD MEMBER [${SQL_APP_USUARIO}];
 ALTER ROLE db_datawriter ADD MEMBER [${SQL_APP_USUARIO}];
 ALTER ROLE db_ddladmin ADD MEMBER [${SQL_APP_USUARIO}];
 GRANT REFERENCES ON SCHEMA::dbo TO [${SQL_APP_USUARIO}];"
+echo "    usuário ${SQL_APP_USUARIO} pronto (leitura, escrita e DDL no banco ${banco})"
+done
 az sql server firewall-rule delete -g "$GRUPO" -s "$SQL_SERVIDOR" -n ProvisionamentoTemporario -o none
-echo "    usuário ${SQL_APP_USUARIO} pronto (leitura, escrita e DDL no banco ${SQL_BANCO})"
 
 passo "Container Registry ${ACR}"
 if existe az acr show -g "$GRUPO" -n "$ACR"; then
@@ -254,6 +280,52 @@ fi
 az webapp config appsettings set -g "$GRUPO" -n "$WEBAPP" --settings "${CONFIGURACOES[@]}" -o none
 echo "    ${#CONFIGURACOES[@]} variáveis definidas"
 
+if [ "$PUBLICAR_DOTNET" = "sim" ]; then
+  passo "API .NET (zeladoria): aplicativo ${WEBAPP_DOTNET} no mesmo plano"
+  if existe az webapp show -g "$GRUPO" -n "$WEBAPP_DOTNET"; then
+    reaproveitado "$WEBAPP_DOTNET"
+  else
+    # Aplicativo .NET nativo (não container): o Cloud Shell compila e publica, sem depender de ACR Tasks.
+    az webapp create -g "$GRUPO" -p "$PLANO" -n "$WEBAPP_DOTNET" --runtime "DOTNETCORE:8.0" -o none
+    criado "$WEBAPP_DOTNET"
+  fi
+  az webapp update -g "$GRUPO" -n "$WEBAPP_DOTNET" --https-only true -o none
+  az webapp config set -g "$GRUPO" -n "$WEBAPP_DOTNET" --always-on true --min-tls-version 1.2 \
+    --ftps-state Disabled --generic-configurations '{"healthCheckPath": "/health/live"}' -o none
+
+  passo "API .NET: variáveis de ambiente (mesmo JWT da API Java, banco ${SQL_BANCO_DOTNET})"
+  SENHA_CONEXAO_DOTNET="${APP_SQL_SENHA//\'/\'\'}"
+  CONEXAO_DOTNET="Server=tcp:${SQL_SERVIDOR}.database.windows.net,1433;Database=${SQL_BANCO_DOTNET};User ID=${SQL_APP_USUARIO};Password='${SENHA_CONEXAO_DOTNET}';Encrypt=True;TrustServerCertificate=False;Connection Timeout=30"
+  CONFIGURACOES_DOTNET=(
+    "ASPNETCORE_ENVIRONMENT=Production"
+    "JWT_SECRET=${JWT_SECRET}"
+    "Jwt__Issuer=${JWT_ISSUER}"
+    "Jwt__Audience=${JWT_AUDIENCE}"
+    "Database__Provider=SqlServer"
+    "Database__CriarTabelasAoIniciar=true"
+    "ConnectionStrings__SqlServer=${CONEXAO_DOTNET}"
+    "ServicosExternos__ApiJavaHealthUrl=https://${WEBAPP}.azurewebsites.net/actuator/health/liveness"
+    "Uploads__Pasta=/home/uploads"
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true"
+  )
+  az webapp config appsettings set -g "$GRUPO" -n "$WEBAPP_DOTNET" --settings "${CONFIGURACOES_DOTNET[@]}" -o none
+  echo "    ${#CONFIGURACOES_DOTNET[@]} variáveis definidas (fotos em /home/uploads, que sobrevive aos deploys)"
+
+  passo "API .NET: compilar ${DOTNET_REPO} (${DOTNET_BRANCH}) e publicar"
+  for ferramenta in git dotnet zip; do
+    command -v "$ferramenta" > /dev/null 2>&1 || { echo "${ferramenta} não encontrado. Rode no Azure Cloud Shell." >&2; exit 1; }
+  done
+  PASTA_DOTNET="$(mktemp -d)"
+  git clone -q --depth 1 -b "$DOTNET_BRANCH" "$DOTNET_REPO" "${PASTA_DOTNET}/codigo"
+  dotnet publish "${PASTA_DOTNET}/codigo/src/CaminhoLivre.Api/CaminhoLivre.Api.csproj" -c Release \
+    -o "${PASTA_DOTNET}/publicado" --nologo -v q
+  (cd "${PASTA_DOTNET}/publicado" && zip -qr "${PASTA_DOTNET}/zeladoria.zip" .)
+  az webapp deploy -g "$GRUPO" -n "$WEBAPP_DOTNET" --src-path "${PASTA_DOTNET}/zeladoria.zip" --type zip -o none
+  COMMIT_DOTNET="$(git -C "${PASTA_DOTNET}/codigo" rev-parse --short HEAD)"
+  rm -rf "$PASTA_DOTNET"
+  echo "    publicado o commit ${COMMIT_DOTNET}"
+fi
+
 passo "Pronto"
 cat <<RESUMO
     API (depois do primeiro deploy): https://${WEBAPP}.azurewebsites.net
@@ -263,6 +335,7 @@ cat <<RESUMO
                                      (API usa ${SQL_APP_USUARIO}; ${SQL_ADMIN} só para administração)
     Container Registry:              ${ACR_SERVIDOR}
     RabbitMQ (rede privada):         ${RABBITMQ_HOST}:5672
+    API .NET (zeladoria):            https://${WEBAPP_DOTNET}.azurewebsites.net/swagger (se PUBLICAR_DOTNET=sim)
 
     Próximos passos no Azure DevOps (detalhes no README, seção "Deploy na Azure"):
     1. Service connections: "vozviva-azure" (Azure Resource Manager, grupo ${GRUPO})
