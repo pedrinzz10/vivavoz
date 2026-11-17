@@ -11,6 +11,7 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 | **API publicada (Azure)** | _a preencher depois do deploy_: `https://<webAppName>.azurewebsites.net/swagger-ui.html` |
 | **Swagger local** | http://localhost:8080/swagger-ui.html |
 | **Vídeo pitch** | _a preencher_ |
+| **Roteiro das apresentações** | [`docs/roteiro-apresentacao.md`](docs/roteiro-apresentacao.md) |
 | **Requisito 5 (Java Advanced)** | **Opção A: RabbitMQ.** O botão de emergência publica o evento e um consumidor assíncrono avisa os contatos ([detalhes](#botão-de-emergência-arquitetura-distribuída--opção-a-rabbitmq)) |
 
 ## Integrantes
@@ -60,6 +61,55 @@ menus complicados:
 | **3 – Saúde e bem-estar** | Socorro rápido com a rede de apoio, caminho até o atendimento de saúde e orientação de ligar 192 |
 | **10 – Redução das desigualdades** | Acesso por voz para quem tem baixo letramento digital ou deficiência, e proteção contra golpes que atingem os mais vulneráveis |
 | **11 – Cidades e comunidades sustentáveis** | Prioriza destinos acessíveis e encaminha problemas da calçada para a zeladoria |
+
+## Impacto e modelo de negócio
+
+### Como o impacto é medido
+
+Os indicadores saem dos dados que a API já grava, sem guardar a localização das buscas nem o texto das mensagens
+verificadas:
+
+| Indicador | Origem | O que mostra |
+|---|---|---|
+| Tempo entre o toque e o aviso aos contatos | `emergencias` (`notificada_em` − `acionada_em`) | Se o socorro chega em segundos |
+| Taxa de emergências em `FALHA_NO_AVISO` | `emergencias` | Contatos desatualizados ou falha de entrega, para agir antes que a pessoa precise |
+| Emergências atendidas pelo cuidador × canceladas | `emergencias` (`ATENDIDA` e `CANCELADA`) | Se a rede de apoio responde |
+| Golpes identificados por tipo | `GET /api/v1/verificacoes/estatisticas` (anônimo) | Golpes que circulam na cidade, para campanhas de prevenção |
+| Falas entendidas × `PEDIR_REPETICAO` | `interacoes_voz` | Se o acesso por voz funciona para quem tem pouco letramento digital |
+| Pessoas com perfil e rede de apoio | `perfis_emergencia` e `contatos_emergencia` | Alcance do piloto (cidadãos que se cadastraram sozinhos e com cuidador) |
+
+**Metas do piloto em Osasco/SP** (propostas, a confirmar com a prefeitura): aviso aos contatos em menos de 30
+segundos em 95% das emergências; menos de 2% das emergências em `FALHA_NO_AVISO`; pelo menos 80% das falas
+entendidas sem pedir repetição.
+
+### Como o impacto é ampliado
+
+- **Outras cidades:** os locais de atendimento vêm do OpenStreetMap. Para uma nova cidade, troca-se a área
+(`ImportadorOsm.AREA`) e roda-se `./gradlew importarOsm`, que gera a carga do banco; o resto da API não muda.
+- **Novos golpes:** as orientações do assistente ficam numa base curada (RAG). Um golpe novo entra como documento,
+sem treinar modelo.
+- **Ecossistema:** a API .NET valida o mesmo JWT, então novos serviços (zeladoria, saúde, assistência social)
+usam a mesma conta do cidadão.
+- **Custo de IA controlado:** as regras respondem sem IA, então a solução continua funcionando com o orçamento
+de IA zerado ou com o provedor fora do ar.
+
+### Quem paga e como se sustenta
+
+Para o cidadão e o cuidador o app é **gratuito**. A receita vem de quem economiza com ele, conforme o relatório de
+dores do grupo:
+
+| Modelo | Quem paga | Por que paga |
+|---|---|---|
+| **B2G** (assinatura) | Prefeituras e secretarias de saúde e assistência social | Menos internações por demora no socorro, menos filas no CRAS e dados para campanhas contra golpes |
+| **B2B2C** | Planos de saúde e clínicas com clientes da terceira idade | Menos custo de central de atendimento e de internações evitáveis; o plano oferece o app aos clientes |
+| **Dados anônimos** | Planejamento urbano, concessionárias de transporte e construtoras | Mapas de calor (sem dado pessoal, conforme a LGPD) de obstáculos nas calçadas e de destinos procurados por PcD |
+
+**Quem participa:** cidadão e cuidador (usuários), contatos de emergência (rede de apoio), prefeitura (zeladoria e
+saúde, pela API .NET), SAMU 192 (sempre indicado nas emergências) e OpenStreetMap (dados abertos, licença ODbL).
+
+**Custo de operação:** o ambiente da Azure criado pelo script (App Service B1, Azure SQL Basic, ACR Basic e um
+RabbitMQ em container) é de entrada e atende o piloto. Para crescer, sobe-se o plano do App Service e do banco, sem
+mudar a arquitetura.
 
 ## Stack
 
@@ -577,7 +627,7 @@ desatualizado.
    ```
 
    O script cria o projeto (privado, Git, Scrum), importa o repositório do GitHub, cria a pipeline a partir do
-   `azure-pipeline.yml`, as políticas da main (passo 4), a tarefa inicial e o grupo de variáveis `vozviva-azure`
+   `azure-pipeline.yml`, as políticas da main (passo 5), a tarefa inicial e o grupo de variáveis `vozviva-azure`
    (`webAppName` e `acrLoginServer`), e convida os professores (Basic na organização e Project Administrators no
    projeto). Pelo portal ficam:
    - Project settings → Service connections: `vozviva-azure` (Azure Resource Manager, grupo `rg-vozviva`) e
@@ -585,9 +635,17 @@ desatualizado.
    - Organization settings → Pipelines → Parallel jobs: organização nova pode vir sem job gratuito; peça a cota
      em https://aka.ms/azpipelines-parallelism-request ou use um agente self-hosted.
    - Organization settings → Billing: trial de Test Plans, para executar os testes manuais.
-4. **Branch principal protegida** (Repos → Branches → main → Branch policies): revisor obrigatório (o
+4. **Backlog e casos de teste** (Compliance, QA & Tests), já prontos em [`docs/azure-boards/`](docs/azure-boards):
+   - Boards → Work items → **Import Work Items** com [`backlog.csv`](docs/azure-boards/backlog.csv) (processo
+     Scrum): 5 Epics, 9 Features e 22 Product Backlog Items, com descrição e critérios de aceite.
+   - Test Plans → crie um plano com uma suíte por Feature e, em cada suíte, **Import test cases** com o CSV da
+     Feature em [`casos-de-teste/`](docs/azure-boards/casos-de-teste): 45 casos, positivos e negativos, com
+     sumário (objetivo, preparação, entradas e saída esperada) e passos.
+   - Os CSVs são gerados por [`gerar_csv.py`](docs/azure-boards/gerar_csv.py); para mudar um item, edite o script
+     e rode `python docs/azure-boards/gerar_csv.py`.
+5. **Branch principal protegida** (Repos → Branches → main → Branch policies): revisor obrigatório (o
    próprio autor pode aprovar), vínculo obrigatório com Work Item e o RM como revisor padrão.
-5. **Fluxo da entrega:**
+6. **Fluxo da entrega:**
    1. Tarefa no Boards.
    2. Branch nova.
    3. Alteração no código.
@@ -595,11 +653,11 @@ desatualizado.
    5. Merge.
    6. Build: testes publicados na aba Tests, cobertura e pacote `vozviva` com o jar, o contrato OpenAPI e o script do banco.
    7. Release automática no App Service, que confere o `/actuator/health` no fim.
-6. **CRUD no banco em nuvem:** pelo Swagger publicado (`https://<webAppName>.azurewebsites.net/swagger-ui.html`),
+7. **CRUD no banco em nuvem:** pelo Swagger publicado (`https://<webAppName>.azurewebsites.net/swagger-ui.html`),
    crie, leia, altere e exclua perfis de emergência (`perfis_emergencia`) e contatos (`contatos_emergencia`).
    Confira cada operação com `SELECT` no Query editor do Azure SQL, por exemplo:
    `SELECT * FROM contatos_emergencia ORDER BY id DESC;`.
-7. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro. Na OCI, exclua a API key, o orçamento e o
+8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro. Na OCI, exclua a API key, o orçamento e o
    compartimento `vozviva` pelo console.
 
 Para testar a imagem localmente, com o SQL Server e o RabbitMQ do `docker compose` (o mesmo teste foi feito
@@ -610,7 +668,7 @@ docker build -f dockerfiles/Dockerfile -t vozviva-api .
 docker run --rm -p 8081:8080 --network vozviva_default \
   -e DB_URL="jdbc:sqlserver://sqlserver:1433;databaseName=vozviva;encrypt=true;trustServerCertificate=true" \
   -e DB_USERNAME=sa -e DB_PASSWORD -e RABBITMQ_HOST=rabbitmq -e RABBITMQ_USERNAME=vozviva \
-  -e RABBITMQ_PASSWORD -e JWT_SECRET -e JWT_ISSUER=vozviva vozviva-api
+  -e RABBITMQ_PASSWORD -e JWT_SECRET -e JWT_ISSUER=voz-e-via-java -e JWT_AUDIENCE=voz-e-via vozviva-api
 ```
 
 ## Testes

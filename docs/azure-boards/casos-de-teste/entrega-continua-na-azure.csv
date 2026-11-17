@@ -1,0 +1,6 @@
+﻿ID,Work Item Type,Title,Test Step,Step Action,Step Expected,Priority,Description,Tags
+,Test Case,[Positivo] Merge na main dispara build e release,1,"Criar a branch, alterar o código e abrir o PR vinculado à tarefa",PR com a política da main exigindo revisor e Work Item,2,"<b>Objetivo:</b> Verificar a pipeline de CI/CD.<br><b>Preparação:</b> Projeto no Azure DevOps configurado; tarefa criada no Boards.<br><b>Entradas:</b> Branch nova com alteração no código, PR vinculado à tarefa e merge na main<br><b>Saída esperada:</b> Build com testes publicados e release com health UP",VozViva; Entrega contínua na Azure; Positivo
+,,,2,Aprovar e fazer o merge,O build inicia automaticamente,,,
+,,,3,Abrir o build e a aba Tests,"Testes JUnit publicados, cobertura e artefato vozviva",,,
+,,,4,Abrir a release,Imagem publicada no App Service e passo de health com UP,,,
+,,,5,Abrir /actuator/health na URL publicada,"{""status"": ""UP""}",,,
