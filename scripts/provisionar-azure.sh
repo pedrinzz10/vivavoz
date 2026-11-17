@@ -62,6 +62,17 @@ reaproveitado() { echo "    já existia: $*"; }
 passo "Assinatura em uso"
 az account show --query "{assinatura:name, id:id}" -o table
 
+# Assinaturas novas (como as de estudante) vêm com alguns provedores desligados, e o primeiro "create" falharia.
+passo "Provedores de recursos da assinatura"
+for provedor in Microsoft.Web Microsoft.Sql Microsoft.ContainerRegistry Microsoft.ContainerInstance Microsoft.Network; do
+  if [ "$(az provider show -n "$provedor" --query registrationState -o tsv)" = "Registered" ]; then
+    reaproveitado "$provedor"
+  else
+    az provider register -n "$provedor" --wait -o none
+    criado "$provedor (registrado)"
+  fi
+done
+
 passo "Grupo de recursos ${GRUPO} (${LOCALIZACAO})"
 if existe az group show -n "$GRUPO"; then
   reaproveitado "$GRUPO"
