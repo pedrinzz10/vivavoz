@@ -567,12 +567,24 @@ desatualizado.
 
    O script pode rodar de novo: ele só cria o que falta e mostra o que criou ou reaproveitou. No fim, imprime
    as URLs e os nomes para o próximo passo.
-3. **Azure DevOps:**
-   - Importe o repositório no Azure Repos.
-   - Em Project settings → Service connections, crie `vozviva-azure` (Azure Resource Manager, grupo
-     `rg-vozviva`) e `vozviva-acr` (Docker Registry → Azure Container Registry).
-   - Em Pipelines → Library, crie o grupo de variáveis `vozviva-azure` com `webAppName` e `acrLoginServer`.
-   - Crie a pipeline a partir do `azure-pipeline.yml` da raiz.
+3. **Azure DevOps:** crie a organização em https://aex.dev.azure.com e rode, no Cloud Shell da Azure:
+
+   ```bash
+   export ORGANIZACAO=<nome> REVISOR_EMAIL=<seu RM>@fiap.com.br
+   export PROFESSOR_DEVOPS_EMAIL=... PROFESSOR_QA_EMAIL=...
+   export WEBAPP_NAME=<do passo 2> ACR_LOGIN_SERVER=<do passo 2>
+   ./scripts/configurar-azure-devops.sh
+   ```
+
+   O script cria o projeto (privado, Git, Scrum), importa o repositório do GitHub, cria a pipeline a partir do
+   `azure-pipeline.yml`, as políticas da main (passo 4), a tarefa inicial e o grupo de variáveis `vozviva-azure`
+   (`webAppName` e `acrLoginServer`), e convida os professores (Basic na organização e Project Administrators no
+   projeto). Pelo portal ficam:
+   - Project settings → Service connections: `vozviva-azure` (Azure Resource Manager, grupo `rg-vozviva`) e
+     `vozviva-acr` (Docker Registry → Azure Container Registry).
+   - Organization settings → Pipelines → Parallel jobs: organização nova pode vir sem job gratuito; peça a cota
+     em https://aka.ms/azpipelines-parallelism-request ou use um agente self-hosted.
+   - Organization settings → Billing: trial de Test Plans, para executar os testes manuais.
 4. **Branch principal protegida** (Repos → Branches → main → Branch policies): revisor obrigatório (o
    próprio autor pode aprovar), vínculo obrigatório com Work Item e o RM como revisor padrão.
 5. **Fluxo da entrega:**
