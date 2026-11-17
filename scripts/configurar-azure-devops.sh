@@ -106,7 +106,7 @@ fi
 
 passo "Tarefa inicial no Boards"
 EXISTE_TAREFA=$(adop boards query --wiql "SELECT [System.Id] FROM workitems WHERE [System.TeamProject] = '${PROJETO}' AND [System.Title] = '${TAREFA}'" \
-  --query 'length(@)' -o tsv)
+  --query '[].id' -o tsv | wc -l)
 if [ "${EXISTE_TAREFA:-0}" != "0" ]; then
   reaproveitado "$TAREFA"
 else
