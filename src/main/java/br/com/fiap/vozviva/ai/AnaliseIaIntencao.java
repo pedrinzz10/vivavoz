@@ -12,10 +12,8 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -40,8 +38,8 @@ public class AnaliseIaIntencao {
 	private final ChatClient chatClient;
 	private final String instrucoes;
 
-	public AnaliseIaIntencao(ObjectProvider<ChatModel> modelo, @Value("${vozviva.ia.credencial:}") String credencial) {
-		ChatModel chatModel = StringUtils.hasText(credencial) ? modelo.getIfAvailable() : null;
+	public AnaliseIaIntencao(ObjectProvider<ChatModel> modelo, CredencialIa credencial) {
+		ChatModel chatModel = credencial.configurada() ? modelo.getIfAvailable() : null;
 		this.chatClient = chatModel == null ? null : ChatClient.builder(chatModel).build();
 		this.instrucoes = lerInstrucoes();
 		if (chatClient == null) {

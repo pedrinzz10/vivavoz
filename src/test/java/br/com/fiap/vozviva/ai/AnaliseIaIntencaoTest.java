@@ -94,7 +94,7 @@ class AnaliseIaIntencaoTest {
 
 	@Test
 	void semChaveNaoChamaOModelo() {
-		assertThat(new AnaliseIaIntencao(provedor(), " ").analisar("qualquer coisa", List.of())).isEmpty();
+		assertThat(new AnaliseIaIntencao(provedor(), new CredencialIa(false)).analisar("qualquer coisa", List.of())).isEmpty();
 		verify(modelo, never()).call(any(Prompt.class));
 	}
 
@@ -107,7 +107,7 @@ class AnaliseIaIntencaoTest {
 	}
 
 	private AnaliseIaIntencao ia() {
-		return new AnaliseIaIntencao(provedor(), "chave-de-teste");
+		return new AnaliseIaIntencao(provedor(), new CredencialIa(true));
 	}
 
 	private ObjectProvider<ChatModel> provedor() {

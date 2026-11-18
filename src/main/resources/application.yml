@@ -97,8 +97,7 @@ springdoc:
 
 vozviva:
   ia:
-    # Liga a IA: a API key do Generative AI ou, sem ela, o usuário da OCI que assina as chamadas.
-    credencial: ${OCI_GENAI_API_KEY:${OCI_GENAI_USER_OCID:}}
+    # A IA liga com a API key do Generative AI (spring.ai.openai.api-key) ou com a assinatura abaixo completa.
     # Assinatura com a chave de assinatura (API signing key) de um usuário da OCI, para contas sem API key do
     # Generative AI. Com os cinco campos preenchidos, cada chamada é assinada e a API key não é usada.
     oci:

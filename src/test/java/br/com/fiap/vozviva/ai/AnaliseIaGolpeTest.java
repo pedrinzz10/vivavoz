@@ -118,17 +118,17 @@ class AnaliseIaGolpeTest {
 		@SuppressWarnings("unchecked")
 		ObjectProvider<ChatModel> semModelo = mock(ObjectProvider.class);
 
-		assertThat(new AnaliseIaGolpe(semModelo, "chave").analisar("qualquer", CanalMensagem.OUTRO, List.of())).isEmpty();
+		assertThat(new AnaliseIaGolpe(semModelo, new CredencialIa(true)).analisar("qualquer", CanalMensagem.OUTRO, List.of())).isEmpty();
 	}
 
 	@Test
 	void semChaveNaoChamaOModeloMesmoQueEleExista() {
-		assertThat(new AnaliseIaGolpe(provedor(), "").analisar("qualquer", CanalMensagem.OUTRO, List.of())).isEmpty();
+		assertThat(new AnaliseIaGolpe(provedor(), new CredencialIa(false)).analisar("qualquer", CanalMensagem.OUTRO, List.of())).isEmpty();
 		verify(modelo, never()).call(any(Prompt.class));
 	}
 
 	private AnaliseIaGolpe ia() {
-		return new AnaliseIaGolpe(provedor(), "chave-de-teste");
+		return new AnaliseIaGolpe(provedor(), new CredencialIa(true));
 	}
 
 	private ObjectProvider<ChatModel> provedor() {

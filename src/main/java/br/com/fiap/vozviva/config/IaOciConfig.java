@@ -1,13 +1,16 @@
 package br.com.fiap.vozviva.config;
 
 import br.com.fiap.vozviva.ai.AssinadorRequisicaoOci;
+import br.com.fiap.vozviva.ai.CredencialIa;
 import br.com.fiap.vozviva.ai.OciAssinaturaProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.openai.http.okhttp.OpenAiHttpClientBuilderCustomizer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 /**
  * Autenticação do Spring AI no OCI Generative AI. Com a assinatura do usuário da OCI configurada
@@ -19,6 +22,12 @@ import org.springframework.context.annotation.Configuration;
 public class IaOciConfig {
 
 	private static final Logger log = LoggerFactory.getLogger(IaOciConfig.class);
+
+	/** A IA liga com a API key ou com a assinatura completa (uma variável vazia não conta como credencial). */
+	@Bean
+	CredencialIa credencialIa(@Value("${spring.ai.openai.api-key:}") String chaveApi, OciAssinaturaProperties assinatura) {
+		return new CredencialIa(StringUtils.hasText(chaveApi) || assinatura.configurada());
+	}
 
 	@Bean
 	OpenAiHttpClientBuilderCustomizer assinaturaOci(OciAssinaturaProperties propriedades) {

@@ -45,6 +45,9 @@ class IaOciAssinaturaIntegrationTest {
 	@Autowired
 	private ChatModel modelo;
 
+	@Autowired
+	private CredencialIa credencial;
+
 	@DynamicPropertySource
 	static void propriedades(DynamicPropertyRegistry registro) {
 		registro.add("spring.ai.openai.base-url", () -> "http://localhost:" + SERVIDOR.getAddress().getPort() + "/openai/v1");
@@ -62,6 +65,11 @@ class IaOciAssinaturaIntegrationTest {
 	@AfterAll
 	static void parar() {
 		SERVIDOR.stop(0);
+	}
+
+	@Test
+	void comApiKeyVaziaAAssinaturaCompletaLigaAIa() {
+		assertThat(credencial.configurada()).isTrue();
 	}
 
 	@Test
