@@ -12,6 +12,7 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 | **Swagger local** | http://localhost:8080/swagger-ui.html |
 | **Vídeo pitch** | _a preencher_ |
 | **Roteiro das apresentações** | [`docs/roteiro-apresentacao.md`](docs/roteiro-apresentacao.md) |
+| **Roteiro do vídeo de DevOps** | [`docs/roteiro-video-devops.md`](docs/roteiro-video-devops.md): preparação (deploy e pipeline) e gravação dos 10 itens |
 | **Requisito 5 (Java Advanced)** | **Opção A: RabbitMQ.** O botão de emergência publica o evento e um consumidor assíncrono avisa os contatos ([detalhes](#botão-de-emergência-arquitetura-distribuída--opção-a-rabbitmq)) |
 
 ## Integrantes
