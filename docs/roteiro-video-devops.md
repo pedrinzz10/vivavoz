@@ -79,7 +79,17 @@ ORCAMENTO_EMAIL=RM562312@fiap.com.br ./scripts/provisionar-oci.sh
 **O que faz:** confere se o modelo `openai.gpt-oss-120b` existe em São Paulo, cria um compartimento `vozviva` (uma
 "pasta" para organizar), cria a **chave de acesso da IA**, cria um alerta de gastos que avisa no seu e-mail e faz
 uma pergunta de teste ao modelo.
-**Resultado esperado:** a última parte mostra `o modelo respondeu (HTTP 200)`.
+**Resultado esperado:** a última parte mostra `o modelo respondeu (HTTP 200)`. O orçamento é de US$ 300 por
+mês (os créditos da conta), com alertas por e-mail em 50% e 100%.
+
+Se aparecer `já existia: vozviva-api` com `pulado: sem .../oci-genai.env`, a chave existe mas o valor dela se
+perdeu. Apague e crie de novo:
+
+```bash
+CONFIRMAR=sim ./scripts/remover-oci.sh
+```
+**O que faz:** apaga a API key e o orçamento da VozViva na OCI (o compartimento fica, vazio). Depois rode de novo
+o `provisionar-oci.sh` acima.
 
 ```bash
 cat ~/.vozviva/oci-genai.env
