@@ -196,7 +196,7 @@ quebra o build se um endpoint ficar fora do contrato ou sem descrição.
 
 | Módulo | Endpoints |
 |---|---|
-| Autenticação | `POST /api/v1/auth/cadastro` · `POST /api/v1/auth/login` · `GET /api/v1/auth/eu` · `DELETE /api/v1/auth/eu` |
+| Autenticação | `POST /api/v1/auth/cadastro` · `POST /api/v1/auth/login` · `GET /api/v1/auth/eu` · `PUT /api/v1/auth/eu` · `PUT /api/v1/auth/eu/senha` · `DELETE /api/v1/auth/eu` |
 | Voz | `POST /api/v1/voz/intencoes` · `GET /api/v1/voz/interacoes` |
 | Botão de emergência | `POST /api/v1/emergencias` · `GET /api/v1/emergencias` · `GET /api/v1/emergencias/{id}` · `GET /api/v1/emergencias/{id}/avisos` · `PATCH /api/v1/emergencias/{id}/cancelar` · `PATCH /api/v1/emergencias/{id}/atender` |
 | Perfil de emergência (CRUD) | `POST`, `GET` (paginado), `GET /meu`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}` em `/api/v1/perfis-emergencia` |
@@ -252,6 +252,8 @@ token, com o mesmo segredo e emissor.
 | `POST /api/v1/auth/cadastro` | Público | Cria a conta (`nome`, `email`, `senha`, `papel`: `CIDADAO` ou `CUIDADOR`, `consentimento`: `true`) |
 | `POST /api/v1/auth/login` | Público | Devolve `accessToken`, `tokenType`, `expiraEm` e os dados do usuário |
 | `GET /api/v1/auth/eu` | Token | Dados do usuário autenticado (com `consentimentoEm`) |
+| `PUT /api/v1/auth/eu` | Token | Corrige o nome (LGPD); papel e e-mail não mudam por aqui |
+| `PUT /api/v1/auth/eu/senha` | Token | Troca a senha com a senha atual: 204; senha atual errada, 400; 5 erros em 15 min, 429 |
 | `DELETE /api/v1/auth/eu` | Token | Exclui a própria conta (LGPD): 204, ou 401 sem token válido |
 
 Use o token em todas as outras chamadas:
@@ -299,7 +301,7 @@ configurado e um papel conhecido; valores desconhecidos nunca dão acesso.
 | `GET /v3/api-docs/**`, `GET /swagger-ui/**` | Público |
 | Consumo de dados de suporte (atendimentos próximos, verificação de golpes, classificação por voz...) | `CIDADAO` ou `CUIDADOR` |
 | Perfil de emergência e contatos (criar e alterar) | O próprio cidadão ou o cuidador responsável |
-| `GET /api/v1/auth/eu`, `DELETE /api/v1/auth/eu` | Qualquer papel, inclusive `GESTOR` |
+| `GET`, `PUT` e `DELETE /api/v1/auth/eu`, `PUT /api/v1/auth/eu/senha` | Qualquer papel, inclusive `GESTOR` |
 | Qualquer outra rota | Token válido |
 
 O `GESTOR` é o servidor da prefeitura que atende a zeladoria na API .NET. Aqui ele só faz login e cuida da
@@ -345,13 +347,18 @@ aceita campos públicos (perfis: `id`, `mobilidade`, `criadoEm`, `atualizadoEm`;
 - A mobilidade é dado de saúde e é opcional: sem ela, o perfil fica `NAO_INFORMADO` e a mensagem de socorro só
   não cita a mobilidade.
 - O cadastro exige `consentimento: true` e grava a data do aceite (`consentimentoEm`).
+- **Correção dos dados** (art. 18, III): `PUT /api/v1/auth/eu` corrige o nome, e `PUT /api/v1/auth/eu/senha` troca
+  a senha exigindo a atual (os erros contam no mesmo limite do login). O e-mail não muda por aqui: sem confirmar o
+  endereço novo por e-mail, quem tivesse o token conseguiria tomar a conta. O nome novo entra no token no próximo
+  login, e os tokens já emitidos continuam valendo até expirar.
 - `DELETE /api/v1/auth/eu` exclui a conta e o que depende dela:
   - do cidadão, apaga o perfil, os contatos, as emergências, os avisos e o histórico de voz;
   - do cuidador, os perfis que ele cuidava continuam com os cidadãos, só sem o vínculo;
   - as estatísticas de golpe já são anônimas e não guardam o usuário;
   - o token da conta excluída para de valer na hora em toda a API Java. Fica guardado só o id numérico da
-    conta, sem dados pessoais, em `contas_excluidas`. A API .NET só confere a assinatura, então aceita o token
-    até ele expirar (no máximo `JWT_EXPIRACAO`, 2 h).
+    conta, sem dados pessoais, em `contas_excluidas`;
+  - na API .NET, o app chama antes `DELETE /api/usuarios/eu` com o mesmo token: ela apaga os reportes e o
+    cadastro local e também passa a recusar o token na hora.
 
 **Limitação conhecida:** o cuidador vincula o perfil pelo e-mail da conta do cidadão, sem confirmação do
 cidadão. Num sistema em produção, o vínculo seria confirmado por convite.
@@ -656,9 +663,9 @@ desatualizado.
    - Organization settings → Billing: trial de Test Plans, para executar os testes manuais.
 4. **Backlog e casos de teste** (Compliance, QA & Tests), já prontos em [`docs/azure-boards/`](docs/azure-boards):
    - Boards → Work items → **Import Work Items** com [`backlog.csv`](docs/azure-boards/backlog.csv) (processo
-     Scrum): 5 Epics, 9 Features e 22 Product Backlog Items, com descrição e critérios de aceite.
+     Scrum): 5 Epics, 9 Features e 23 Product Backlog Items, com descrição e critérios de aceite.
    - Test Plans → crie um plano com uma suíte por Feature e, em cada suíte, **Import test cases** com o CSV da
-     Feature em [`casos-de-teste/`](docs/azure-boards/casos-de-teste): 45 casos, positivos e negativos, com
+     Feature em [`casos-de-teste/`](docs/azure-boards/casos-de-teste): 49 casos, positivos e negativos, com
      sumário (objetivo, preparação, entradas e saída esperada) e passos.
    - Os CSVs são gerados por [`gerar_csv.py`](docs/azure-boards/gerar_csv.py); para mudar um item, edite o script
      e rode `python docs/azure-boards/gerar_csv.py`.

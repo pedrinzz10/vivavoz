@@ -101,6 +101,15 @@ public class Usuario {
 		ativo = false;
 	}
 
+	public void alterarNome(String novoNome) {
+		this.nome = novoNome;
+	}
+
+	/** Recebe o hash (BCrypt) da senha nova, nunca a senha em texto. */
+	public void alterarSenha(String novoHash) {
+		this.senhaHash = novoHash;
+	}
+
 	public Long getId() {
 		return id;
 	}

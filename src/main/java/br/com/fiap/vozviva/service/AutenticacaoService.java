@@ -1,8 +1,10 @@
 package br.com.fiap.vozviva.service;
 
+import br.com.fiap.vozviva.dto.AtualizarContaRequest;
 import br.com.fiap.vozviva.dto.CadastroUsuarioRequest;
 import br.com.fiap.vozviva.dto.LoginRequest;
 import br.com.fiap.vozviva.dto.TokenResponse;
+import br.com.fiap.vozviva.dto.TrocarSenhaRequest;
 import br.com.fiap.vozviva.dto.UsuarioResponse;
 import br.com.fiap.vozviva.exception.ConflitoException;
 import br.com.fiap.vozviva.exception.ContaInexistenteException;
@@ -96,6 +98,34 @@ public class AutenticacaoService {
 		TokenEmitido token = emissor.emitir(usuario.getId().toString(), usuario.getNome(), usuario.getPapel(),
 				usuario.getOrgao());
 		return new TokenResponse(token.valor(), TIPO_TOKEN, token.expiraEm().toString(), UsuarioMapper.paraResponse(usuario));
+	}
+
+	/** Correção dos próprios dados (LGPD, art. 18, III). Só o nome: papel e e-mail não mudam por aqui. */
+	@Transactional
+	public UsuarioResponse atualizarConta(Long id, AtualizarContaRequest request) {
+		Usuario usuario = usuarios.findById(id).orElseThrow(ContaInexistenteException::new);
+		usuario.alterarNome(request.nome().trim());
+		return UsuarioMapper.paraResponse(usuarios.saveAndFlush(usuario));
+	}
+
+	/**
+	 * Troca de senha com a senha atual. Os erros de senha atual contam no mesmo limite do login (5 em 15 minutos),
+	 * para quem pegou um token não conseguir descobrir a senha por tentativa e erro. Tokens já emitidos continuam
+	 * valendo até expirar (no máximo JWT_EXPIRACAO, 2 horas por padrão).
+	 */
+	@Transactional
+	public void trocarSenha(Long id, TrocarSenhaRequest request) {
+		Usuario usuario = usuarios.findById(id).orElseThrow(ContaInexistenteException::new);
+		limitador.consumirTentativa(usuario.getEmail());
+		if (!senhas.matches(request.senhaAtual(), usuario.getSenhaHash())) {
+			throw new RequisicaoInvalidaException("A senha atual não confere.");
+		}
+		limitador.registrarSucesso(usuario.getEmail());
+		if (request.novaSenha().equals(request.senhaAtual())) {
+			throw new RequisicaoInvalidaException("A nova senha precisa ser diferente da atual.");
+		}
+		usuario.alterarSenha(senhas.encode(request.novaSenha()));
+		usuarios.saveAndFlush(usuario);
 	}
 
 	@Transactional(readOnly = true)
