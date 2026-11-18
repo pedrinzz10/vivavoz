@@ -58,7 +58,8 @@ menus complicados:
 **Ecossistema:**
 - **App mobile** (React Native): voz, toque e rota.
 - **API Java**, este repositório: identidade e JWT, voz, socorro, golpes e atendimentos, com Azure SQL.
-- **API .NET**: zeladoria e cadastros oficiais, com Oracle, validando o mesmo JWT.
+- **API .NET**: zeladoria (reportes de barreiras e painel do gestor), validando o mesmo JWT; na Azure usa o banco
+  `zeladoria` do Azure SQL (o modelo em Oracle é o da disciplina de Banco de Dados).
 
 **ODS atendidos:**
 
@@ -130,17 +131,22 @@ o piloto; para crescer, sobe-se o plano do App Service e do banco, sem mudar a a
 
 ![Arquitetura macro do VozViva](docs/arquitetura.svg)
 
-Versão editável no draw.io: [`docs/arquitetura.drawio`](docs/arquitetura.drawio). Abra em https://app.diagrams.net
-(Arquivo → Abrir de → Dispositivo) ou arraste o arquivo para a página.
+Versão editável no draw.io: [`docs/arquitetura.drawio`](docs/arquitetura.drawio). Para abrir direto, sem baixar:
+[abrir no draw.io](https://app.diagrams.net/#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fpedrinzz10%2Fvivavoz%2Fmain%2Fdocs%2Farquitetura.drawio)
+(ou, em https://app.diagrams.net, Arquivo → Abrir de → Dispositivo).
+
+O App Service Plan B1 roda as **duas APIs**: a API Java (container, imagem do ACR) e a API .NET de zeladoria. O Azure
+SQL tem **dois bancos** (`vozviva`, da API Java, e `zeladoria`, da API .NET), cada um com o usuário de privilégio
+mínimo `vozviva_app`. O RabbitMQ não tem IP público: só as APIs o alcançam, pela rede virtual.
 
 | # | Fluxo |
 |---|---|
 | 1 | O app (React Native) transcreve a fala ou recebe o toque e chama a API Java por HTTPS, com o JWT no header `Authorization` |
-| 2 | A API lê e grava no Azure SQL com Spring Data JPA; o esquema é versionado com Flyway |
+| 2 | A API Java lê e grava no banco `vozviva` com Spring Data JPA (esquema versionado com Flyway); a API .NET usa o banco `zeladoria` com EF Core |
 | 3 | O botão de emergência grava o pedido, publica o evento no RabbitMQ e responde 202; o consumidor avisa os contatos em segundo plano, com retry e DLQ |
 | 4 | O assistente contra golpes e a classificação por voz chamam o modelo na OCI pelo Spring AI, com RAG; sem IA, as regras respondem |
-| 5 | O app também usa a API .NET (zeladoria, Oracle), que valida o mesmo JWT emitido pela API Java |
-| 6 | Azure DevOps: tarefa no Boards, branch e PR no Repos; o merge na main dispara o build com testes, a imagem vai para o ACR e a release a publica no App Service |
+| 5 | O app também usa a API .NET de zeladoria, publicada no mesmo App Service Plan, que valida o mesmo JWT emitido pela API Java (com o órgão do gestor na claim `orgao`) |
+| 6 | Azure DevOps: tarefa no Boards, branch e PR no Repos; o merge na main dispara o build com testes, a imagem vai para o ACR e a release a publica no App Service, conferindo a readiness (`/actuator/health/readiness`) |
 | 7 | Os locais de atendimento vêm de uma importação única do OpenStreetMap, aplicada pelo Flyway como carga do banco |
 
 ## Pré-requisitos
