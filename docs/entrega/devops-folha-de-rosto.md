@@ -24,4 +24,4 @@ Container Registry e RabbitMQ em Azure Container Instances, criados por scripts 
 
 ---
 
-Arquivo a entregar: `Grupo_VozViva_rm562312.pdf` (nome do grupo e RM do representante).
+Arquivo a entregar: `VozViva_rm562312.pdf` (nome do grupo e RM do representante, como no exemplo `Grupo1_rm9999.pdf`).

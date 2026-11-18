@@ -174,14 +174,42 @@ notificações do sistema desligadas, nenhuma senha na tela.
 
 Tempo estimado: 15 a 20 minutos, a maior parte com a pipeline rodando (comente o que cada etapa faz).
 
-### Item 1 – README, solução e arquitetura (≈ 2 min)
+### Item 1 – README, solução e desenho da arquitetura (≈ 3 min)
 
-**Mostrar:** no Azure Repos, o README: "O problema e quem a solução atende", "A solução" e "Arquitetura" (diagrama).
+Critério: **desenho, fluxo e legenda** (10 pontos). Abra o desenho no draw.io pelo link (abre direto, sem baixar):
+[abrir `docs/arquitetura.drawio`](https://app.diagrams.net/#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fpedrinzz10%2Fvivavoz%2Fmain%2Fdocs%2Farquitetura.drawio)
+(a mesma imagem está no README, seção "Arquitetura").
 
-**Falar:** "O VozViva ajuda idosos e pessoas com deficiência: pedido de socorro com aviso à rede de apoio, assistente
-contra golpes com IA e atendimento acessível mais próximo. Na arquitetura, o app chama a API Java por HTTPS com JWT;
-a API grava no Azure SQL, publica as emergências no RabbitMQ e consulta a IA na OCI. A API .NET faz a zeladoria com
-o mesmo token. O Azure DevOps leva cada merge na main até o App Service."
+**1. O problema (≈ 20 s)**, no README, seção "O problema e quem a solução atende":
+"O Brasil tem 32 milhões de pessoas com mais de 60 anos e 14 milhões de pessoas com deficiência, e 68,8% dos
+moradores urbanos vivem em ruas sem rampa. Elas ficam presas em casa e mais expostas a golpes."
+
+**2. A solução (≈ 30 s)**, na tabela de "A solução":
+"O VozViva é a API Java do ecossistema Fala Cidadão. A pessoa usa o app falando ou com um toque: pede socorro e a rede
+de apoio é avisada em segundos, confere se uma mensagem é golpe com IA, e acha o atendimento acessível mais perto,
+com a rota no celular."
+
+**3. O desenho (≈ 2 min)**, no draw.io. Apresente as áreas e depois **aponte cada número** enquanto fala:
+
+- **Áreas** (os ícones são os oficiais da Azure): "Na área azul, o grupo de recursos `rg-vozviva` na Azure, em São
+  Paulo, criado pelo script Azure CLI. Dentro dele, o **App Service Plan B1** roda as duas APIs; ao lado, o
+  **RabbitMQ** em Container Instances, a **rede virtual**, o **Azure SQL** com dois bancos e o **Container
+  Registry**. Em laranja, os sistemas externos: o app, a IA na Oracle Cloud e o OpenStreetMap. Em verde, o Azure
+  DevOps."
+- **1** "O app chama a API Java por HTTPS, com o token JWT."
+- **2** "A API Java grava no banco `vozviva` com JPA, com o esquema versionado pelo Flyway; a API .NET usa o banco
+  `zeladoria`. Cada banco tem um usuário com privilégio mínimo."
+- **3** "No botão de emergência, a API grava, responde na hora e publica o evento no RabbitMQ, que não tem IP
+  público: fica só na rede privada. Um consumidor avisa os contatos em segundo plano, com novas tentativas e fila de
+  mensagens com falha."
+- **4** "O assistente contra golpes e a voz usam IA generativa na Oracle Cloud, pelo Spring AI, com RAG. Sem IA, as
+  regras respondem."
+- **5** "O app também usa a API .NET de zeladoria, no mesmo plano, que aceita o mesmo token."
+- **6** "No Azure DevOps, a tarefa vira branch e pull request. O merge na main dispara o build com os testes, a
+  imagem vai para o Container Registry e a release publica no App Service, conferindo se a API respondeu."
+- **7** "Os locais de atendimento vêm do OpenStreetMap, carregados no banco pela migração."
+- **Legenda** (aponte o quadro): "Linha cheia é requisição síncrona; tracejada é assíncrona ou carga; verde
+  tracejada é build e deploy; laranja é a chamada à IA."
 
 ### Item 2 – Recursos criados pelos scripts (≈ 1 min)
 
@@ -319,7 +347,7 @@ pipeline e foi publicada na Azure automaticamente."
 1. Assista ao vídeo já publicado no YouTube (público ou não listado) antes de entregar: 720p, áudio claro,
    todos os 10 itens.
 2. A alteração feita no vídeo ficou só no Azure Repos. Traga para o GitHub (pull do Azure e PR no GitHub).
-3. **PDF da entrega** (nome `Grupo_rm562312.pdf`): folha de rosto com o nome do grupo, RM e nome completo dos
+3. **PDF da entrega** (nome `VozViva_rm562312.pdf`): folha de rosto com o nome do grupo, RM e nome completo dos
    integrantes; link da organização (`https://dev.azure.com/vozviva`); link do vídeo.
 4. Mantenha tudo no ar até a correção (30/11). Para parar a cobrança depois: `./scripts/remover-azure.sh`.
 
