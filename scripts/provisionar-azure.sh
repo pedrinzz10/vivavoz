@@ -87,7 +87,8 @@ az account show --query "{assinatura:name, id:id}" -o table
 
 # Assinaturas novas (como as de estudante) vêm com alguns provedores desligados, e o primeiro "create" falharia.
 passo "Provedores de recursos da assinatura"
-for provedor in Microsoft.Web Microsoft.Sql Microsoft.ContainerRegistry Microsoft.ContainerInstance Microsoft.Network \n    Microsoft.KeyVault; do
+for provedor in Microsoft.Web Microsoft.Sql Microsoft.ContainerRegistry Microsoft.ContainerInstance Microsoft.Network \
+    Microsoft.KeyVault; do
   if [ "$(az provider show -n "$provedor" --query registrationState -o tsv)" = "Registered" ]; then
     reaproveitado "$provedor"
   else
@@ -118,16 +119,26 @@ else
 fi
 KEYVAULT_ID="$(az keyvault show -g "$GRUPO" -n "$KEYVAULT" --query id -o tsv)"
 
-# Dá um papel no cofre a uma identidade, se ela ainda não tiver.
-papel_no_cofre() {
-  local objeto="$1" tipo="$2" papel="$3" quem="$4"
-  if [ -n "$(az role assignment list --assignee "$objeto" --scope "$KEYVAULT_ID" --role "$papel" --query '[].id' -o tsv)" ]; then
-    reaproveitado "${papel} para ${quem}"
+# Dá um papel a uma identidade num escopo (o cofre inteiro ou um segredo só), se ela ainda não tiver.
+papel_em() {
+  local escopo="$1" objeto="$2" tipo="$3" papel="$4" descricao="$5"
+  if [ -n "$(az role assignment list --assignee "$objeto" --scope "$escopo" --role "$papel" --query '[].id' -o tsv)" ]; then
+    reaproveitado "$descricao"
   else
     az role assignment create --assignee-object-id "$objeto" --assignee-principal-type "$tipo" \
-      --scope "$KEYVAULT_ID" --role "$papel" -o none
-    criado "${papel} para ${quem}"
+      --scope "$escopo" --role "$papel" -o none
+    criado "$descricao"
   fi
+}
+papel_no_cofre() { papel_em "$KEYVAULT_ID" "$1" "$2" "$3" "${3} para ${4}"; }
+# As APIs leem só os segredos que usam (nunca a sql-admin-senha): leitura em cada segredo, não no cofre inteiro.
+leitura_dos_segredos() {
+  local objeto="$1" quem="$2" segredo
+  shift 2
+  for segredo in "$@"; do
+    papel_em "${KEYVAULT_ID}/secrets/${segredo}" "$objeto" ServicePrincipal "Key Vault Secrets User" \
+      "leitura de ${segredo} para ${quem}"
+  done
 }
 # Quem roda o script grava os segredos (e consegue copiá-los no portal, como a senha do SQL para o Query editor).
 EU="$(az ad signed-in-user show --query id -o tsv)"
@@ -317,7 +328,11 @@ else
     --scope "$ACR_ID" --role AcrPull -o none
   criado "permissão AcrPull"
 fi
-papel_no_cofre "$PRINCIPAL" ServicePrincipal "Key Vault Secrets User" "$WEBAPP"
+SEGREDOS_JAVA=(app-sql-senha rabbitmq-senha jwt-secret)
+[ -n "${USUARIOS_TESTE_SENHA:-}" ] && SEGREDOS_JAVA+=(usuarios-teste-senha)
+[ -n "${OCI_GENAI_API_KEY:-}" ] && SEGREDOS_JAVA+=(oci-genai-api-key)
+[ -n "${OCI_GENAI_PRIVATE_KEY:-}" ] && SEGREDOS_JAVA+=(oci-genai-private-key)
+leitura_dos_segredos "$PRINCIPAL" "$WEBAPP" "${SEGREDOS_JAVA[@]}"
 
 
 passo "App Service: integração com a rede virtual (acesso privado ao RabbitMQ)"
@@ -384,15 +399,15 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
     --ftps-state Disabled --generic-configurations '{"healthCheckPath": "/health/live"}' -o none
   az webapp log config -g "$GRUPO" -n "$WEBAPP_DOTNET" --docker-container-logging filesystem -o none
 
-  passo "API .NET: identidade gerenciada com leitura no ${KEYVAULT}"
-  PRINCIPAL_DOTNET="$(az webapp identity assign -g "$GRUPO" -n "$WEBAPP_DOTNET" --query principalId -o tsv)"
-  papel_no_cofre "$PRINCIPAL_DOTNET" ServicePrincipal "Key Vault Secrets User" "$WEBAPP_DOTNET"
-
-  passo "API .NET: variáveis de ambiente (mesmo JWT da API Java, banco ${SQL_BANCO_DOTNET}, senhas no cofre)"
+  passo "API .NET: identidade gerenciada com leitura só dos segredos dela no ${KEYVAULT}"
   SENHA_CONEXAO_DOTNET="${APP_SQL_SENHA//\'/\'\'}"
   CONEXAO_DOTNET="Server=tcp:${SQL_SERVIDOR}.database.windows.net,1433;Database=${SQL_BANCO_DOTNET};User ID=${SQL_APP_USUARIO};Password='${SENHA_CONEXAO_DOTNET}';Encrypt=True;TrustServerCertificate=False;Connection Timeout=30"
   # A string de conexão tem a senha dentro: vai inteira para o cofre.
   guardar zeladoria-conexao-sql "$CONEXAO_DOTNET"
+  PRINCIPAL_DOTNET="$(az webapp identity assign -g "$GRUPO" -n "$WEBAPP_DOTNET" --query principalId -o tsv)"
+  leitura_dos_segredos "$PRINCIPAL_DOTNET" "$WEBAPP_DOTNET" jwt-secret zeladoria-conexao-sql
+
+  passo "API .NET: variáveis de ambiente (mesmo JWT da API Java, banco ${SQL_BANCO_DOTNET}, senhas no cofre)"
   CONFIGURACOES_DOTNET=(
     "ASPNETCORE_ENVIRONMENT=Production"
     "JWT_SECRET=$(ref jwt-secret)"
@@ -442,6 +457,7 @@ referencias_resolvidas() {
     az webapp restart -g "$GRUPO" -n "$app" -o none 2> /dev/null || true
   done
   echo "    ${app}: referências ainda não resolvidas (${pendentes//$'\n'/, }); confira em Configuração > Variáveis de ambiente" >&2
+  return 1
 }
 passo "Key Vault: o App Service consegue ler as senhas do ${KEYVAULT}"
 referencias_resolvidas "$WEBAPP"
