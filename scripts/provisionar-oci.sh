@@ -12,14 +12,14 @@
 # ela não aparece na tela. Para levar à Azure, veja as instruções no fim da execução.
 #
 # Opcionais: REGIAO (padrão sa-saopaulo-1), COMPARTIMENTO (padrão vozviva), MODELO (padrão openai.gpt-oss-120b),
-# EXPIRACAO (padrão 2026-12-31T23:59:59Z), ORCAMENTO_USD (padrão 10), ORCAMENTO_EMAIL (sem ele, não cria orçamento).
+# EXPIRACAO (padrão 2026-12-31T23:59:59Z), ORCAMENTO_USD (padrão 300, os créditos da conta), ORCAMENTO_EMAIL (sem ele, não cria orçamento).
 set -euo pipefail
 
 REGIAO="${REGIAO:-sa-saopaulo-1}"
 COMPARTIMENTO="${COMPARTIMENTO:-vozviva}"
 MODELO="${MODELO:-openai.gpt-oss-120b}"
 EXPIRACAO="${EXPIRACAO:-2026-12-31T23:59:59Z}"
-ORCAMENTO_USD="${ORCAMENTO_USD:-10}"
+ORCAMENTO_USD="${ORCAMENTO_USD:-300}"
 ORCAMENTO_EMAIL="${ORCAMENTO_EMAIL:-}"
 NOME_CHAVE="vozviva-api"
 NOME_ORCAMENTO="vozviva-ia"
@@ -60,10 +60,12 @@ passo "API key ${NOME_CHAVE} (válida até ${EXPIRACAO})"
 mkdir -p "$PASTA_SEGREDOS" && chmod 700 "$PASTA_SEGREDOS"
 EXISTENTE=$(oci_r generative-ai api-key list --compartment-id "$COMP" --all \
   --query "length(data.items[?\"display-name\"=='${NOME_CHAVE}' && \"lifecycle-state\"=='ACTIVE'])" \
-  --raw-output 2> /dev/null || echo 0)
-if [ "${EXISTENTE:-0}" != "0" ]; then
+  --raw-output 2> /dev/null || true)
+# Num compartimento recém-criado a listagem pode falhar ou devolver texto; só um número maior que zero conta.
+case "$EXISTENTE" in ''|*[!0-9]*) EXISTENTE=0 ;; esac
+if [ "$EXISTENTE" -gt 0 ]; then
   reaproveitado "$NOME_CHAVE"
-  [ -f "$ARQUIVO_ENV" ] || echo "    o valor da chave só aparece na criação; sem ${ARQUIVO_ENV}, apague a chave no console e rode de novo"
+  [ -f "$ARQUIVO_ENV" ] || echo "    o valor da chave só aparece na criação; sem ${ARQUIVO_ENV}, rode ./scripts/remover-oci.sh e depois este script de novo"
 else
   RESPOSTA="${PASTA_SEGREDOS}/oci-apikey-criacao.json"
   umask 077
@@ -137,5 +139,5 @@ Pronto. Para usar a chave:
   - na Azure: no Cloud Shell da Azure, rode   read -rs OCI_GENAI_API_KEY && export OCI_GENAI_API_KEY
     e cole o valor (exibido com: cat ${ARQUIVO_ENV}). Depois rode ./scripts/provisionar-azure.sh.
   - endpoint: ${BASE_URL}  modelo: ${MODELO}
-Para apagar tudo: exclua a API key e o orçamento no console e depois o compartimento ${COMPARTIMENTO}.
+Para apagar a chave e o orçamento (e criar de novo): ./scripts/remover-oci.sh
 EOF
