@@ -347,7 +347,7 @@ pipeline e foi publicada na Azure automaticamente."
 1. Assista ao vídeo já publicado no YouTube (público ou não listado) antes de entregar: 720p, áudio claro,
    todos os 10 itens.
 2. A alteração feita no vídeo ficou só no Azure Repos. Traga para o GitHub (pull do Azure e PR no GitHub).
-3. **PDF da entrega** (nome `Grupo_rm562312.pdf`): folha de rosto com o nome do grupo, RM e nome completo dos
+3. **PDF da entrega** (nome `VozViva_rm562312.pdf`): folha de rosto com o nome do grupo, RM e nome completo dos
    integrantes; link da organização (`https://dev.azure.com/vozviva`); link do vídeo.
 4. Mantenha tudo no ar até a correção (30/11). Para parar a cobrança depois: `./scripts/remover-azure.sh`.
 
