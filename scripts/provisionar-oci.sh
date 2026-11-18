@@ -86,6 +86,11 @@ else
         --wait-for-state ACTIVE > "$RESPOSTA" 2> "${RESPOSTA}.erro"; then
       break
     fi
+    if grep -q LimitExceeded "${RESPOSTA}.erro"; then
+      echo "    a conta já chegou no limite de API keys. Veja onde estão e apague as antigas com: ./scripts/remover-oci.sh"
+      rm -f "$RESPOSTA" "${RESPOSTA}.erro"
+      exit 1
+    fi
     [ "$tentativa" = 6 ] && { cat "${RESPOSTA}.erro"; exit 1; }
     sleep 20
   done
