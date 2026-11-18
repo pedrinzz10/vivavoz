@@ -21,7 +21,7 @@ trap 'rm -f "$ERRO"' EXIT
 falhou() { echo "Não consegui listar $1: $(cat "$ERRO")"; echo "Nada foi apagado."; exit 1; }
 CHAVES=""
 if [ -n "$COMP" ] && [ "$COMP" != "null" ]; then
-  LISTA=$(oci_r generative-ai api-key list --compartment-id "$COMP" --all 2> "$ERRO") || falhou "as API keys"
+  LISTA=$(oci_r generative-ai api-key-collection list-api-keys --compartment-id "$COMP" --all 2> "$ERRO") || falhou "as API keys"
   # Só a chave da VozViva: outras chaves do compartimento ficam intactas. Sem chaves, o CLI não imprime nada.
   CHAVES=$(printf '%s' "${LISTA:-{\}}" | jq -r --arg nome "$NOME_CHAVE" '.data.items[]?
     | select(."display-name" == $nome and ."lifecycle-state" != "DELETED" and ."lifecycle-state" != "DELETING") | .id')
