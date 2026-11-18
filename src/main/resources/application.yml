@@ -56,8 +56,8 @@ spring:
         transcription: none
       moderation: none
     # OCI Generative AI pelo endpoint compatível com a API da OpenAI (o Spring AI usa o SDK oficial da OpenAI).
-    # A chave é uma "API key" do OCI Generative AI, criada na mesma região do modelo (São Paulo, a mesma região
-    # da Azure brazilsouth, onde fica a API).
+    # Autenticação: uma "API key" do OCI Generative AI ou, sem ela, a assinatura com o usuário da OCI
+    # (vozviva.ia.oci, abaixo). O modelo fica em São Paulo, a mesma região da Azure brazilsouth, onde fica a API.
     openai:
       base-url: ${OCI_GENAI_BASE_URL:https://inference.generativeai.sa-saopaulo-1.oci.oraclecloud.com/openai/v1}
       api-key: ${OCI_GENAI_API_KEY:}
@@ -65,9 +65,10 @@ spring:
       timeout: ${OCI_GENAI_TIMEOUT:30s}
       max-retries: 1
       chat:
-        model: ${OCI_GENAI_MODEL:openai.gpt-oss-120b}
-        # A resposta é um JSON curto; o restante do limite fica para o raciocínio do modelo.
-        max-completion-tokens: ${OCI_GENAI_MAX_TOKENS:4000}
+        # Llama 3.3 70B: disponível sob demanda em São Paulo (o gpt-oss-120b lá só existe em cluster dedicado).
+        model: ${OCI_GENAI_MODEL:meta.llama-3.3-70b-instruct}
+        # A resposta é um JSON curto.
+        max-tokens: ${OCI_GENAI_MAX_TOKENS:1000}
   web:
     # Mensagens de validação sempre em português, independente do idioma do aparelho.
     locale: pt_BR
@@ -95,6 +96,18 @@ springdoc:
     persist-authorization: true
 
 vozviva:
+  ia:
+    # Liga a IA: a API key do Generative AI ou, sem ela, o usuário da OCI que assina as chamadas.
+    credencial: ${OCI_GENAI_API_KEY:${OCI_GENAI_USER_OCID:}}
+    # Assinatura com a chave de assinatura (API signing key) de um usuário da OCI, para contas sem API key do
+    # Generative AI. Com os cinco campos preenchidos, cada chamada é assinada e a API key não é usada.
+    oci:
+      tenancy: ${OCI_GENAI_TENANCY_OCID:}
+      usuario: ${OCI_GENAI_USER_OCID:}
+      fingerprint: ${OCI_GENAI_FINGERPRINT:}
+      # PEM da chave privada, de preferência em Base64 (uma linha só).
+      chave-privada: ${OCI_GENAI_PRIVATE_KEY:}
+      compartimento: ${OCI_GENAI_COMPARTMENT_OCID:}
   voz:
     # Abaixo desta confiança a resposta da IA não decide sozinha: valem as regras ou o app pede para repetir.
     confianca-minima: ${VOZ_CONFIANCA_MINIMA:0.6}

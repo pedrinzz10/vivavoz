@@ -7,7 +7,7 @@ set -uo pipefail
 
 REGIAO="${REGIAO:-sa-saopaulo-1}"
 SERVICO="${SERVICO:-ai-generative}"
-MODELO="${MODELO:-openai.gpt-oss-120b}"
+MODELO="${MODELO:-meta.llama-3.3-70b-instruct}"
 SAIDA="${HOME}/diagnostico-oci.txt"
 
 : "${OCI_TENANCY:?rode no Cloud Shell da OCI (a variável OCI_TENANCY vem configurada)}"

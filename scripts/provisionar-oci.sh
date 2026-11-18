@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Cria na OCI o que a API precisa para a IA generativa (OCI Generative AI, endpoint compatível com OpenAI):
 #   - compartimento "vozviva" (separa a chave e os custos);
-#   - API key do Generative AI, válida até a data de EXPIRACAO;
+#   - API key do Generative AI, válida até a data de EXPIRACAO. Se a conta não permitir API keys (limite
+#     api-key-count = 0, comum em contas novas), cria no lugar uma chave de assinatura (API signing key) para o
+#     seu usuário, e a API Java assina as chamadas com ela (plano B; force com AUTENTICACAO=usuario);
 #   - orçamento mensal no compartimento, com alertas por e-mail em 50% e 100%;
 #   - uma chamada de teste ao modelo.
 #
@@ -11,13 +13,14 @@
 # Idempotente: o que já existe é reaproveitado. A chave criada fica só em ~/.vozviva/oci-genai.env (permissão 600);
 # ela não aparece na tela. Para levar à Azure, veja as instruções no fim da execução.
 #
-# Opcionais: REGIAO (padrão sa-saopaulo-1), COMPARTIMENTO (padrão vozviva), MODELO (padrão openai.gpt-oss-120b),
+# Opcionais: REGIAO (padrão sa-saopaulo-1), COMPARTIMENTO (padrão vozviva), MODELO (padrão meta.llama-3.3-70b-instruct),
 # EXPIRACAO (padrão 2026-12-31T23:59:59Z), ORCAMENTO_USD (padrão 300, os créditos da conta), ORCAMENTO_EMAIL (sem ele, não cria orçamento).
 set -euo pipefail
 
 REGIAO="${REGIAO:-sa-saopaulo-1}"
 COMPARTIMENTO="${COMPARTIMENTO:-vozviva}"
-MODELO="${MODELO:-openai.gpt-oss-120b}"
+MODELO="${MODELO:-meta.llama-3.3-70b-instruct}"
+AUTENTICACAO="${AUTENTICACAO:-}"
 EXPIRACAO="${EXPIRACAO:-2026-12-31T23:59:59Z}"
 ORCAMENTO_USD="${ORCAMENTO_USD:-300}"
 ORCAMENTO_EMAIL="${ORCAMENTO_EMAIL:-}"
@@ -26,6 +29,7 @@ NOME_ORCAMENTO="vozviva-ia"
 BASE_URL="https://inference.generativeai.${REGIAO}.oci.oraclecloud.com/openai/v1"
 PASTA_SEGREDOS="${HOME}/.vozviva"
 ARQUIVO_ENV="${PASTA_SEGREDOS}/oci-genai.env"
+CHAVE_ASSINATURA="${PASTA_SEGREDOS}/oci-assinatura.pem"
 
 : "${OCI_TENANCY:?rode no Cloud Shell da OCI (a variável OCI_TENANCY vem configurada)}"
 command -v jq > /dev/null || { echo "jq não encontrado"; exit 1; }
@@ -56,8 +60,12 @@ else
   criado "$COMPARTIMENTO"
 fi
 
-passo "API key ${NOME_CHAVE} (válida até ${EXPIRACAO})"
 mkdir -p "$PASTA_SEGREDOS" && chmod 700 "$PASTA_SEGREDOS"
+# Já configurado com a assinatura do usuário numa execução anterior: continua assim.
+grep -q '^export OCI_GENAI_USER_OCID=' "$ARQUIVO_ENV" 2> /dev/null && AUTENTICACAO=usuario
+EXISTENTE=0
+if [ "$AUTENTICACAO" != usuario ]; then
+passo "API key ${NOME_CHAVE} (válida até ${EXPIRACAO})"
 # Um compartimento recém-criado pode levar alguns segundos para ficar visível ao Generative AI: tenta algumas vezes
 # e, se a listagem não funcionar, para com o erro em vez de supor que a chave existe (ou não existe).
 ERRO_LISTA=$(mktemp)
@@ -87,14 +95,17 @@ else
       break
     fi
     if grep -q LimitExceeded "${RESPOSTA}.erro"; then
-      echo "    a conta já chegou no limite de API keys. Veja onde estão e apague as antigas com: ./scripts/remover-oci.sh"
+      echo "    a conta não permite mais API keys do Generative AI (limite api-key-count); usando a assinatura do usuário"
       rm -f "$RESPOSTA" "${RESPOSTA}.erro"
-      exit 1
+      AUTENTICACAO=usuario
+      break
     fi
     [ "$tentativa" = 6 ] && { cat "${RESPOSTA}.erro"; exit 1; }
     sleep 20
   done
   rm -f "${RESPOSTA}.erro"
+fi
+if [ "$AUTENTICACAO" != usuario ] && [ "$EXISTENTE" -eq 0 ]; then
   # Procura o valor da chave na resposta sem imprimi-lo.
   CHAVE=$(jq -r '[.. | objects | (.key? // .value? // .secret? // empty) | strings | select(length > 20)][0] // empty' "$RESPOSTA")
   if [ -z "$CHAVE" ]; then
@@ -108,6 +119,40 @@ else
   chmod 600 "$ARQUIVO_ENV"
   rm -f "$RESPOSTA"
   criado "$NOME_CHAVE (valor salvo em ${ARQUIVO_ENV})"
+fi
+fi
+
+if [ "$AUTENTICACAO" = usuario ]; then
+  passo "Chave de assinatura do seu usuário (plano B, sem API key do Generative AI)"
+  USUARIO="${OCI_CS_USER_OCID:-}"
+  [ -n "$USUARIO" ] || { echo "    não achei o OCID do usuário (OCI_CS_USER_OCID); rode no Cloud Shell da OCI"; exit 1; }
+  umask 077
+  if [ ! -f "$CHAVE_ASSINATURA" ]; then
+    openssl genrsa -out "$CHAVE_ASSINATURA" 2048 2> /dev/null
+    criado "chave RSA em ${CHAVE_ASSINATURA}"
+  else
+    reaproveitado "chave RSA em ${CHAVE_ASSINATURA}"
+  fi
+  openssl rsa -in "$CHAVE_ASSINATURA" -pubout -out "${CHAVE_ASSINATURA%.pem}-publica.pem" 2> /dev/null
+  FINGERPRINT=$(openssl rsa -in "$CHAVE_ASSINATURA" -pubout -outform DER 2> /dev/null | openssl md5 -c | awk '{print $NF}')
+  if oci iam user api-key list --user-id "$USUARIO" --all 2> /dev/null | jq -e --arg f "$FINGERPRINT" \
+      '[.data[]? | select(.fingerprint == $f)] | length > 0' > /dev/null; then
+    reaproveitado "chave pública no usuário (fingerprint ${FINGERPRINT})"
+  else
+    oci iam user api-key upload --user-id "$USUARIO" --key-file "${CHAVE_ASSINATURA%.pem}-publica.pem" > /dev/null
+    criado "chave pública no usuário (fingerprint ${FINGERPRINT})"
+  fi
+  {
+    printf 'export OCI_GENAI_TENANCY_OCID=%q\n' "$OCI_TENANCY"
+    printf 'export OCI_GENAI_USER_OCID=%q\n' "$USUARIO"
+    printf 'export OCI_GENAI_FINGERPRINT=%q\n' "$FINGERPRINT"
+    printf 'export OCI_GENAI_COMPARTMENT_OCID=%q\n' "$COMP"
+    printf 'export OCI_GENAI_PRIVATE_KEY=%q\n' "$(base64 -w 0 "$CHAVE_ASSINATURA")"
+    printf 'export OCI_GENAI_BASE_URL=%q\n' "$BASE_URL"
+    printf 'export OCI_GENAI_MODEL=%q\n' "$MODELO"
+  } > "$ARQUIVO_ENV"
+  chmod 600 "$ARQUIVO_ENV"
+  echo "    valores salvos em ${ARQUIVO_ENV} (a chave privada vai em Base64, numa linha só)"
 fi
 
 passo "Orçamento ${NOME_ORCAMENTO} (US\$ ${ORCAMENTO_USD} por mês)"
@@ -130,17 +175,35 @@ else
   fi
 fi
 
-passo "Teste: uma chamada curta ao modelo"
+passo "Teste: uma chamada curta ao modelo ${MODELO}"
 if [ -f "$ARQUIVO_ENV" ]; then
   # shellcheck disable=SC1090
   source "$ARQUIVO_ENV"
-  STATUS=$(curl -s -o /dev/null -w '%{http_code}' -m 60 "${BASE_URL}/chat/completions" \
-    -H "Authorization: Bearer ${OCI_GENAI_API_KEY}" -H 'Content-Type: application/json' \
-    -d "{\"model\":\"${MODELO}\",\"messages\":[{\"role\":\"user\",\"content\":\"Responda só: ok\"}],\"max_tokens\":200}")
+  CORPO="{\"model\":\"${MODELO}\",\"messages\":[{\"role\":\"user\",\"content\":\"Responda só: ok\"}],\"max_tokens\":200}"
+  if [ -n "${OCI_GENAI_API_KEY:-}" ]; then
+    STATUS=$(curl -s -o /dev/null -w '%{http_code}' -m 60 "${BASE_URL}/chat/completions" \
+      -H "Authorization: Bearer ${OCI_GENAI_API_KEY}" -H 'Content-Type: application/json' -d "$CORPO")
+  else
+    # Assina com a chave do usuário (a mesma que a API Java vai usar), por um arquivo de configuração temporário.
+    CONFIG=$(mktemp)
+    printf '[VOZVIVA]\nuser=%s\nfingerprint=%s\ntenancy=%s\nregion=%s\nkey_file=%s\n' "$OCI_GENAI_USER_OCID" \
+      "$OCI_GENAI_FINGERPRINT" "$OCI_GENAI_TENANCY_OCID" "$REGIAO" "$CHAVE_ASSINATURA" > "$CONFIG"
+    # Uma chave recém-cadastrada leva até alguns minutos para valer.
+    for tentativa in 1 2 3 4 5 6 7 8; do
+      STATUS=$(oci --config-file "$CONFIG" --profile VOZVIVA --auth api_key raw-request --http-method POST \
+        --target-uri "${BASE_URL}/chat/completions" --request-body "$CORPO" \
+        --request-headers "{\"opc-compartment-id\":\"${OCI_GENAI_COMPARTMENT_OCID}\"}" 2> /dev/null \
+        | jq -r '.status // "000"' 2> /dev/null | cut -c1-3)
+      [ "$STATUS" = 401 ] && [ "$tentativa" != 8 ] && { sleep 20; continue; }
+      break
+    done
+    rm -f "$CONFIG"
+  fi
   case "$STATUS" in
     200) echo "    o modelo respondeu (HTTP 200)" ;;
-    401|403|404) echo "    HTTP ${STATUS}: a chave existe, mas falta permissão (policy) para usá-la; veja a seção de API keys na documentação do Generative AI" ;;
-    *) echo "    HTTP ${STATUS}: confira a região, o modelo e se a conta tem créditos ou é Pay As You Go" ;;
+    401) echo "    HTTP 401: a credencial não foi aceita (se a chave acabou de ser cadastrada, espere uns minutos e rode de novo)" ;;
+    403|404) echo "    HTTP ${STATUS}: falta permissão (policy) ou o modelo ${MODELO} não está disponível sob demanda em ${REGIAO}" ;;
+    *) echo "    HTTP ${STATUS:-000}: confira a região, o modelo e se a conta tem créditos ou é Pay As You Go" ;;
   esac
 else
   echo "    pulado: sem ${ARQUIVO_ENV}"
@@ -148,10 +211,11 @@ fi
 
 cat <<EOF
 
-Pronto. Para usar a chave:
-  - neste Cloud Shell:  source ${ARQUIVO_ENV}
-  - na Azure: no Cloud Shell da Azure, rode   read -rs OCI_GENAI_API_KEY && export OCI_GENAI_API_KEY
-    e cole o valor (exibido com: cat ${ARQUIVO_ENV}). Depois rode ./scripts/provisionar-azure.sh.
-  - endpoint: ${BASE_URL}  modelo: ${MODELO}
-Para apagar a chave e o orçamento (e criar de novo): ./scripts/remover-oci.sh
+Pronto. Para levar as credenciais da IA para a Azure (sem digitar valor nenhum):
+  1. aqui, mostre o arquivo em Base64:           base64 -w 64 ${ARQUIVO_ENV}
+  2. no Cloud Shell da Azure, rode               sed '/^$/q' | base64 -d > ~/oci-genai.env
+     cole o bloco do passo 1, aperte Enter numa linha vazia e depois carregue com   . ~/oci-genai.env
+  3. rode ./scripts/provisionar-azure.sh no mesmo Cloud Shell.
+Endpoint: ${BASE_URL}  modelo: ${MODELO}
+Para apagar a API key e o orçamento (e criar de novo): ./scripts/remover-oci.sh
 EOF

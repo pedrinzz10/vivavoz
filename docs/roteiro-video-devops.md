@@ -61,7 +61,8 @@ Aqui ficam só as coisas que **mostram senhas na tela**. Nada disso pode aparece
 
 ### A1. Criar a chave da IA na Oracle (Cloud Shell da **OCI**)
 
-A IA fica na Oracle, não na Azure, então ela não faz parte da demonstração dos recursos da Azure.
+A IA fica na Oracle, não na Azure, então ela não faz parte da demonstração dos recursos da Azure. Se o Cloud
+Shell da OCI ainda tiver a pasta `~/vivavoz`, use `git -C ~/vivavoz pull -q` no lugar do `git clone`.
 
 ```bash
 git clone -q https://github.com/pedrinzz10/vivavoz.git ~/vivavoz
@@ -76,26 +77,22 @@ cd ~/vivavoz
 ```bash
 ORCAMENTO_EMAIL=RM562312@fiap.com.br ./scripts/provisionar-oci.sh
 ```
-**O que faz:** confere se o modelo `openai.gpt-oss-120b` existe em São Paulo, cria um compartimento `vozviva` (uma
-"pasta" para organizar), cria a **chave de acesso da IA**, cria um alerta de gastos que avisa no seu e-mail e faz
-uma pergunta de teste ao modelo.
+**O que faz:** confere se o modelo `meta.llama-3.3-70b-instruct` existe em São Paulo, cria um compartimento
+`vozviva` (uma "pasta" para organizar), cria a **credencial da IA**, cria um alerta de gastos que avisa no seu
+e-mail e faz uma pergunta de teste ao modelo.
+
+A credencial normalmente é uma API key do Generative AI. A nossa conta não permite API keys (o limite
+`api-key-count` é zero), então o script cria no lugar uma **chave de assinatura para o seu usuário** da OCI, e a
+API Java assina cada chamada ao modelo com ela. Na saída aparece `usando a assinatura do usuário`, e isso é o
+esperado.
 **Resultado esperado:** a última parte mostra `o modelo respondeu (HTTP 200)`. O orçamento é de US$ 300 por
 mês (os créditos da conta), com alertas por e-mail em 50% e 100%.
 
-Se aparecer `já existia: vozviva-api` com `pulado: sem .../oci-genai.env`, a chave existe mas o valor dela se
-perdeu. Apague e crie de novo:
-
 ```bash
-CONFIRMAR=sim ./scripts/remover-oci.sh
+base64 -w 64 ~/.vozviva/oci-genai.env
 ```
-**O que faz:** apaga a API key e o orçamento da VozViva na OCI (o compartimento fica, vazio). Depois rode de novo
-o `provisionar-oci.sh` acima.
-
-```bash
-cat ~/.vozviva/oci-genai.env
-```
-**O que faz:** mostra o arquivo onde o script guardou a chave. **Copie só o valor depois de
-`OCI_GENAI_API_KEY=`** para a etapa A2. Não cole a chave em nenhum chat.
+**O que faz:** mostra o arquivo com as credenciais da IA codificado em Base64, num bloco de linhas curtas.
+**Copie o bloco inteiro** para a etapa A2. Ele contém a chave privada: não mostre no vídeo nem cole em nenhum chat.
 
 ### A2. Guardar as senhas num arquivo (Cloud Shell da **Azure**, em Bash)
 
@@ -131,10 +128,10 @@ echo "JWT_SECRET='$(openssl rand -hex 32)'" >> ~/vozviva-segredos.env
 login vale nas duas.
 
 ```bash
-read -rs K && echo "OCI_GENAI_API_KEY='$K'" >> ~/vozviva-segredos.env
+sed '/^$/q' | base64 -d >> ~/vozviva-segredos.env
 ```
-**O que faz:** pede a chave da IA copiada na etapa A1. Cole e aperte Enter: **nada aparece na tela**, de
-propósito. A chave vai direto para o arquivo.
+**O que faz:** espera você colar o bloco copiado na etapa A1, decodifica e acrescenta as credenciais da IA no
+arquivo. Cole o bloco, aperte **Enter** e depois **Enter de novo numa linha vazia** para terminar.
 
 ```bash
 read -rs K && echo "USUARIOS_TESTE_SENHA='$K'" >> ~/vozviva-segredos.env

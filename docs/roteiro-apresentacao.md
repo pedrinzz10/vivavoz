@@ -11,7 +11,7 @@ está o código para abrir na hora.
 - [ ] Contas `cidadao.teste@` e `cuidador.teste@` criadas (`USUARIOS_TESTE_SENHA` no provisionamento).
 - [ ] Query editor do Azure SQL aberto, para mostrar os `SELECT` depois de cada CRUD.
 - [ ] Azure DevOps aberto em Boards, Pipelines (último build verde), Releases e Test Plans.
-- [ ] Chave da OCI configurada (`OCI_GENAI_API_KEY`), senão a IA cai nas regras (funciona, mas não mostra o LLM).
+- [ ] Credencial da OCI configurada (`OCI_GENAI_API_KEY` ou as variáveis `OCI_GENAI_*` da assinatura), senão a IA cai nas regras (funciona, mas não mostra o LLM).
 - [ ] App mobile instalado apontando para a URL da Azure.
 
 ## Roteiro da demonstração (ponta a ponta, uns 4 minutos)
@@ -79,7 +79,7 @@ Código em `model/`; o esquema é versionado no Flyway (`src/main/resources/db/m
 ### Spring AI (15 pts)
 
 - Starter `spring-ai-starter-model-openai` apontado para o endpoint **compatível com OpenAI da OCI Generative AI**,
-  modelo `openai.gpt-oss-120b`.
+  modelo `meta.llama-3.3-70b-instruct`.
 - **RAG:** antes de chamar o modelo, um índice TF-IDF (`ai/IndiceTfIdf.java`) busca na base curada
   (`resources/conhecimento/golpes.json` e os exemplos de intenção) os documentos mais parecidos com o texto. Eles
   entram no prompt (`resources/prompts`).

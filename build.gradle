@@ -77,7 +77,7 @@ tasks.named('test') {
 
 tasks.register('avaliarIa', Test) {
 	group = 'verification'
-	description = 'Avalia o assistente contra golpes com o modelo de IA real (exige OCI_GENAI_API_KEY).'
+	description = 'Avalia o assistente contra golpes com o modelo de IA real (exige OCI_GENAI_API_KEY ou a assinatura OCI_GENAI_*).'
 	testClassesDirs = sourceSets.test.output.classesDirs
 	classpath = sourceSets.test.runtimeClasspath
 	useJUnitPlatform {
