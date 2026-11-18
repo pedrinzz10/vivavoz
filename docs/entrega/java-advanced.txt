@@ -1,0 +1,16 @@
+Global Solution 2026/2 - CitizenTech
+Java Advanced
+Grupo: VozViva
+Turma: 2TDSPW
+
+Integrantes:
+RM563237 - Fabrício Henrique Pereira - 2TDSPW
+RM562977 - Henrique Sinkevicius Maran - 2TDSPW
+RM563065 - Leonardo José Pereira - 2TDSPW
+RM565492 - Miguel Henrique Oliveira Dias - 2TDSPW
+RM562312 - Pedro Henrique de Oliveira - 2TDSPW
+
+Repositório (público): https://github.com/pedrinzz10/vivavoz
+Vídeo pitch: <link do vídeo>
+API publicada (Swagger): https://app-vozviva-rm562312.azurewebsites.net/swagger-ui.html
+Requisito 5: opção A (RabbitMQ)
