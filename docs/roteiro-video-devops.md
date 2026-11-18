@@ -82,14 +82,25 @@ printf 'SQL admin: %s\nSQL app: %s\nRabbitMQ: %s\nJWT: %s\n' "$SQL_ADMIN_SENHA" 
 (copie para o gerenciador de senhas e limpe a tela com `clear`)
 
 ```bash
-./scripts/provisionar-azure.sh
+./scripts/provisionar-azure.sh 2>&1 | tee ~/provisionar.log
 ```
 
-Leva de 15 a 20 minutos e termina com o resumo das URLs. Confira:
+Leva de 15 a 20 minutos e termina com o resumo das URLs. **Deixe a aba do Cloud Shell aberta e em primeiro plano**
+(ele desconecta depois de um tempo sem interação). Confira:
 
 ```bash
 az resource list -g rg-vozviva --query "[].{nome:name,tipo:type}" -o table
 ```
+
+Se der erro, as últimas linhas do log mostram onde parou:
+
+```bash
+tail -40 ~/provisionar.log
+```
+
+**Se o Cloud Shell cair no meio:** reabra, faça o `git clone` e o `cd` de novo e exporte as variáveis **com as
+mesmas senhas guardadas** (troque cada `$(openssl ...)` pelo valor salvo; a chave da OCI de novo com `read -rs`).
+Rode o script outra vez: ele só cria o que falta, sem duplicar nada.
 
 ### 1.3 Conexões da pipeline (navegador, Azure DevOps)
 
@@ -118,6 +129,8 @@ export WEBAPP_NAME=app-vozviva-rm562312
 ```bash
 export ACR_LOGIN_SERVER=acrvozvivarm562312.azurecr.io
 ```
+Só se já tiver o e-mail do professor (dá para rodar de novo depois, só com ele):
+
 ```bash
 export PROFESSOR_DEVOPS_EMAIL="<e-mail do professor>"
 ```
@@ -125,7 +138,8 @@ export PROFESSOR_DEVOPS_EMAIL="<e-mail do professor>"
 ./scripts/configurar-azure-devops.sh
 ```
 
-O professor entra com **Basic** na organização e em **Project Administrators** no projeto (sem acesso: −70).
+O professor entra com **Basic** na organização e em **Project Administrators** no projeto (sem acesso: −70). O
+script pode rodar de novo sem duplicar nada.
 
 ### 1.5 Primeira execução da pipeline (ensaio)
 
