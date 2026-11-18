@@ -6,6 +6,7 @@ set -euo pipefail
 
 REGIAO="${REGIAO:-sa-saopaulo-1}"
 COMPARTIMENTO="${COMPARTIMENTO:-vozviva}"
+NOME_CHAVE="vozviva-api"
 NOME_ORCAMENTO="vozviva-ia"
 ARQUIVO_ENV="${HOME}/.vozviva/oci-genai.env"
 
@@ -14,18 +15,23 @@ oci_r() { oci --region "$REGIAO" "$@"; }
 
 COMP=$(oci iam compartment list --compartment-id "$OCI_TENANCY" --name "$COMPARTIMENTO" \
   --lifecycle-state ACTIVE --query 'data[0].id' --raw-output 2> /dev/null || true)
+# Se uma listagem falhar, para sem apagar nada: apagar só o arquivo local deixaria a chave remota sem o valor.
+ERRO=$(mktemp)
+trap 'rm -f "$ERRO"' EXIT
+falhou() { echo "Não consegui listar $1: $(cat "$ERRO")"; echo "Nada foi apagado."; exit 1; }
 CHAVES=""
 if [ -n "$COMP" ] && [ "$COMP" != "null" ]; then
-  CHAVES=$(oci_r generative-ai api-key list --compartment-id "$COMP" --all \
-    --query 'data.items[?"lifecycle-state"!=`DELETED` && "lifecycle-state"!=`DELETING`].id' --raw-output 2> /dev/null \
-    | jq -r '.[]?' 2> /dev/null || true)
+  LISTA=$(oci_r generative-ai api-key list --compartment-id "$COMP" --all 2> "$ERRO") || falhou "as API keys"
+  # Só a chave da VozViva: outras chaves do compartimento ficam intactas. Sem chaves, o CLI não imprime nada.
+  CHAVES=$(printf '%s' "${LISTA:-{\}}" | jq -r --arg nome "$NOME_CHAVE" '.data.items[]?
+    | select(."display-name" == $nome and ."lifecycle-state" != "DELETED" and ."lifecycle-state" != "DELETING") | .id')
 fi
-ORC=$(oci budgets budget budget list --compartment-id "$OCI_TENANCY" --all \
-  --query "data[?\"display-name\"=='${NOME_ORCAMENTO}'].id | [0]" --raw-output 2> /dev/null || true)
-[ "$ORC" = "null" ] && ORC=""
+LISTA=$(oci budgets budget budget list --compartment-id "$OCI_TENANCY" --all 2> "$ERRO") || falhou "os orçamentos"
+ORC=$(printf '%s' "${LISTA:-{\}}" | jq -r --arg nome "$NOME_ORCAMENTO" \
+  '[.data[]? | select(."display-name" == $nome) | .id][0] // empty')
 
 echo "Vai apagar:"
-echo "  - API keys no compartimento ${COMPARTIMENTO}: $(printf '%s' "$CHAVES" | grep -c . || true)"
+echo "  - API keys ${NOME_CHAVE} no compartimento ${COMPARTIMENTO}: $(printf '%s' "$CHAVES" | grep -c . || true)"
 echo "  - orçamento ${NOME_ORCAMENTO}: $([ -n "$ORC" ] && echo sim || echo 'não existe')"
 echo "  - arquivo ${ARQUIVO_ENV}: $([ -f "$ARQUIVO_ENV" ] && echo sim || echo 'não existe')"
 
