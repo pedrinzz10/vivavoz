@@ -58,11 +58,20 @@ fi
 
 passo "API key ${NOME_CHAVE} (válida até ${EXPIRACAO})"
 mkdir -p "$PASTA_SEGREDOS" && chmod 700 "$PASTA_SEGREDOS"
-EXISTENTE=$(oci_r generative-ai api-key list --compartment-id "$COMP" --all \
-  --query "length(data.items[?\"display-name\"=='${NOME_CHAVE}' && \"lifecycle-state\"=='ACTIVE'])" \
-  --raw-output 2> /dev/null || true)
-# Num compartimento recém-criado a listagem pode falhar ou devolver texto; só um número maior que zero conta.
-case "$EXISTENTE" in ''|*[!0-9]*) EXISTENTE=0 ;; esac
+# Um compartimento recém-criado pode levar alguns segundos para ficar visível ao Generative AI: tenta algumas vezes
+# e, se a listagem não funcionar, para com o erro em vez de supor que a chave existe (ou não existe).
+ERRO_LISTA=$(mktemp)
+for tentativa in 1 2 3 4 5 6; do
+  if LISTA=$(oci_r generative-ai api-key-collection list-api-keys --compartment-id "$COMP" --all 2> "$ERRO_LISTA"); then
+    break
+  fi
+  [ "$tentativa" = 6 ] && { echo "    não consegui listar as API keys:"; sed 's/^/      /' "$ERRO_LISTA"; exit 1; }
+  sleep 20
+done
+rm -f "$ERRO_LISTA"
+# Sem chaves, o CLI não imprime nada.
+EXISTENTE=$(printf '%s' "${LISTA:-{\}}" | jq --arg nome "$NOME_CHAVE" \
+  '[.data.items[]? | select(."display-name" == $nome and ."lifecycle-state" == "ACTIVE")] | length')
 if [ "$EXISTENTE" -gt 0 ]; then
   reaproveitado "$NOME_CHAVE"
   [ -f "$ARQUIVO_ENV" ] || echo "    o valor da chave só aparece na criação; sem ${ARQUIVO_ENV}, rode ./scripts/remover-oci.sh e depois este script de novo"
@@ -76,6 +85,11 @@ else
         --key-details "[{\"keyName\":\"principal\",\"timeExpiry\":\"${EXPIRACAO}\"}]" \
         --wait-for-state ACTIVE > "$RESPOSTA" 2> "${RESPOSTA}.erro"; then
       break
+    fi
+    if grep -q LimitExceeded "${RESPOSTA}.erro"; then
+      echo "    a conta já chegou no limite de API keys. Veja onde estão e apague as antigas com: ./scripts/remover-oci.sh"
+      rm -f "$RESPOSTA" "${RESPOSTA}.erro"
+      exit 1
     fi
     [ "$tentativa" = 6 ] && { cat "${RESPOSTA}.erro"; exit 1; }
     sleep 20
