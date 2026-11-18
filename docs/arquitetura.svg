@@ -105,7 +105,7 @@
   <text x="976" y="176" class="nome">Oracle Cloud (OCI)</text>
   <text x="976" y="198" class="det">Generative AI, São Paulo</text>
   <text x="976" y="218" class="det">endpoint compatível com OpenAI</text>
-  <text x="976" y="238" class="det">(openai.gpt-oss-120b)</text>
+  <text x="976" y="238" class="det">(Llama 3.3 70B)</text>
   <text x="976" y="260" class="det">sem IA: regras respondem</text>
 
   <!-- OSM -->

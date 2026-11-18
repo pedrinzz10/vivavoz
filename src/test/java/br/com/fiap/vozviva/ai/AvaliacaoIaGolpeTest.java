@@ -27,7 +27,8 @@ class AvaliacaoIaGolpeTest {
 
 	@Test
 	void desempenhoNoConjuntoRotulado() {
-		assumeTrue(StringUtils.hasText(System.getenv("OCI_GENAI_API_KEY")), "Defina OCI_GENAI_API_KEY para avaliar");
+		assumeTrue(StringUtils.hasText(System.getenv("OCI_GENAI_API_KEY")) || StringUtils.hasText(System.getenv("OCI_GENAI_USER_OCID")),
+				"Defina OCI_GENAI_API_KEY ou as variáveis OCI_GENAI_* da assinatura com o usuário da OCI para avaliar");
 
 		var metricas = MensagensRotuladas.avaliar(MensagensRotuladas.carregar(),
 				m -> assistente.verificar(new VerificacaoRequest(m.texto(), m.canal())).classificacao());

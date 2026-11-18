@@ -21,8 +21,9 @@
 #   ./scripts/provisionar-azure.sh
 #
 # Opcionais: LOCALIZACAO (padrão brazilsouth), GRUPO, JWT_ISSUER (padrão voz-e-via-java), JWT_AUDIENCE (padrão
-# voz-e-via; os dois iguais aos da API .NET), OCI_GENAI_API_KEY, OCI_GENAI_BASE_URL,
-# OCI_GENAI_MODEL, USUARIOS_TESTE_SENHA (cria os usuários de teste, útil na demonstração) e
+# voz-e-via; os dois iguais aos da API .NET), OCI_GENAI_API_KEY, OCI_GENAI_BASE_URL, OCI_GENAI_MODEL ou, sem API
+# key, as variáveis OCI_GENAI_TENANCY_OCID, OCI_GENAI_USER_OCID, OCI_GENAI_FINGERPRINT, OCI_GENAI_PRIVATE_KEY e
+# OCI_GENAI_COMPARTMENT_OCID (todas geradas por scripts/provisionar-oci.sh), USUARIOS_TESTE_SENHA (cria os usuários de teste, útil na demonstração) e
 # LIBERAR_MEU_IP=sim (libera o seu IP no firewall do Azure SQL, para o Query editor e o SELECT do vídeo).
 # API .NET: PUBLICAR_DOTNET (padrão sim; o banco "zeladoria" Basic custa cerca de US$ 5 por mês), DOTNET_REPO e
 # DOTNET_BRANCH (padrão main do repositório da equipe .NET).
@@ -300,6 +301,10 @@ CONFIGURACOES=(
 [ -n "${OCI_GENAI_API_KEY:-}" ] && CONFIGURACOES+=("OCI_GENAI_API_KEY=${OCI_GENAI_API_KEY}")
 [ -n "${OCI_GENAI_BASE_URL:-}" ] && CONFIGURACOES+=("OCI_GENAI_BASE_URL=${OCI_GENAI_BASE_URL}")
 [ -n "${OCI_GENAI_MODEL:-}" ] && CONFIGURACOES+=("OCI_GENAI_MODEL=${OCI_GENAI_MODEL}")
+# Plano B da IA (conta sem API key do Generative AI): a API assina as chamadas com a chave do usuário da OCI.
+for var in OCI_GENAI_TENANCY_OCID OCI_GENAI_USER_OCID OCI_GENAI_FINGERPRINT OCI_GENAI_PRIVATE_KEY     OCI_GENAI_COMPARTMENT_OCID; do
+  [ -n "${!var:-}" ] && CONFIGURACOES+=("${var}=${!var}")
+done
 if [ -n "${USUARIOS_TESTE_SENHA:-}" ]; then
   CONFIGURACOES+=("USUARIOS_TESTE_HABILITADO=true" "USUARIOS_TESTE_SENHA=${USUARIOS_TESTE_SENHA}")
 fi

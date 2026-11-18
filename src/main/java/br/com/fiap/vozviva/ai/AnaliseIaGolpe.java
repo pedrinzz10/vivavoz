@@ -12,10 +12,8 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -42,14 +40,14 @@ public class AnaliseIaGolpe {
 	/**
 	 * Depende do {@link ChatModel} (e não do ChatClient.Builder, que o Spring AI registra mesmo sem
 	 * modelo): sem modelo configurado, o assistente segue funcionando só com as regras. Sem a chave da
-	 * OCI o modelo também não é usado, para nenhuma verificação esperar por uma chamada que vai falhar.
+	 * OCI (API key ou usuário que assina as chamadas) o modelo também não é usado, para nenhuma verificação esperar por uma chamada que vai falhar.
 	 */
-	public AnaliseIaGolpe(ObjectProvider<ChatModel> modelo, @Value("${spring.ai.openai.api-key:}") String chaveApi) {
-		ChatModel chatModel = StringUtils.hasText(chaveApi) ? modelo.getIfAvailable() : null;
+	public AnaliseIaGolpe(ObjectProvider<ChatModel> modelo, CredencialIa credencial) {
+		ChatModel chatModel = credencial.configurada() ? modelo.getIfAvailable() : null;
 		this.chatClient = chatModel == null ? null : ChatClient.builder(chatModel).build();
 		this.instrucoes = lerInstrucoes();
 		if (chatClient == null) {
-			log.warn("Sem modelo de IA ou sem OCI_GENAI_API_KEY: o assistente contra golpes usará só as regras.");
+			log.warn("Sem modelo de IA ou sem credencial da OCI: o assistente contra golpes usará só as regras.");
 		}
 	}
 

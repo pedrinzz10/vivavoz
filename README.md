@@ -220,9 +220,10 @@ quebra o build se um endpoint ficar fora do contrato ou sem descrição.
 
 | Variável | Descrição |
 |---|---|
-| `OCI_GENAI_API_KEY` | API key do OCI Generative AI (sem ela, o assistente usa só as regras) |
+| `OCI_GENAI_API_KEY` | API key do OCI Generative AI (sem ela e sem a assinatura abaixo, o assistente usa só as regras) |
+| `OCI_GENAI_TENANCY_OCID` / `OCI_GENAI_USER_OCID` / `OCI_GENAI_FINGERPRINT` / `OCI_GENAI_PRIVATE_KEY` / `OCI_GENAI_COMPARTMENT_OCID` | Alternativa à API key, para contas em que o limite de API keys do Generative AI é zero: a API assina cada chamada com a chave de assinatura de um usuário da OCI (chave privada em Base64). O `provisionar-oci.sh` gera todas |
 | `OCI_GENAI_BASE_URL` | Endpoint compatível com OpenAI da OCI (padrão `https://inference.generativeai.sa-saopaulo-1.oci.oraclecloud.com/openai/v1`) |
-| `OCI_GENAI_MODEL` | Modelo usado (padrão `openai.gpt-oss-120b`) |
+| `OCI_GENAI_MODEL` | Modelo usado (padrão `meta.llama-3.3-70b-instruct`) |
 | `VOZ_CONFIANCA_MINIMA` | Confiança mínima para a IA decidir a intenção sozinha (padrão `0.6`) |
 | `DB_URL` | URL JDBC do banco (Azure SQL em produção; padrão do dev aponta para o SQL Server do docker-compose) |
 | `DB_USERNAME` / `DB_PASSWORD` | Credenciais do banco (no dev, usuário `sa` e a senha do `.env`) |
@@ -437,7 +438,9 @@ mensagem ──▶ 1. Regras determinísticas (senha, Pix com pressa, link, "tro
   respondem sozinhas.
 - **LGPD:** o texto da mensagem e o usuário nunca são gravados; só tipo, classificação, canal e data.
 - **Modelo:** OCI Generative AI pelo endpoint compatível com a API da OpenAI (Spring AI + SDK oficial da
-  OpenAI), configurável por `OCI_GENAI_MODEL` (padrão `openai.gpt-oss-120b`). O código depende só do
+  OpenAI), configurável por `OCI_GENAI_MODEL` (padrão `meta.llama-3.3-70b-instruct`, disponível sob demanda em São Paulo).
+  Autenticação por API key do Generative AI ou, em contas sem API key, assinando cada chamada com a chave de um
+  usuário da OCI (`AssinadorRequisicaoOci`, um interceptor no cliente HTTP do Spring AI). O código depende só do
   `ChatModel` do Spring AI, então trocar de modelo ou provedor é só configuração.
 
 ### Avaliação
@@ -449,7 +452,7 @@ de banco e saúde. "Golpe detectado" = `PROVAVEL_GOLPE` ou `SUSPEITA`.
 | Configuração | Acurácia | Recall | Precisão | Falsos alarmes | Como rodar |
 |---|---|---|---|---|---|
 | Só regras (linha de base) | 83,3% | 72,2% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-golpes/somente-regras.md`) |
-| IA + regras | meta ≥ 80% | meta ≥ 90% | — | — | `./gradlew avaliarIa` (exige `OCI_GENAI_API_KEY`; consome créditos da OCI) |
+| IA + regras | meta ≥ 80% | meta ≥ 90% | — | — | `./gradlew avaliarIa` (exige `OCI_GENAI_API_KEY` ou as variáveis da assinatura; consome créditos da OCI) |
 
 Os golpes que as regras não pegam são os semânticos (falso advogado, motoboy, "vaga de emprego"), que é
 onde a IA agrega. As regras foram ajustadas com padrões gerais conhecidos ("somente hoje", "perdi meu
@@ -508,7 +511,7 @@ de socorro) e "a árvore caiu" (zeladoria, não queda de uma pessoa).
 | Configuração | Acurácia | Socorros reconhecidos | Socorros falsos | Como rodar |
 |---|---|---|---|---|
 | Só regras (linha de base) | 96,9% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-intencoes/`) |
-| IA + regras | meta ≥ 90% | meta 100% | — | `./gradlew avaliarIa` (exige `OCI_GENAI_API_KEY`; consome créditos da OCI) |
+| IA + regras | meta ≥ 90% | meta 100% | — | `./gradlew avaliarIa` (exige `OCI_GENAI_API_KEY` ou as variáveis da assinatura; consome créditos da OCI) |
 
 Duas falhas das regras foram corrigidas depois da primeira medição: "alagou" não casava com "alaga", e
 "calçada está toda quebrada" tinha palavras no meio. As duas correções são de padrão, e não de frase do
@@ -632,16 +635,17 @@ desatualizado.
 
 **Passo a passo:**
 
-1. **IA na OCI** (Cloud Shell da OCI, região `sa-saopaulo-1`): compartimento `vozviva`, API key do Generative AI,
-   orçamento com alerta e uma chamada de teste ao modelo. A chave fica só em `~/.vozviva/oci-genai.env`, sem
-   aparecer na tela.
+1. **IA na OCI** (Cloud Shell da OCI, região `sa-saopaulo-1`): compartimento `vozviva`, API key do Generative AI
+   (ou, se a conta não permitir API keys, uma chave de assinatura para o seu usuário), orçamento com alerta e uma
+   chamada de teste ao modelo. As credenciais ficam só em `~/.vozviva/oci-genai.env`, sem aparecer na tela.
 
    ```bash
    ORCAMENTO_EMAIL=voce@fiap.com.br ./scripts/provisionar-oci.sh
    ```
 
-   No Cloud Shell da Azure, antes do próximo passo, informe a chave sem deixá-la no histórico:
-   `read -rs OCI_GENAI_API_KEY && export OCI_GENAI_API_KEY`.
+   Para levar as credenciais ao Cloud Shell da Azure, siga as instruções do fim do script: mostre o arquivo com
+   `base64 -w 64 ~/.vozviva/oci-genai.env`, rode `sed '/^$/q' | base64 -d > ~/oci-genai.env` no Cloud Shell da
+   Azure, cole o bloco, aperte Enter numa linha vazia e carregue com `. ~/oci-genai.env`.
 2. **Provisionar a Azure** (Azure Cloud Shell ou Azure CLI com `az login`). O script registra os provedores que
    faltarem na assinatura (Microsoft.Sql, Microsoft.ContainerInstance e outros) e também publica a API .NET de
    zeladoria, com o mesmo `JWT_SECRET`, para o app mobile ter as duas APIs no ar:
@@ -720,7 +724,7 @@ docker run --rm -p 8081:8080 --network vozviva_default \
 ./gradlew test                    # unitários + integração
 ./gradlew check                   # testes + cobertura mínima + script do banco atualizado (o que o CI roda)
 ./gradlew test jacocoTestReport   # relatório de cobertura em build/reports/jacoco
-./gradlew avaliarIa               # avaliação com o modelo real da OCI (opcional; exige OCI_GENAI_API_KEY)
+./gradlew avaliarIa               # avaliação com o modelo real da OCI (opcional; exige OCI_GENAI_API_KEY ou as variáveis OCI_GENAI_* da assinatura)
 ```
 
 | Camada | Ferramentas | Exemplos |
