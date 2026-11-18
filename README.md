@@ -590,7 +590,7 @@ desatualizado.
 | Azure Container Registry (Basic) | Imagens da API, uma por build |
 | Rede virtual `vnet-vozviva` (2 sub-redes) | Liga o App Service ao RabbitMQ por IP privado |
 | Container Instance com RabbitMQ (0,5 vCPU e 1 GB) | Fila do botão de emergência, sem IP público; imagem oficial pelo espelho `public.ecr.aws` (o Docker Hub limita downloads anônimos) |
-| Orçamento `vozviva-creditos` (assinatura) | Alerta por e-mail em 50% do crédito e na previsão de 80%: o Azure for Students para os recursos quando o crédito acaba |
+| Orçamento `vozviva-creditos` (do grupo) | Gasto **acumulado** do grupo (período anual, porque o crédito não renova por mês), com alerta por e-mail em 50% e 80% e na previsão de 100%: o Azure for Students para os recursos quando o crédito acaba |
 | App Service Linux B1 (container) | API Java; HTTPS obrigatório e health check em `/actuator/health/liveness` |
 | Segundo app no mesmo plano B1 (.NET 8, sem custo extra) + banco `zeladoria` (Basic) | API .NET de zeladoria, que o app mobile também usa; compilada a partir do repositório da equipe .NET e publicada pelo próprio script. Para pular: `PUBLICAR_DOTNET=nao` |
 
@@ -688,7 +688,7 @@ desatualizado.
    crie, leia, altere e exclua perfis de emergência (`perfis_emergencia`) e contatos (`contatos_emergencia`).
    Confira cada operação com `SELECT` no Query editor do Azure SQL, por exemplo:
    `SELECT * FROM contatos_emergencia ORDER BY id DESC;`.
-8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro e o orçamento. Na OCI, exclua a API key, o orçamento e o
+8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro, com o orçamento dele. Na OCI, exclua a API key, o orçamento e o
    compartimento `vozviva` pelo console.
 
 Para testar a imagem localmente, com o SQL Server e o RabbitMQ do `docker compose` (o mesmo teste foi feito

@@ -26,8 +26,8 @@
 # LIBERAR_MEU_IP=sim (libera o seu IP no firewall do Azure SQL, para o Query editor e o SELECT do vídeo).
 # API .NET: PUBLICAR_DOTNET (padrão sim; o banco "zeladoria" Basic custa cerca de US$ 5 por mês), DOTNET_REPO e
 # DOTNET_BRANCH (padrão main do repositório da equipe .NET).
-# Orçamento: ORCAMENTO_USD (padrão 80, o crédito do Azure for Students) e ORCAMENTO_EMAIL (padrão: o e-mail da conta
-# logada) para o alerta de custo em 50% e 80%.
+# Orçamento do grupo: ORCAMENTO_USD (padrão 80, o crédito do Azure for Students) e ORCAMENTO_EMAIL (padrão: o e-mail
+# da conta logada) para os alertas de gasto acumulado em 50% e 80% e na previsão de 100%.
 #
 # Custo estimado em brazilsouth (preços de varejo da Microsoft): cerca de US$ 2,20 por dia, a maior parte do
 # RabbitMQ em container. Para parar a cobrança: ./scripts/remover-azure.sh.
@@ -354,31 +354,37 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
   echo "    publicado o commit ${COMMIT_DOTNET}"
 fi
 
-passo "Orçamento ${ORCAMENTO}: US\$ ${ORCAMENTO_USD} por mês, alerta por e-mail em 50% e 80%"
+passo "Orçamento ${ORCAMENTO} do grupo ${GRUPO}: US\$ ${ORCAMENTO_USD} acumulados, alertas em 50%, 80% e na previsão de 100%"
 # Azure for Students tem limite de gastos: quando o crédito acaba, os recursos param (nada é cobrado). O alerta
 # avisa antes disso, para a API não sair do ar durante a avaliação.
+# Período anual, e não mensal: o crédito não renova a cada mês, então o gasto tem que ser somado desde o início
+# (um orçamento mensal zeraria na virada do mês e nunca chegaria ao alerta). E o orçamento é do grupo de
+# recursos: mede só o custo deste ambiente e é apagado junto com o grupo pelo remover-azure.sh.
 ORCAMENTO_EMAIL="${ORCAMENTO_EMAIL:-$(az account show --query user.name -o tsv)}"
 ASSINATURA="$(az account show --query id -o tsv)"
 INICIO_ORCAMENTO="$(date -u +%Y-%m-01)"
 FIM_ORCAMENTO="$(date -u -d "${INICIO_ORCAMENTO} +1 year" +%Y-%m-%d)"
+alerta() {
+  printf '"%s": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": %s, "thresholdType": "%s", "contactEmails": ["%s"] }' \
+    "$1" "$2" "$3" "$ORCAMENTO_EMAIL"
+}
 cat > /tmp/orcamento-vozviva.json <<JSON
 {
   "properties": {
     "category": "Cost",
     "amount": ${ORCAMENTO_USD},
-    "timeGrain": "Monthly",
+    "timeGrain": "Annually",
     "timePeriod": { "startDate": "${INICIO_ORCAMENTO}T00:00:00Z", "endDate": "${FIM_ORCAMENTO}T00:00:00Z" },
     "notifications": {
-      "Atingiu50": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 50,
-                     "contactEmails": ["${ORCAMENTO_EMAIL}"], "thresholdType": "Actual" },
-      "Previsao80": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 80,
-                      "contactEmails": ["${ORCAMENTO_EMAIL}"], "thresholdType": "Forecasted" }
+      $(alerta Gasto50 50 Actual),
+      $(alerta Gasto80 80 Actual),
+      $(alerta Previsao100 100 Forecasted)
     }
   }
 }
 JSON
 if MSYS_NO_PATHCONV=1 az rest --method put -o none \
-    --url "https://management.azure.com/subscriptions/${ASSINATURA}/providers/Microsoft.Consumption/budgets/${ORCAMENTO}?api-version=2023-05-01" \
+    --url "https://management.azure.com/subscriptions/${ASSINATURA}/resourceGroups/${GRUPO}/providers/Microsoft.Consumption/budgets/${ORCAMENTO}?api-version=2023-05-01" \
     --body @/tmp/orcamento-vozviva.json; then
   echo "    ok (alertas para ${ORCAMENTO_EMAIL})"
 else
