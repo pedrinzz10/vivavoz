@@ -72,8 +72,8 @@ ler() {
   done <<< "$COMPS"
   echo "    total: ${TOTAL}"
 
-  secao "Limites do serviço ${SERVICO} (nome, escopo, valor)"
-  if ler limits value list --service-name "$SERVICO" --compartment-id "$OCI_TENANCY" --all; then
+  secao "Limites do serviço ${SERVICO} em ${REGIAO} (nome, escopo, valor)"
+  if ler --region "$REGIAO" limits value list --service-name "$SERVICO" --compartment-id "$OCI_TENANCY" --all; then
     jq -r '.data[] | "    \(.name)  \(."scope-type")\(if ."availability-domain" then " " + ."availability-domain" else "" end)  = \(.value)"' \
       "$TMP/r.json" | sort
     LIMITES_CHAVE=$(jq -r '.data[] | select(.name | test("key"; "i")) | .name' "$TMP/r.json" | sort -u)
@@ -90,7 +90,7 @@ ler() {
   done
 
   secao "Definições dos limites de chave (descrição)"
-  if ler limits definition list --service-name "$SERVICO" --compartment-id "$OCI_TENANCY" --all; then
+  if ler --region "$REGIAO" limits definition list --service-name "$SERVICO" --compartment-id "$OCI_TENANCY" --all; then
     jq -r '.data[] | select(.name | test("key"; "i")) | "    \(.name): \(.description // "")  (pode pedir aumento: \(."is-eligible-for-limit-increase"))"' \
       "$TMP/r.json"
   fi
