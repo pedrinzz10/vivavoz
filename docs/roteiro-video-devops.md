@@ -9,18 +9,26 @@ tarefa concluída. Cada comando vem com uma explicação do que ele faz.
 | Fase | O que acontece | Tempo |
 |---|---|---|
 | **A. Antes de gravar** (fora do vídeo) | Cria a chave da IA na Oracle, guarda as senhas num arquivo e deixa as abas prontas | 20 min |
-| **B. Gravação** (vídeo contínuo, sem cortes) | 5 partes: solução → recursos na Azure → organização e pipelines → CRUD → tarefa concluída | 50 a 60 min |
-| **C. Depois de gravar** | Conferir o vídeo, montar o PDF e entregar | 20 min |
+| **B. Gravação** (uma gravação só, do início ao fim) | 5 partes: solução → recursos na Azure → organização e pipelines → CRUD → tarefa concluída | ≈ 45 min gravados |
+| **C. Edição** | Acelerar as duas esperas (script e pipeline), sem cortar nada | 15 min |
+| **D. Depois de editar** | Conferir o vídeo, montar o PDF e entregar | 20 min |
 
-Ordem da gravação:
+**Meta: vídeo final de 18 a 20 minutos.** A gravação é contínua, mas o script da Azure (15 a 20 min) e a pipeline
+(8 a 12 min) são espera. Você explica o que está acontecendo nos primeiros 1 a 2 minutos de cada espera e, na
+edição, **acelera o resto** (fica na tela, só mais rápido). Nada é cortado: o professor vê tudo acontecendo.
 
-| Parte | O que mostra | Itens obrigatórios |
-|---|---|---|
-| 1. Solução e arquitetura | README, problema, solução e o desenho com os recursos | Apresentar o README e o desenho |
-| 2. Recursos na Azure | O script criando tudo e o resultado no portal | Recursos criados pelos scripts |
-| 3. Organização e pipelines | O projeto, a tarefa, a branch, a alteração no código, o merge, o build, o deploy e o resultado na nuvem | Tarefa, branch e código, merge, pipelines, artefatos, alteração publicada |
-| 4. CRUD | Três tabelas, conferidas com `SELECT` no banco | CRUD em pelo menos duas tabelas |
-| 5. Final | A tarefa concluída com os links | Tarefa concluída com os links |
+Ordem da gravação e tempo de cada parte **no vídeo final**:
+
+| Parte | O que mostra | Itens obrigatórios | Tempo |
+|---|---|---|---|
+| 1. Solução e arquitetura | README, problema, solução e o desenho com os recursos | Apresentar o README e o desenho | 3 min |
+| 2. Recursos na Azure | O script criando tudo (espera acelerada) e o resultado no portal | Recursos criados pelos scripts | 3 min |
+| 3. Organização e pipelines | O projeto, a tarefa, a branch, a alteração no código, o merge, o build e o deploy (espera acelerada) e o resultado na nuvem | Tarefa, branch e código, merge, pipelines, artefatos, alteração publicada | 8 a 9 min |
+| 4. CRUD | Três tabelas, conferidas com `SELECT` no banco | CRUD em pelo menos duas tabelas | 4 a 5 min |
+| 5. Final | A tarefa concluída com os links | Tarefa concluída com os links | 30 s |
+
+Para caber no tempo: fale de forma direta, deixe as abas abertas na ordem e **deixe os JSON do CRUD num bloco de
+notas** (só os JSON, nada de senha) para copiar e colar.
 
 Nomes que vão aparecer (o sufixo `rm562312` deixa os nomes únicos na Azure):
 
@@ -161,16 +169,16 @@ da voz tiram 30 pontos), notificações desligadas e o gerenciador de senhas **f
 
 **Recomendação:** se der tempo, faça um ensaio completo antes, sem gravar: rode as Partes 2 e 3, confira que a
 pipeline fica verde e apague tudo com `./scripts/remover-azure.sh`. Custa poucos centavos de crédito e evita
-regravar um vídeo de uma hora por causa de um erro.
+regravar 45 minutos por causa de um erro. Também serve para treinar as falas dentro do tempo.
 
 ---
 
-## Fase B – Gravação (sem cortes)
+## Fase B – Gravação (uma gravação só, sem pausar)
 
-Cada passo diz o que **fazer**, o que **mostrar** e uma sugestão do que **falar**. O script e a pipeline levam
-alguns minutos: aproveite esse tempo para explicar o que está acontecendo.
+Cada passo diz o que **fazer**, o que **mostrar** e uma sugestão do que **falar**. Não pause a gravação nas
+esperas: deixe gravando, e a aceleração é feita depois, na Fase C. Os tempos entre parênteses são do vídeo final.
 
-### Parte 1 – Solução e desenho da arquitetura (≈ 4 min)
+### Parte 1 – Solução e desenho da arquitetura (≈ 3 min)
 
 **Mostrar:** o README no Azure Repos e depois o desenho no draw.io. O professor avalia **desenho, fluxo e
 legenda** (10 pontos).
@@ -207,7 +215,7 @@ legenda** (10 pontos).
    - **7** "Os locais de atendimento vêm do OpenStreetMap, carregados no banco."
    - **Legenda:** "Linha cheia é chamada direta; tracejada é assíncrona; verde é build e deploy; laranja é a IA."
 
-### Parte 2 – Subir os recursos na Azure (≈ 20 min)
+### Parte 2 – Subir os recursos na Azure (≈ 3 min no vídeo final; 20 min gravando)
 
 **Mostrar:** o portal da Azure com o Cloud Shell aberto (o mesmo da etapa A2).
 
@@ -251,7 +259,14 @@ você mostra o código sem sair dessa tela. (Se o editor não abrir, mostre o ar
 **Tempo:** 15 a 20 minutos. **Fique nesta aba**, rolando o editor e o terminal: o Cloud Shell desconecta depois
 de um tempo sem uso.
 
-**Enquanto ele roda**, role o script no editor e explique cada bloco quando ele aparecer no terminal:
+**Nos primeiros 1 a 2 minutos**, role o script no editor e explique os blocos de uma vez (não precisa esperar cada
+um aparecer no terminal). Depois diga:
+> "O script leva uns 15 minutos. Vou acelerar o vídeo até ele terminar."
+
+e continue gravando, só rolando o terminal de vez em quando até aparecer `Pronto`. **Na edição, esse trecho é
+acelerado.**
+
+O que falar sobre cada bloco do script:
 
 | No terminal aparece | O que falar |
 |---|---|
@@ -274,9 +289,9 @@ az resource list -g rg-vozviva --query "[].{nome:name,tipo:type}" -o table
 o Container Registry, o Container Instance (RabbitMQ) e a rede virtual.
 > "Esses são os recursos do desenho, criados pelo script. Ele pode rodar de novo sem duplicar nada."
 
-### Parte 3 – Organização, alteração no código e pipelines (≈ 20 min)
+### Parte 3 – Organização, alteração no código e pipelines (≈ 8 a 9 min no vídeo final)
 
-#### 3.1 Mostrar a organização (≈ 2 min)
+#### 3.1 Mostrar a organização (≈ 1 min)
 
 Abra `https://dev.azure.com/vozviva/vozviva` e mostre rapidamente:
 
@@ -288,7 +303,7 @@ Abra `https://dev.azure.com/vozviva/vozviva` e mostre rapidamente:
   revisor padrão (o seu RM).
 > "A main é protegida: só recebe código por pull request, com revisor e tarefa vinculada."
 
-#### 3.2 Ligar o Azure DevOps aos recursos criados (≈ 4 min)
+#### 3.2 Ligar o Azure DevOps aos recursos criados (≈ 2 min)
 
 A pipeline precisa de duas "service connections", que são as permissões para o Azure DevOps publicar nos recursos
 recém-criados. Vá em **Project settings → Service connections → New service connection**:
@@ -366,10 +381,12 @@ também mantém o perfil, então o texto antigo estava desatualizado.
 
 > "O merge na main dispara a pipeline sozinho, sem ninguém clicar em Run."
 
-#### 3.6 Execução completa da pipeline (≈ 8 a 12 min)
+#### 3.6 Execução completa da pipeline (≈ 2 min no vídeo final; 8 a 12 min gravando)
 
-**Mostrar:** em Pipelines, a execução que acabou de começar (gatilho *Individual CI*, branch `main`). Abra cada
-estágio e comente as tarefas enquanto rodam:
+**Mostrar:** em Pipelines, a execução que acabou de começar (gatilho *Individual CI*, branch `main`). Abra o
+estágio de build e, **no primeiro minuto**, explique as tarefas da lista. Depois diga
+"Vou acelerar até a pipeline terminar" e deixe gravando, com a tela da execução aberta, até os dois estágios
+ficarem verdes. **Na edição, esse trecho é acelerado.** O que falar:
 
 - **Build e testes (CI):** compila com o Gradle, roda centenas de testes (incluindo testes com SQL Server e
   RabbitMQ de verdade), mede a cobertura, gera o pacote, cria a imagem e envia para o registro.
@@ -397,7 +414,11 @@ access a resource"**. Se aparecer, clique em **View** e em **Permit** e explique
 **"mantido pelo cidadão ou pelo cuidador"**.
 > "A alteração saiu da tarefa e chegou na nuvem passando pelo build, pelos testes e pelo deploy."
 
-### Parte 4 – CRUD em três tabelas, conferindo direto no banco (≈ 6 min)
+### Parte 4 – CRUD em três tabelas, conferindo direto no banco (≈ 4 a 5 min)
+
+Para ser rápido: deixe o Swagger e o Query editor em **duas abas lado a lado** (ou alterne com Ctrl+Tab), cole os
+JSON do bloco de notas e, no Query editor, deixe os três `SELECT` escritos e rode só o que interessa (selecione a
+linha e clique em **Run**).
 
 Abra o banco: portal → SQL databases → `vozviva` → **Query editor**, entre com o usuário `vozvivaadmin` e cole a
 `SQL_ADMIN_SENHA` do gerenciador de senhas (o campo esconde a senha). Se pedir, clique em **Allowlist IP**.
@@ -466,7 +487,21 @@ SELECT id, perfil_id, nome, telefone, prioridade FROM contatos_emergencia ORDER 
 
 ---
 
-## Fase C – Depois de gravar
+## Fase C – Edição: acelerar as esperas
+
+Use o **Clipchamp**, que já vem no Windows 11 (menu Iniciar → Clipchamp), ou outro editor que você já conheça.
+
+1. Importe a gravação e arraste para a linha do tempo.
+2. Ache o trecho em que você diz "vou acelerar" no script da Azure. Com a ferramenta **Split** (tesoura), divida
+   o vídeo **logo depois dessa frase** e **logo antes de aparecer `Pronto`**.
+3. Selecione o pedaço do meio → **Speed** → escolha uma velocidade que deixe o trecho com uns 30 segundos (para
+   15 minutos de espera, use 16x ou mais). O áudio desse trecho fica mudo, e tudo bem, porque nele você não fala.
+4. Repita o mesmo com a espera da pipeline: do "vou acelerar até a pipeline terminar" até os dois estágios
+   ficarem verdes.
+5. **Não apague nenhum pedaço.** Só acelere. Confira se o vídeo final ficou com 18 a 20 minutos.
+6. Exporte em **1080p** (ou 720p no mínimo) e envie para o YouTube.
+
+## Fase D – Depois de editar
 
 1. **Assista ao vídeo já publicado no YouTube** (público ou não listado): 720p, áudio claro e todas as partes.
 2. **Peça para o Claude trazer a alteração do vídeo para o GitHub.** Ela foi feita no Azure Repos e precisa voltar
@@ -509,6 +544,6 @@ grupo `rg-vozviva` inteiro (com o alerta de gastos). Não tem volta: os dados do
 | Não criou branch para a tarefa | −10 | Parte 3.4 |
 | Alteração no README em vez do código | −20 | Parte 3.4 |
 | CRUD sem `SELECT` no banco em nuvem | −30 | Parte 4 |
-| Vídeo sem narração, abaixo de 720p ou com áudio ruim | −30 | Etapa A4 |
+| Vídeo sem narração, abaixo de 720p ou com áudio ruim | −30 | Etapa A4 e Fase C |
 | Item obrigatório faltando no vídeo | −20 cada | Partes 1 a 5 |
-| Entrega fora do prazo (19/11, 23h55) | −70 | Fase C |
+| Entrega fora do prazo (19/11, 23h55) | −70 | Fase D |
