@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# SPEC-024: apaga o grupo de recursos da VozViva na Azure (API, Azure SQL, ACR, RabbitMQ) e para a cobrança.
+# SPEC-024: apaga o grupo de recursos da VozViva na Azure (APIs, Azure SQL, ACR, RabbitMQ, Key Vault) e para a
+# cobrança.
 # Irreversível: os dados do banco são perdidos. Uso: ./scripts/remover-azure.sh  (ou CONFIRMAR=sim para não perguntar)
 set -euo pipefail
 
@@ -20,6 +21,14 @@ if [ "${CONFIRMAR:-}" != "sim" ]; then
     exit 1
   fi
 fi
+
+# O Key Vault apagado iria para a lixeira por 7 dias, com o nome reservado: apaga e expurga antes, para o
+# provisionar-azure.sh poder criar o cofre de novo com o mesmo nome (num ensaio seguido da gravação, por exemplo).
+for cofre in $(az keyvault list -g "$GRUPO" --query '[].name' -o tsv 2> /dev/null); do
+  az keyvault delete -n "$cofre" -o none && az keyvault purge -n "$cofre" -o none \
+    && echo "Key Vault ${cofre} apagado e expurgado (as senhas guardadas nele foram junto)." \
+    || echo "Não consegui expurgar o Key Vault ${cofre}; ele fica 7 dias na lixeira e o provisionar-azure.sh o recupera."
+done
 
 az group delete -n "$GRUPO" --yes --no-wait
 echo "Remoção de ${GRUPO} iniciada (leva alguns minutos). Acompanhe com: az group show -n ${GRUPO}"

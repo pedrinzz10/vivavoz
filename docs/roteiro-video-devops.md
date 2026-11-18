@@ -142,17 +142,17 @@ Digite uma senha **só com letras e números** e aperte Enter (nada aparece na t
 ```bash
 cat ~/vozviva-segredos.env
 ```
-**O que faz:** mostra o arquivo. **Copie tudo para um gerenciador de senhas.** Você vai precisar da
-`SQL_ADMIN_SENHA` no vídeo para entrar no banco, e de todas elas se o Cloud Shell reiniciar. Depois limpe a tela:
+**O que faz:** mostra o arquivo, para você conferir. Não precisa guardar as senhas em outro lugar: na Parte 2, o
+script grava todas no **Key Vault** da Azure, e é de lá que você copia a senha do banco na Parte 4. Depois limpe a
+tela:
 
 ```bash
 clear
 ```
 **O que faz:** apaga o que estava na tela, para as senhas não ficarem expostas.
 
-Se o Cloud Shell reiniciar antes da gravação, o arquivo some. Para recriá-lo, rode
-`read -rs K && echo "$K" > ~/vozviva-segredos.env`, cole a primeira linha do gerenciador de senhas e repita com
-`>>` no lugar de `>` para cada uma das outras linhas.
+Se o Cloud Shell reiniciar antes da gravação e o arquivo sumir, refaça esta etapa: como a Azure ainda não foi
+criada, senhas novas servem do mesmo jeito.
 
 ### A3. Atualizar o Azure Repos com o GitHub
 
@@ -172,7 +172,7 @@ Deixe estas abas abertas, na ordem em que vão aparecer:
 | Azure DevOps | `https://dev.azure.com/vozviva/vozviva` |
 
 **Checklist técnico:** resolução de 1280×720 ou mais, microfone testado, **narração falada** (legendas no lugar
-da voz tiram 30 pontos), notificações desligadas e o gerenciador de senhas **fora da tela**.
+da voz tiram 30 pontos), notificações desligadas e nenhuma senha aberta em outra janela.
 
 **Recomendação:** se der tempo, faça um ensaio completo antes, sem gravar: rode as Partes 2 e 3, confira que a
 pipeline fica verde e apague tudo com `./scripts/remover-azure.sh`. Custa poucos centavos de crédito e evita
@@ -204,6 +204,8 @@ legenda** (10 pontos).
      de zeladoria."
    - "O **Azure SQL** guarda os dados, com dois bancos: `vozviva` para a API Java e `zeladoria` para a .NET."
    - "O **Container Registry** guarda as imagens da API Java que a pipeline gera."
+   - "O **Key Vault** é o cofre das senhas: as APIs leem as senhas dele com a identidade gerenciada, e nenhuma
+     senha fica nas configurações nem no código."
    - "O **RabbitMQ** roda num **Container Instance**, dentro de uma **rede virtual** privada, sem endereço
      público."
    - "Um **alerta de gastos** avisa por e-mail antes de os créditos acabarem."
@@ -220,6 +222,7 @@ legenda** (10 pontos).
    - **6** "No Azure DevOps, a tarefa vira branch e pull request; o merge dispara o build com os testes, a imagem
      vai para o registro e a release publica na Azure."
    - **7** "Os locais de atendimento vêm do OpenStreetMap, carregados no banco."
+   - **8** "Quando sobem, as APIs buscam as senhas no Key Vault."
    - **Legenda:** "Linha cheia é chamada direta; tracejada é assíncrona; verde é build e deploy; laranja é a IA."
 
 ### Parte 2 – Subir os recursos na Azure (≈ 3 min no vídeo final; 20 min gravando)
@@ -278,11 +281,13 @@ O que falar sobre cada bloco do script:
 | No terminal aparece | O que falar |
 |---|---|
 | Grupo de recursos | "Primeiro o grupo `rg-vozviva`, em `brazilsouth`, que reúne tudo." |
+| Key Vault | "Logo depois, o Key Vault: o script grava nele todas as senhas que carreguei. Daqui para a frente, as APIs só recebem uma referência ao cofre." |
 | Azure SQL | "O servidor SQL com os bancos `vozviva` e `zeladoria`. A API não usa o administrador: o script cria o usuário `vozviva_app`, que só mexe nos bancos da aplicação." |
 | Container Registry | "O registro privado onde a pipeline vai guardar as imagens da API." |
 | Rede e RabbitMQ | "A rede virtual e o RabbitMQ em container, só com endereço privado." |
-| App Service | "O plano B1 e as duas APIs. A Java vai receber a imagem do registro, que ela acessa por identidade gerenciada, sem senha. As configurações e senhas viram variáveis de ambiente do App Service." |
+| App Service | "O plano B1 e as duas APIs. Cada API tem uma identidade gerenciada: com ela, a Java baixa a imagem do registro e as duas leem as senhas do Key Vault, só com permissão de leitura. Nas variáveis de ambiente ficam só referências ao cofre." |
 | API .NET | "A API .NET de zeladoria é compilada e publicada aqui mesmo." |
+| Key Vault: o App Service consegue ler | "O script confere que o App Service conseguiu ler todas as senhas do cofre." |
 | Orçamento | "Por fim, um alerta de gastos de 80 dólares, que manda e-mail em 50% e 80% do valor." |
 
 **Resultado esperado:** termina com o título `Pronto` e um resumo com os endereços.
@@ -293,7 +298,7 @@ az resource list -g rg-vozviva --query "[].{nome:name,tipo:type}" -o table
 **O que faz:** lista tudo o que foi criado no grupo `rg-vozviva`.
 
 **Mostrar no portal:** Resource groups → `rg-vozviva`, com os dois App Services, o plano, o Azure SQL e os bancos,
-o Container Registry, o Container Instance (RabbitMQ) e a rede virtual.
+o Container Registry, o Key Vault, o Container Instance (RabbitMQ) e a rede virtual.
 > "Esses são os recursos do desenho, criados pelo script. Ele pode rodar de novo sem duplicar nada."
 
 ### Parte 3 – Organização, alteração no código e pipelines (≈ 8 a 9 min no vídeo final)
@@ -427,8 +432,11 @@ Para ser rápido: deixe o Swagger e o Query editor em **duas abas lado a lado** 
 JSON do bloco de notas e, no Query editor, deixe os três `SELECT` escritos e rode só o que interessa (selecione a
 linha e clique em **Run**).
 
-Abra o banco: portal → SQL databases → `vozviva` → **Query editor**, entre com o usuário `vozvivaadmin` e cole a
-`SQL_ADMIN_SENHA` do gerenciador de senhas (o campo esconde a senha). Se pedir, clique em **Allowlist IP**.
+Pegue a senha do banco no cofre: portal → Key vaults → `kv-vozviva-rm562312` → **Objetos → Segredos** →
+`sql-admin-senha` → a versão atual → clique no ícone de **copiar** ao lado de "Valor do segredo" (não clique em
+"Mostrar"). Depois abra o banco: portal → SQL databases → `vozviva` → **Query editor**, entre com o usuário
+`vozvivaadmin` e cole a senha (o campo esconde o que é digitado). Se pedir, clique em **Allowlist IP**.
+> "A senha do banco também está no Key Vault: copio de lá sem mostrar."
 
 **Regra da disciplina:** para provar que gravou, use **`SELECT` no Query editor**, nunca o GET. Faça o `SELECT`
 depois de **cada** operação. Faltar qualquer operação tira 30 pontos.

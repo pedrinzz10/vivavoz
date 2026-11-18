@@ -137,7 +137,9 @@ Versão editável no draw.io: [`docs/arquitetura.drawio`](docs/arquitetura.drawi
 
 O App Service Plan B1 roda as **duas APIs**: a API Java (container, imagem do ACR) e a API .NET de zeladoria. O Azure
 SQL tem **dois bancos** (`vozviva`, da API Java, e `zeladoria`, da API .NET), cada um com o usuário de privilégio
-mínimo `vozviva_app`. O RabbitMQ não tem IP público: só as APIs o alcançam, pela rede virtual.
+mínimo `vozviva_app`. O RabbitMQ não tem IP público: só as APIs o alcançam, pela rede virtual. As senhas ficam no
+**Key Vault** `kv-vozviva-<sufixo>`: as configurações das APIs guardam só referências ao cofre, que o App Service
+resolve com a identidade gerenciada de cada API (permissão só de leitura).
 
 | # | Fluxo |
 |---|---|
@@ -148,6 +150,7 @@ mínimo `vozviva_app`. O RabbitMQ não tem IP público: só as APIs o alcançam,
 | 5 | O app também usa a API .NET de zeladoria, publicada no mesmo App Service Plan, que valida o mesmo JWT emitido pela API Java (com o órgão do gestor na claim `orgao`) |
 | 6 | Azure DevOps: tarefa no Boards, branch e PR no Repos; o merge na main dispara o build com testes, a imagem vai para o ACR e a release a publica no App Service, conferindo a readiness (`/actuator/health/readiness`) |
 | 7 | Os locais de atendimento vêm de uma importação única do OpenStreetMap, aplicada pelo Flyway como carga do banco |
+| 8 | Ao subir, as APIs recebem as senhas (banco, RabbitMQ, JWT, usuários de teste e chave da IA) do Key Vault, por referência `@Microsoft.KeyVault(...)` resolvida com a identidade gerenciada; nenhuma senha fica nas configurações nem no repositório |
 
 ## Pré-requisitos
 
@@ -659,6 +662,13 @@ desatualizado.
 
    O script pode rodar de novo: ele só cria o que falta e mostra o que criou ou reaproveitou. No fim, imprime
    as URLs e os nomes para o próximo passo.
+
+   As senhas recebidas por variável de ambiente vão para o Key Vault `kv-vozviva-<sufixo>` (modo RBAC): quem roda
+   o script recebe **Key Vault Secrets Officer**, e a identidade gerenciada de cada API, **Key Vault Secrets User**.
+   As configurações das APIs ficam com referências `@Microsoft.KeyVault(VaultName=...;SecretName=...)`, e o script
+   só termina depois de conferir que o App Service resolveu todas. A senha do administrador do SQL (para o Query
+   editor) é o segredo `sql-admin-senha`: no portal, Key Vault → Objetos → Segredos → `sql-admin-senha` → versão
+   atual → copiar.
 3. **Azure DevOps:** crie a organização em https://aex.dev.azure.com e rode, no Cloud Shell da Azure:
 
    ```bash
@@ -704,7 +714,8 @@ desatualizado.
    crie, leia, altere e exclua perfis de emergência (`perfis_emergencia`) e contatos (`contatos_emergencia`).
    Confira cada operação com `SELECT` no Query editor do Azure SQL, por exemplo:
    `SELECT * FROM contatos_emergencia ORDER BY id DESC;`.
-8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro, com o orçamento dele. Na OCI, exclua a API key, o orçamento e o
+8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro, com o orçamento dele, e expurga o Key
+   Vault (senão o nome ficaria reservado por 7 dias na lixeira). Na OCI, exclua a API key, o orçamento e o
    compartimento `vozviva` pelo console.
 
 Para testar a imagem localmente, com o SQL Server e o RabbitMQ do `docker compose` (o mesmo teste foi feito

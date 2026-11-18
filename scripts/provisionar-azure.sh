@@ -53,6 +53,7 @@ SQL_BANCO="vozviva"
 SQL_ADMIN="vozvivaadmin"
 SQL_APP_USUARIO="vozviva_app"
 ACR="acrvozviva${SUFIXO_LIMPO}"
+KEYVAULT="kv-vozviva-${SUFIXO_LIMPO}"
 VNET="vnet-vozviva"
 SUBNET_APP="snet-app"
 SUBNET_RABBITMQ="snet-rabbitmq"
@@ -86,7 +87,8 @@ az account show --query "{assinatura:name, id:id}" -o table
 
 # Assinaturas novas (como as de estudante) vêm com alguns provedores desligados, e o primeiro "create" falharia.
 passo "Provedores de recursos da assinatura"
-for provedor in Microsoft.Web Microsoft.Sql Microsoft.ContainerRegistry Microsoft.ContainerInstance Microsoft.Network; do
+for provedor in Microsoft.Web Microsoft.Sql Microsoft.ContainerRegistry Microsoft.ContainerInstance Microsoft.Network \
+    Microsoft.KeyVault; do
   if [ "$(az provider show -n "$provedor" --query registrationState -o tsv)" = "Registered" ]; then
     reaproveitado "$provedor"
   else
@@ -102,6 +104,70 @@ else
   az group create -n "$GRUPO" -l "$LOCALIZACAO" --tags projeto=vozviva disciplina=devops -o none
   criado "$GRUPO"
 fi
+
+passo "Key Vault ${KEYVAULT}: cofre com as senhas (as APIs leem daqui; nenhuma senha fica nas configurações)"
+if existe az keyvault show -g "$GRUPO" -n "$KEYVAULT"; then
+  reaproveitado "$KEYVAULT"
+elif [ -n "$(az keyvault list-deleted --resource-type vault --query "[?name=='${KEYVAULT}'].name" -o tsv 2> /dev/null)" ]; then
+  # Um cofre apagado fica 7 dias na lixeira com o nome reservado: recupera em vez de criar outro.
+  az keyvault recover -n "$KEYVAULT" -o none
+  criado "$KEYVAULT (recuperado da lixeira)"
+else
+  az keyvault create -g "$GRUPO" -n "$KEYVAULT" -l "$LOCALIZACAO" --enable-rbac-authorization true \
+    --retention-days 7 -o none
+  criado "$KEYVAULT"
+fi
+KEYVAULT_ID="$(az keyvault show -g "$GRUPO" -n "$KEYVAULT" --query id -o tsv)"
+
+# Dá um papel a uma identidade num escopo (o cofre inteiro ou um segredo só), se ela ainda não tiver.
+papel_em() {
+  local escopo="$1" objeto="$2" tipo="$3" papel="$4" descricao="$5"
+  if [ -n "$(az role assignment list --assignee "$objeto" --scope "$escopo" --role "$papel" --query '[].id' -o tsv)" ]; then
+    reaproveitado "$descricao"
+  else
+    az role assignment create --assignee-object-id "$objeto" --assignee-principal-type "$tipo" \
+      --scope "$escopo" --role "$papel" -o none
+    criado "$descricao"
+  fi
+}
+papel_no_cofre() { papel_em "$KEYVAULT_ID" "$1" "$2" "$3" "${3} para ${4}"; }
+# As APIs leem só os segredos que usam (nunca a sql-admin-senha): leitura em cada segredo, não no cofre inteiro.
+leitura_dos_segredos() {
+  local objeto="$1" quem="$2" segredo
+  shift 2
+  for segredo in "$@"; do
+    papel_em "${KEYVAULT_ID}/secrets/${segredo}" "$objeto" ServicePrincipal "Key Vault Secrets User" \
+      "leitura de ${segredo} para ${quem}"
+  done
+}
+# Quem roda o script grava os segredos (e consegue copiá-los no portal, como a senha do SQL para o Query editor).
+EU="$(az ad signed-in-user show --query id -o tsv)"
+papel_no_cofre "$EU" User "Key Vault Secrets Officer" "você"
+
+# Grava um segredo; a permissão recém-dada pode levar alguns minutos para valer, então tenta de novo.
+guardar() {
+  local nome="$1" valor="$2" tentativa
+  for tentativa in 1 2 3 4 5 6 7 8 9 10; do
+    if az keyvault secret set --vault-name "$KEYVAULT" -n "$nome" --value "$valor" -o none 2> /dev/null; then
+      echo "    segredo ${nome}"
+      return 0
+    fi
+    [ "$tentativa" = 1 ] && echo "    esperando a permissão no cofre valer..."
+    sleep 20
+  done
+  echo "    não consegui gravar o segredo ${nome} no ${KEYVAULT}" >&2
+  exit 1
+}
+# Referência que o App Service resolve na hora de subir a API, com a identidade gerenciada dela.
+ref() { printf '@Microsoft.KeyVault(VaultName=%s;SecretName=%s)' "$KEYVAULT" "$1"; }
+
+guardar sql-admin-senha "$SQL_ADMIN_SENHA"
+guardar app-sql-senha "$APP_SQL_SENHA"
+guardar rabbitmq-senha "$RABBITMQ_SENHA"
+guardar jwt-secret "$JWT_SECRET"
+[ -n "${USUARIOS_TESTE_SENHA:-}" ] && guardar usuarios-teste-senha "$USUARIOS_TESTE_SENHA"
+[ -n "${OCI_GENAI_API_KEY:-}" ] && guardar oci-genai-api-key "$OCI_GENAI_API_KEY"
+[ -n "${OCI_GENAI_PRIVATE_KEY:-}" ] && guardar oci-genai-private-key "$OCI_GENAI_PRIVATE_KEY"
 
 passo "Azure SQL: servidor ${SQL_SERVIDOR}"
 if existe az sql server show -g "$GRUPO" -n "$SQL_SERVIDOR"; then
@@ -262,6 +328,12 @@ else
     --scope "$ACR_ID" --role AcrPull -o none
   criado "permissão AcrPull"
 fi
+SEGREDOS_JAVA=(app-sql-senha rabbitmq-senha jwt-secret)
+[ -n "${USUARIOS_TESTE_SENHA:-}" ] && SEGREDOS_JAVA+=(usuarios-teste-senha)
+[ -n "${OCI_GENAI_API_KEY:-}" ] && SEGREDOS_JAVA+=(oci-genai-api-key)
+[ -n "${OCI_GENAI_PRIVATE_KEY:-}" ] && SEGREDOS_JAVA+=(oci-genai-private-key)
+leitura_dos_segredos "$PRINCIPAL" "$WEBAPP" "${SEGREDOS_JAVA[@]}"
+
 
 passo "App Service: integração com a rede virtual (acesso privado ao RabbitMQ)"
 if [ -n "$(az webapp vnet-integration list -g "$GRUPO" -n "$WEBAPP" --query '[].name' -o tsv)" ]; then
@@ -279,7 +351,7 @@ az webapp config set -g "$GRUPO" -n "$WEBAPP" --always-on true --min-tls-version
 az webapp log config -g "$GRUPO" -n "$WEBAPP" --docker-container-logging filesystem -o none
 echo "    ok (logs do container ligados)"
 
-passo "App Service: variáveis de ambiente (segredos ficam só aqui, nunca no repositório)"
+passo "App Service: variáveis de ambiente (as senhas são referências ao ${KEYVAULT}, nunca o valor)"
 DB_URL="jdbc:sqlserver://${SQL_SERVIDOR}.database.windows.net:1433;database=${SQL_BANCO};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
 CONFIGURACOES=(
   "SPRING_PROFILES_ACTIVE=prod"
@@ -289,24 +361,26 @@ CONFIGURACOES=(
   "JAVA_OPTS=${JAVA_OPTS_APP}"
   "DB_URL=${DB_URL}"
   "DB_USERNAME=${SQL_APP_USUARIO}"
-  "DB_PASSWORD=${APP_SQL_SENHA}"
+  "DB_PASSWORD=$(ref app-sql-senha)"
   "RABBITMQ_HOST=${RABBITMQ_HOST}"
   "RABBITMQ_PORT=5672"
   "RABBITMQ_USERNAME=${RABBITMQ_USUARIO}"
-  "RABBITMQ_PASSWORD=${RABBITMQ_SENHA}"
-  "JWT_SECRET=${JWT_SECRET}"
+  "RABBITMQ_PASSWORD=$(ref rabbitmq-senha)"
+  "JWT_SECRET=$(ref jwt-secret)"
   "JWT_ISSUER=${JWT_ISSUER}"
   "JWT_AUDIENCE=${JWT_AUDIENCE}"
 )
-[ -n "${OCI_GENAI_API_KEY:-}" ] && CONFIGURACOES+=("OCI_GENAI_API_KEY=${OCI_GENAI_API_KEY}")
+[ -n "${OCI_GENAI_API_KEY:-}" ] && CONFIGURACOES+=("OCI_GENAI_API_KEY=$(ref oci-genai-api-key)")
 [ -n "${OCI_GENAI_BASE_URL:-}" ] && CONFIGURACOES+=("OCI_GENAI_BASE_URL=${OCI_GENAI_BASE_URL}")
 [ -n "${OCI_GENAI_MODEL:-}" ] && CONFIGURACOES+=("OCI_GENAI_MODEL=${OCI_GENAI_MODEL}")
 # Plano B da IA (conta sem API key do Generative AI): a API assina as chamadas com a chave do usuário da OCI.
-for var in OCI_GENAI_TENANCY_OCID OCI_GENAI_USER_OCID OCI_GENAI_FINGERPRINT OCI_GENAI_PRIVATE_KEY     OCI_GENAI_COMPARTMENT_OCID; do
+# Os OCIDs e o fingerprint não são segredos; a chave privada fica no cofre.
+for var in OCI_GENAI_TENANCY_OCID OCI_GENAI_USER_OCID OCI_GENAI_FINGERPRINT OCI_GENAI_COMPARTMENT_OCID; do
   [ -n "${!var:-}" ] && CONFIGURACOES+=("${var}=${!var}")
 done
+[ -n "${OCI_GENAI_PRIVATE_KEY:-}" ] && CONFIGURACOES+=("OCI_GENAI_PRIVATE_KEY=$(ref oci-genai-private-key)")
 if [ -n "${USUARIOS_TESTE_SENHA:-}" ]; then
-  CONFIGURACOES+=("USUARIOS_TESTE_HABILITADO=true" "USUARIOS_TESTE_SENHA=${USUARIOS_TESTE_SENHA}")
+  CONFIGURACOES+=("USUARIOS_TESTE_HABILITADO=true" "USUARIOS_TESTE_SENHA=$(ref usuarios-teste-senha)")
 fi
 az webapp config appsettings set -g "$GRUPO" -n "$WEBAPP" --settings "${CONFIGURACOES[@]}" -o none
 echo "    ${#CONFIGURACOES[@]} variáveis definidas"
@@ -325,17 +399,23 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
     --ftps-state Disabled --generic-configurations '{"healthCheckPath": "/health/live"}' -o none
   az webapp log config -g "$GRUPO" -n "$WEBAPP_DOTNET" --docker-container-logging filesystem -o none
 
-  passo "API .NET: variáveis de ambiente (mesmo JWT da API Java, banco ${SQL_BANCO_DOTNET})"
+  passo "API .NET: identidade gerenciada com leitura só dos segredos dela no ${KEYVAULT}"
   SENHA_CONEXAO_DOTNET="${APP_SQL_SENHA//\'/\'\'}"
   CONEXAO_DOTNET="Server=tcp:${SQL_SERVIDOR}.database.windows.net,1433;Database=${SQL_BANCO_DOTNET};User ID=${SQL_APP_USUARIO};Password='${SENHA_CONEXAO_DOTNET}';Encrypt=True;TrustServerCertificate=False;Connection Timeout=30"
+  # A string de conexão tem a senha dentro: vai inteira para o cofre.
+  guardar zeladoria-conexao-sql "$CONEXAO_DOTNET"
+  PRINCIPAL_DOTNET="$(az webapp identity assign -g "$GRUPO" -n "$WEBAPP_DOTNET" --query principalId -o tsv)"
+  leitura_dos_segredos "$PRINCIPAL_DOTNET" "$WEBAPP_DOTNET" jwt-secret zeladoria-conexao-sql
+
+  passo "API .NET: variáveis de ambiente (mesmo JWT da API Java, banco ${SQL_BANCO_DOTNET}, senhas no cofre)"
   CONFIGURACOES_DOTNET=(
     "ASPNETCORE_ENVIRONMENT=Production"
-    "JWT_SECRET=${JWT_SECRET}"
+    "JWT_SECRET=$(ref jwt-secret)"
     "Jwt__Issuer=${JWT_ISSUER}"
     "Jwt__Audience=${JWT_AUDIENCE}"
     "Database__Provider=SqlServer"
     "Database__CriarTabelasAoIniciar=true"
-    "ConnectionStrings__SqlServer=${CONEXAO_DOTNET}"
+    "ConnectionStrings__SqlServer=$(ref zeladoria-conexao-sql)"
     "ServicosExternos__ApiJavaHealthUrl=https://${WEBAPP}.azurewebsites.net/actuator/health/liveness"
     "Uploads__Pasta=/home/uploads"
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true"
@@ -359,6 +439,30 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
   echo "    publicado o commit ${COMMIT_DOTNET}"
 fi
 
+ASSINATURA="$(az account show --query id -o tsv)"
+# O App Service resolve as referências ao cofre com a identidade da API; logo depois de dar a permissão, a
+# resolução pode falhar por alguns minutos. Confere e reinicia a API até todas ficarem resolvidas.
+referencias_resolvidas() {
+  local app="$1" tentativa pendentes
+  for tentativa in 1 2 3 4 5 6 7 8 9 10; do
+    pendentes=$(MSYS_NO_PATHCONV=1 az rest --method get \
+      --url "https://management.azure.com/subscriptions/${ASSINATURA}/resourceGroups/${GRUPO}/providers/Microsoft.Web/sites/${app}/config/configreferences/appsettings?api-version=2022-03-01" \
+      --query "value[?properties.status!='Resolved'].name" -o tsv 2> /dev/null || echo "erro")
+    if [ -z "$pendentes" ]; then
+      echo "    ${app}: todas as referências ao cofre resolvidas"
+      return 0
+    fi
+    [ "$tentativa" = 1 ] && echo "    ${app}: esperando o App Service ler o cofre..."
+    sleep 30
+    az webapp restart -g "$GRUPO" -n "$app" -o none 2> /dev/null || true
+  done
+  echo "    ${app}: referências ainda não resolvidas (${pendentes//$'\n'/, }); confira em Configuração > Variáveis de ambiente" >&2
+  return 1
+}
+passo "Key Vault: o App Service consegue ler as senhas do ${KEYVAULT}"
+referencias_resolvidas "$WEBAPP"
+[ "$PUBLICAR_DOTNET" = "sim" ] && referencias_resolvidas "$WEBAPP_DOTNET"
+
 passo "Orçamento ${ORCAMENTO} do grupo ${GRUPO}: US\$ ${ORCAMENTO_USD} acumulados, alertas em 50%, 80% e na previsão de 100%"
 # Azure for Students tem limite de gastos: quando o crédito acaba, os recursos param (nada é cobrado). O alerta
 # avisa antes disso, para a API não sair do ar durante a avaliação.
@@ -366,7 +470,6 @@ passo "Orçamento ${ORCAMENTO} do grupo ${GRUPO}: US\$ ${ORCAMENTO_USD} acumulad
 # (um orçamento mensal zeraria na virada do mês e nunca chegaria ao alerta). E o orçamento é do grupo de
 # recursos: mede só o custo deste ambiente e é apagado junto com o grupo pelo remover-azure.sh.
 ORCAMENTO_EMAIL="${ORCAMENTO_EMAIL:-$(az account show --query user.name -o tsv)}"
-ASSINATURA="$(az account show --query id -o tsv)"
 INICIO_ORCAMENTO="$(date -u +%Y-%m-01)"
 FIM_ORCAMENTO="$(date -u -d "${INICIO_ORCAMENTO} +1 year" +%Y-%m-%d)"
 alerta() {
@@ -405,6 +508,7 @@ cat <<RESUMO
     Azure SQL:                       ${SQL_SERVIDOR}.database.windows.net / banco ${SQL_BANCO}
                                      (API usa ${SQL_APP_USUARIO}; ${SQL_ADMIN} só para administração)
     Container Registry:              ${ACR_SERVIDOR}
+    Key Vault (senhas):              ${KEYVAULT} (a senha do ${SQL_ADMIN} é o segredo sql-admin-senha)
     RabbitMQ (rede privada):         ${RABBITMQ_HOST}:5672
     API .NET (zeladoria):            https://${WEBAPP_DOTNET}.azurewebsites.net/swagger (se PUBLICAR_DOTNET=sim)
 
