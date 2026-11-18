@@ -167,6 +167,16 @@ class SegurancaIntegrationTest {
 	}
 
 	@Test
+	void probesDeLivenessEReadinessPublicas() throws Exception {
+		// Liveness: health check do App Service. Readiness (API e banco): conferência no fim da release.
+		for (String probe : new String[] { "/actuator/health/liveness", "/actuator/health/readiness" }) {
+			mvc.perform(get(probe))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("UP"));
+		}
+	}
+
+	@Test
 	void outrosEndpointsDoActuatorProtegidos() throws Exception {
 		mvc.perform(get("/actuator/env"))
 			.andExpect(status().isUnauthorized());

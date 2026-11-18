@@ -107,9 +107,10 @@ dores do grupo:
 **Quem participa:** cidadão e cuidador (usuários), contatos de emergência (rede de apoio), prefeitura (zeladoria e
 saúde, pela API .NET), SAMU 192 (sempre indicado nas emergências) e OpenStreetMap (dados abertos, licença ODbL).
 
-**Custo de operação:** o ambiente da Azure criado pelo script (App Service B1, Azure SQL Basic, ACR Basic e um
-RabbitMQ em container) é de entrada e atende o piloto. Para crescer, sobe-se o plano do App Service e do banco, sem
-mudar a arquitetura.
+**Custo de operação:** o ambiente da Azure criado pelo script (App Service B1 com as duas APIs, dois bancos Azure SQL
+Basic, ACR Basic e um RabbitMQ em container) custa cerca de **US$ 2,20 por dia** em `brazilsouth`, pelos preços de
+varejo da Microsoft: RabbitMQ (0,5 vCPU e 1 GB) US$ 1,19, App Service US$ 0,48, bancos US$ 0,39 e ACR US$ 0,17. Atende
+o piloto; para crescer, sobe-se o plano do App Service e do banco, sem mudar a arquitetura.
 
 ## Stack
 
@@ -581,7 +582,8 @@ desatualizado.
 | Azure SQL (servidor + banco `vozviva`, Basic) | Banco da API (PaaS) |
 | Azure Container Registry (Basic) | Imagens da API, uma por build |
 | Rede virtual `vnet-vozviva` (2 sub-redes) | Liga o App Service ao RabbitMQ por IP privado |
-| Container Instance com RabbitMQ | Fila do botão de emergência, sem IP público |
+| Container Instance com RabbitMQ (0,5 vCPU e 1 GB) | Fila do botão de emergência, sem IP público; imagem oficial pelo espelho `public.ecr.aws` (o Docker Hub limita downloads anônimos) |
+| Orçamento `vozviva-creditos` (assinatura) | Alerta por e-mail em 50% do crédito e na previsão de 80%: o Azure for Students para os recursos quando o crédito acaba |
 | App Service Linux B1 (container) | API Java; HTTPS obrigatório e health check em `/actuator/health/liveness` |
 | Segundo app no mesmo plano B1 (.NET 8, sem custo extra) + banco `zeladoria` (Basic) | API .NET de zeladoria, que o app mobile também usa; compilada a partir do repositório da equipe .NET e publicada pelo próprio script. Para pular: `PUBLICAR_DOTNET=nao` |
 
@@ -602,6 +604,12 @@ desatualizado.
   histórico.
 - O RabbitMQ não usa volume do Azure Files: a documentação do RabbitMQ desaconselha guardar os dados em
   sistemas de arquivos de rede.
+- A API fala com o RabbitMQ pelo IP privado do container. Se ele for recriado e o IP mudar, rodar o
+  `provisionar-azure.sh` de novo atualiza o `RABBITMQ_HOST`; até lá, as emergências esperam como `ACIONADA`.
+
+**Memória e logs:** as duas APIs dividem os 1,75 GB do plano B1, por isso a JVM fica limitada a 40% da memória
+(`JAVA_OPTS`). Os logs dos containers ficam ligados no próprio App Service (3 dias): *Log stream* no portal ou
+`az webapp log tail -g rg-vozviva -n <webAppName>`. A release confere `/actuator/health/readiness` (API e banco).
 
 **Passo a passo:**
 
@@ -673,7 +681,7 @@ desatualizado.
    crie, leia, altere e exclua perfis de emergência (`perfis_emergencia`) e contatos (`contatos_emergencia`).
    Confira cada operação com `SELECT` no Query editor do Azure SQL, por exemplo:
    `SELECT * FROM contatos_emergencia ORDER BY id DESC;`.
-8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro. Na OCI, exclua a API key, o orçamento e o
+8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro e o orçamento. Na OCI, exclua a API key, o orçamento e o
    compartimento `vozviva` pelo console.
 
 Para testar a imagem localmente, com o SQL Server e o RabbitMQ do `docker compose` (o mesmo teste foi feito

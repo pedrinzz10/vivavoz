@@ -118,7 +118,9 @@ stages:
 
                 - bash: |
                     set -euo pipefail
-                    url="https://$(webAppName).azurewebsites.net/actuator/health"
+                    # Readiness: a API e o banco estão prontos. O RabbitMQ fica de fora de propósito: uma
+                    # lentidão do broker não pode reprovar uma release que já está atendendo.
+                    url="https://$(webAppName).azurewebsites.net/actuator/health/readiness"
                     for tentativa in $(seq 1 30); do
                       if curl -fsS --max-time 10 "$url" | grep -q '"status":"UP"'; then
                         echo "API no ar: $url (tentativa $tentativa)"

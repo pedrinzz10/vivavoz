@@ -26,6 +26,11 @@
 # LIBERAR_MEU_IP=sim (libera o seu IP no firewall do Azure SQL, para o Query editor e o SELECT do vídeo).
 # API .NET: PUBLICAR_DOTNET (padrão sim; o banco "zeladoria" Basic custa cerca de US$ 5 por mês), DOTNET_REPO e
 # DOTNET_BRANCH (padrão main do repositório da equipe .NET).
+# Orçamento: ORCAMENTO_USD (padrão 80, o crédito do Azure for Students) e ORCAMENTO_EMAIL (padrão: o e-mail da conta
+# logada) para o alerta de custo em 50% e 80%.
+#
+# Custo estimado em brazilsouth (preços de varejo da Microsoft): cerca de US$ 2,20 por dia, a maior parte do
+# RabbitMQ em container. Para parar a cobrança: ./scripts/remover-azure.sh.
 # Nenhuma senha fica neste arquivo.
 set -euo pipefail
 
@@ -51,6 +56,9 @@ VNET="vnet-vozviva"
 SUBNET_APP="snet-app"
 SUBNET_RABBITMQ="snet-rabbitmq"
 ACI_RABBITMQ="aci-vozviva-rabbitmq"
+# Mesma imagem oficial do Docker Hub, pelo espelho público da AWS: o Docker Hub limita downloads anônimos e a
+# Azure às vezes esbarra nesse limite ao criar o container ("toomanyrequests").
+RABBITMQ_IMAGEM="${RABBITMQ_IMAGEM:-public.ecr.aws/docker/library/rabbitmq:4}"
 RABBITMQ_USUARIO="vozviva"
 PLANO="plan-vozviva"
 WEBAPP="app-vozviva-${SUFIXO_LIMPO}"
@@ -62,6 +70,10 @@ DOTNET_REPO="${DOTNET_REPO:-https://github.com/Fabriciopereira-sp/DOTNETGS.git}"
 DOTNET_BRANCH="${DOTNET_BRANCH:-main}"
 SQL_BANCO_DOTNET="zeladoria"
 WEBAPP_DOTNET="app-zeladoria-${SUFIXO_LIMPO}"
+ORCAMENTO="vozviva-creditos"
+ORCAMENTO_USD="${ORCAMENTO_USD:-80}"
+# As duas APIs dividem os 1,75 GB do plano B1: sem limite, a JVM usaria até 75% da memória e o .NET ficaria sem.
+JAVA_OPTS_APP="-XX:MaxRAMPercentage=40 -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
 
 passo() { printf '\n==> %s\n' "$*"; }
 existe() { "$@" > /dev/null 2>&1; }
@@ -204,13 +216,23 @@ if existe az container show -g "$GRUPO" -n "$ACI_RABBITMQ"; then
   reaproveitado "$ACI_RABBITMQ (para trocar a senha, apague o container e rode o script de novo)"
 else
   # Sem IP público: só o App Service (pela integração com a rede virtual) alcança a porta 5672.
-  az container create -g "$GRUPO" -n "$ACI_RABBITMQ" -l "$LOCALIZACAO" \
-    --image docker.io/library/rabbitmq:4 --os-type Linux --cpu 1 --memory 1.5 \
-    --ports 5672 --vnet "$VNET" --subnet "$SUBNET_RABBITMQ" --restart-policy Always \
-    --environment-variables RABBITMQ_DEFAULT_USER="$RABBITMQ_USUARIO" \
-    --secure-environment-variables RABBITMQ_DEFAULT_PASS="$RABBITMQ_SENHA" -o none
+  # 0,5 vCPU e 1 GB sobram para a carga da demonstração e custam metade de 1 vCPU (o container é o item mais caro).
+  for tentativa in 1 2 3; do
+    if az container create -g "$GRUPO" -n "$ACI_RABBITMQ" -l "$LOCALIZACAO" \
+        --image "$RABBITMQ_IMAGEM" --os-type Linux --cpu 0.5 --memory 1 \
+        --ports 5672 --vnet "$VNET" --subnet "$SUBNET_RABBITMQ" --restart-policy Always \
+        --environment-variables RABBITMQ_DEFAULT_USER="$RABBITMQ_USUARIO" \
+        --secure-environment-variables RABBITMQ_DEFAULT_PASS="$RABBITMQ_SENHA" -o none; then
+      break
+    fi
+    [ "$tentativa" = 3 ] && { echo "Não foi possível criar o container do RabbitMQ." >&2; exit 1; }
+    echo "    falhou (tentativa ${tentativa}); nova tentativa em 30 s"
+    sleep 30
+  done
   criado "$ACI_RABBITMQ"
 fi
+# O IP privado vai para RABBITMQ_HOST da API. Se o container for recriado (ou a Azure o mover) e o IP mudar, rodar
+# este script de novo atualiza a configuração; até lá, as emergências ficam ACIONADA e o reenvio tenta depois.
 RABBITMQ_HOST="$(az container show -g "$GRUPO" -n "$ACI_RABBITMQ" --query ipAddress.ip -o tsv)"
 
 passo "App Service: plano ${PLANO} (Linux B1)"
@@ -252,7 +274,9 @@ passo "App Service: configuração (HTTPS, health check, always on)"
 az webapp update -g "$GRUPO" -n "$WEBAPP" --https-only true -o none
 az webapp config set -g "$GRUPO" -n "$WEBAPP" --always-on true --min-tls-version 1.2 --ftps-state Disabled \
   --generic-configurations '{"acrUseManagedIdentityCreds": true, "healthCheckPath": "/actuator/health/liveness"}' -o none
-echo "    ok"
+# Logs do container (stdout da API) no próprio App Service: Log stream no portal e "az webapp log tail".
+az webapp log config -g "$GRUPO" -n "$WEBAPP" --docker-container-logging filesystem -o none
+echo "    ok (logs do container ligados)"
 
 passo "App Service: variáveis de ambiente (segredos ficam só aqui, nunca no repositório)"
 DB_URL="jdbc:sqlserver://${SQL_SERVIDOR}.database.windows.net:1433;database=${SQL_BANCO};encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30"
@@ -260,6 +284,8 @@ CONFIGURACOES=(
   "SPRING_PROFILES_ACTIVE=prod"
   "WEBSITES_PORT=8080"
   "WEBSITES_CONTAINER_START_TIME_LIMIT=300"
+  "WEBSITE_HTTPLOGGING_RETENTION_DAYS=3"
+  "JAVA_OPTS=${JAVA_OPTS_APP}"
   "DB_URL=${DB_URL}"
   "DB_USERNAME=${SQL_APP_USUARIO}"
   "DB_PASSWORD=${APP_SQL_SENHA}"
@@ -292,6 +318,7 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
   az webapp update -g "$GRUPO" -n "$WEBAPP_DOTNET" --https-only true -o none
   az webapp config set -g "$GRUPO" -n "$WEBAPP_DOTNET" --always-on true --min-tls-version 1.2 \
     --ftps-state Disabled --generic-configurations '{"healthCheckPath": "/health/live"}' -o none
+  az webapp log config -g "$GRUPO" -n "$WEBAPP_DOTNET" --docker-container-logging filesystem -o none
 
   passo "API .NET: variáveis de ambiente (mesmo JWT da API Java, banco ${SQL_BANCO_DOTNET})"
   SENHA_CONEXAO_DOTNET="${APP_SQL_SENHA//\'/\'\'}"
@@ -307,6 +334,7 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
     "ServicosExternos__ApiJavaHealthUrl=https://${WEBAPP}.azurewebsites.net/actuator/health/liveness"
     "Uploads__Pasta=/home/uploads"
     "WEBSITES_ENABLE_APP_SERVICE_STORAGE=true"
+    "WEBSITE_HTTPLOGGING_RETENTION_DAYS=3"
   )
   az webapp config appsettings set -g "$GRUPO" -n "$WEBAPP_DOTNET" --settings "${CONFIGURACOES_DOTNET[@]}" -o none
   echo "    ${#CONFIGURACOES_DOTNET[@]} variáveis definidas (fotos em /home/uploads, que sobrevive aos deploys)"
@@ -325,6 +353,38 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
   rm -rf "$PASTA_DOTNET"
   echo "    publicado o commit ${COMMIT_DOTNET}"
 fi
+
+passo "Orçamento ${ORCAMENTO}: US\$ ${ORCAMENTO_USD} por mês, alerta por e-mail em 50% e 80%"
+# Azure for Students tem limite de gastos: quando o crédito acaba, os recursos param (nada é cobrado). O alerta
+# avisa antes disso, para a API não sair do ar durante a avaliação.
+ORCAMENTO_EMAIL="${ORCAMENTO_EMAIL:-$(az account show --query user.name -o tsv)}"
+ASSINATURA="$(az account show --query id -o tsv)"
+INICIO_ORCAMENTO="$(date -u +%Y-%m-01)"
+FIM_ORCAMENTO="$(date -u -d "${INICIO_ORCAMENTO} +1 year" +%Y-%m-%d)"
+cat > /tmp/orcamento-vozviva.json <<JSON
+{
+  "properties": {
+    "category": "Cost",
+    "amount": ${ORCAMENTO_USD},
+    "timeGrain": "Monthly",
+    "timePeriod": { "startDate": "${INICIO_ORCAMENTO}T00:00:00Z", "endDate": "${FIM_ORCAMENTO}T00:00:00Z" },
+    "notifications": {
+      "Atingiu50": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 50,
+                     "contactEmails": ["${ORCAMENTO_EMAIL}"], "thresholdType": "Actual" },
+      "Previsao80": { "enabled": true, "operator": "GreaterThanOrEqualTo", "threshold": 80,
+                      "contactEmails": ["${ORCAMENTO_EMAIL}"], "thresholdType": "Forecasted" }
+    }
+  }
+}
+JSON
+if MSYS_NO_PATHCONV=1 az rest --method put -o none \
+    --url "https://management.azure.com/subscriptions/${ASSINATURA}/providers/Microsoft.Consumption/budgets/${ORCAMENTO}?api-version=2023-05-01" \
+    --body @/tmp/orcamento-vozviva.json; then
+  echo "    ok (alertas para ${ORCAMENTO_EMAIL})"
+else
+  echo "    não foi possível criar o orçamento; crie em Cost Management > Budgets (o resto do ambiente está pronto)"
+fi
+rm -f /tmp/orcamento-vozviva.json
 
 passo "Pronto"
 cat <<RESUMO

@@ -23,3 +23,9 @@ fi
 
 az group delete -n "$GRUPO" --yes --no-wait
 echo "Remoção de ${GRUPO} iniciada (leva alguns minutos). Acompanhe com: az group show -n ${GRUPO}"
+
+# O orçamento criado pelo provisionamento é da assinatura (fica fora do grupo de recursos).
+ASSINATURA="$(az account show --query id -o tsv)"
+MSYS_NO_PATHCONV=1 az rest --method delete -o none \
+  --url "https://management.azure.com/subscriptions/${ASSINATURA}/providers/Microsoft.Consumption/budgets/vozviva-creditos?api-version=2023-05-01" \
+  2> /dev/null && echo "Orçamento vozviva-creditos removido." || true
