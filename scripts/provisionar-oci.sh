@@ -190,20 +190,38 @@ if [ -f "$ARQUIVO_ENV" ]; then
     STATUS=$(curl -s -o /dev/null -w '%{http_code}' -m 60 "${BASE_URL}/chat/completions" \
       -H "Authorization: Bearer ${OCI_GENAI_API_KEY}" -H 'Content-Type: application/json' -d "$CORPO")
   else
-    # Assina com a chave do usuário (a mesma que a API Java vai usar), por um arquivo de configuração temporário.
-    CONFIG=$(mktemp)
-    printf '[VOZVIVA]\nuser=%s\nfingerprint=%s\ntenancy=%s\nregion=%s\nkey_file=%s\n' "$OCI_GENAI_USER_OCID" \
-      "$OCI_GENAI_FINGERPRINT" "$OCI_GENAI_TENANCY_OCID" "$REGIAO" "$CHAVE_ASSINATURA" > "$CONFIG"
+    # Assina com curl exatamente como o AssinadorRequisicaoOci da API Java (mesmos cabeçalhos, na mesma ordem),
+    # usando a chave privada lida do próprio oci-genai.env: confere o formato da assinatura e o arquivo que vai
+    # para a Azure.
+    TMP_TESTE=$(mktemp -d)
+    printf '%s' "$OCI_GENAI_PRIVATE_KEY" | base64 -d > "$TMP_TESTE/chave.pem"
+    printf '%s' "$CORPO" > "$TMP_TESTE/corpo.json"
+    HOST_IA=$(printf '%s' "$BASE_URL" | sed -E 's#^https://([^/]+).*#\1#')
+    CAMINHO="$(printf '%s' "$BASE_URL" | sed -E 's#^https://[^/]+##')/chat/completions"
+    TIPO="application/json"
+    TAMANHO=$(wc -c < "$TMP_TESTE/corpo.json" | tr -d ' ')
+    RESUMO=$(openssl dgst -sha256 -binary "$TMP_TESTE/corpo.json" | base64 -w 0)
     # Uma chave recém-cadastrada leva até alguns minutos para valer.
     for tentativa in 1 2 3 4 5 6 7 8; do
-      STATUS=$(oci --config-file "$CONFIG" --profile VOZVIVA --auth api_key raw-request --http-method POST \
-        --target-uri "${BASE_URL}/chat/completions" --request-body "$CORPO" \
-        --request-headers "{\"opc-compartment-id\":\"${OCI_GENAI_COMPARTMENT_OCID}\"}" 2> /dev/null \
-        | jq -r '.status // "000"' 2> /dev/null | cut -c1-3)
+      DATA=$(LC_ALL=C date -u '+%a, %d %b %Y %H:%M:%S GMT')
+      printf 'date: %s\n(request-target): post %s\nhost: %s\ncontent-length: %s\ncontent-type: %s\nx-content-sha256: %s' \
+        "$DATA" "$CAMINHO" "$HOST_IA" "$TAMANHO" "$TIPO" "$RESUMO" > "$TMP_TESTE/assinar.txt"
+      ASSINATURA=$(openssl dgst -sha256 -sign "$TMP_TESTE/chave.pem" "$TMP_TESTE/assinar.txt" | base64 -w 0)
+      CHAVE_ID="${OCI_GENAI_TENANCY_OCID}/${OCI_GENAI_USER_OCID}/${OCI_GENAI_FINGERPRINT}"
+      STATUS=$(curl -s -o "$TMP_TESTE/resposta.json" -w '%{http_code}' -m 60 -X POST "https://${HOST_IA}${CAMINHO}" \
+        -H "date: ${DATA}" -H "host: ${HOST_IA}" -H "content-length: ${TAMANHO}" -H "content-type: ${TIPO}" \
+        -H "x-content-sha256: ${RESUMO}" -H "opc-compartment-id: ${OCI_GENAI_COMPARTMENT_OCID}" \
+        -H "authorization: Signature version=\"1\",headers=\"date (request-target) host content-length content-type x-content-sha256\",keyId=\"${CHAVE_ID}\",algorithm=\"rsa-sha256\",signature=\"${ASSINATURA}\"" \
+        --data-binary @"$TMP_TESTE/corpo.json")
       [ "$STATUS" = 401 ] && [ "$tentativa" != 8 ] && { sleep 20; continue; }
       break
     done
-    rm -f "$CONFIG"
+    if [ "$STATUS" = 200 ]; then
+      echo "    resposta: $(jq -r '.choices[0].message.content // empty' "$TMP_TESTE/resposta.json" 2> /dev/null | head -c 80)"
+    else
+      echo "    corpo da resposta: $(head -c 300 "$TMP_TESTE/resposta.json")"
+    fi
+    rm -rf "$TMP_TESTE"
   fi
   case "$STATUS" in
     200) echo "    o modelo respondeu (HTTP 200)" ;;
