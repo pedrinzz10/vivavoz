@@ -17,12 +17,16 @@ public record CadastroUsuarioRequest(
 		@NotBlank @Size(max = 120) String nome,
 		@NotBlank @Email @Size(max = 160) String email,
 		@NotBlank @Size(min = 8) @LimiteBytesUtf8(max = 72)
-		@Pattern(regexp = "^(?=.*[A-Za-zÀ-ÿ])(?=.*\\d).+$", message = "deve ter pelo menos uma letra e um número")
+		@Pattern(regexp = CadastroUsuarioRequest.REGRA_SENHA, message = CadastroUsuarioRequest.MENSAGEM_SENHA)
 		String senha,
 		@NotNull Papel papel,
 		@NotNull(message = "é preciso aceitar os termos de uso e privacidade")
 		@AssertTrue(message = "é preciso aceitar os termos de uso e privacidade")
 		Boolean consentimento) {
+
+	/** Pelo menos uma letra e um número (a mesma regra vale para a troca de senha). */
+	public static final String REGRA_SENHA = "^(?=.*[A-Za-zÀ-ÿ])(?=.*\\d).+$";
+	public static final String MENSAGEM_SENHA = "deve ter pelo menos uma letra e um número";
 
 	@Override
 	public String toString() {

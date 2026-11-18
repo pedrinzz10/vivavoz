@@ -1,9 +1,11 @@
 package br.com.fiap.vozviva.controller;
 
 import br.com.fiap.vozviva.config.OpenApiConfig;
+import br.com.fiap.vozviva.dto.AtualizarContaRequest;
 import br.com.fiap.vozviva.dto.CadastroUsuarioRequest;
 import br.com.fiap.vozviva.dto.LoginRequest;
 import br.com.fiap.vozviva.dto.TokenResponse;
+import br.com.fiap.vozviva.dto.TrocarSenhaRequest;
 import br.com.fiap.vozviva.dto.UsuarioResponse;
 import br.com.fiap.vozviva.security.UsuarioAutenticado;
 import br.com.fiap.vozviva.service.AutenticacaoService;
@@ -19,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -76,6 +79,32 @@ public class AutenticacaoController {
 	@Operation(summary = "Quem sou eu", description = "Dados do usuário dono do token.")
 	public UsuarioResponse eu() {
 		return autenticacao.buscar(usuarioAutenticado.idNumerico());
+	}
+
+	@PutMapping("/eu")
+	@ApiResponse(responseCode = "200", description = "Dados atualizados")
+	@Operation(summary = "Corrigir meus dados (LGPD)", description = "Corrige o nome da conta do token (direito de "
+			+ "correção da LGPD). O papel não muda por aqui, e o e-mail também não: sem confirmar o endereço novo, quem "
+			+ "tivesse o token conseguiria tomar a conta. O nome novo vai para o token no próximo login.")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "nome",
+			value = """
+					{"nome": "Maria da Silva Souza"}""")))
+	public UsuarioResponse atualizarConta(@Valid @RequestBody AtualizarContaRequest request) {
+		return autenticacao.atualizarConta(usuarioAutenticado.idNumerico(), request);
+	}
+
+	@PutMapping("/eu/senha")
+	@ApiResponse(responseCode = "204", description = "Senha trocada")
+	@ApiResponse(responseCode = "429", description = "Muitas tentativas com a senha atual errada")
+	@Operation(summary = "Trocar minha senha", description = "Exige a senha atual. A nova segue as regras do cadastro "
+			+ "(8 caracteres ou mais, com letra e número) e precisa ser diferente da atual. Erros de senha atual contam no "
+			+ "mesmo limite do login: 5 em 15 minutos bloqueiam (429).")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(examples = @ExampleObject(name = "troca",
+			value = """
+					{"senhaAtual": "girassol2026", "novaSenha": "ipe-amarelo-2027"}""")))
+	public ResponseEntity<Void> trocarSenha(@Valid @RequestBody TrocarSenhaRequest request) {
+		autenticacao.trocarSenha(usuarioAutenticado.idNumerico(), request);
+		return ResponseEntity.noContent().build();
 	}
 
 }

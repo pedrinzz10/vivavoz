@@ -107,9 +107,10 @@ dores do grupo:
 **Quem participa:** cidadão e cuidador (usuários), contatos de emergência (rede de apoio), prefeitura (zeladoria e
 saúde, pela API .NET), SAMU 192 (sempre indicado nas emergências) e OpenStreetMap (dados abertos, licença ODbL).
 
-**Custo de operação:** o ambiente da Azure criado pelo script (App Service B1, Azure SQL Basic, ACR Basic e um
-RabbitMQ em container) é de entrada e atende o piloto. Para crescer, sobe-se o plano do App Service e do banco, sem
-mudar a arquitetura.
+**Custo de operação:** o ambiente da Azure criado pelo script (App Service B1 com as duas APIs, dois bancos Azure SQL
+Basic, ACR Basic e um RabbitMQ em container) custa cerca de **US$ 2,20 por dia** em `brazilsouth`, pelos preços de
+varejo da Microsoft: RabbitMQ (0,5 vCPU e 1 GB) US$ 1,19, App Service US$ 0,48, bancos US$ 0,39 e ACR US$ 0,17. Atende
+o piloto; para crescer, sobe-se o plano do App Service e do banco, sem mudar a arquitetura.
 
 ## Stack
 
@@ -195,7 +196,7 @@ quebra o build se um endpoint ficar fora do contrato ou sem descrição.
 
 | Módulo | Endpoints |
 |---|---|
-| Autenticação | `POST /api/v1/auth/cadastro` · `POST /api/v1/auth/login` · `GET /api/v1/auth/eu` · `DELETE /api/v1/auth/eu` |
+| Autenticação | `POST /api/v1/auth/cadastro` · `POST /api/v1/auth/login` · `GET /api/v1/auth/eu` · `PUT /api/v1/auth/eu` · `PUT /api/v1/auth/eu/senha` · `DELETE /api/v1/auth/eu` |
 | Voz | `POST /api/v1/voz/intencoes` · `GET /api/v1/voz/interacoes` |
 | Botão de emergência | `POST /api/v1/emergencias` · `GET /api/v1/emergencias` · `GET /api/v1/emergencias/{id}` · `GET /api/v1/emergencias/{id}/avisos` · `PATCH /api/v1/emergencias/{id}/cancelar` · `PATCH /api/v1/emergencias/{id}/atender` |
 | Perfil de emergência (CRUD) | `POST`, `GET` (paginado), `GET /meu`, `GET /{id}`, `PUT /{id}`, `DELETE /{id}` em `/api/v1/perfis-emergencia` |
@@ -251,6 +252,8 @@ token, com o mesmo segredo e emissor.
 | `POST /api/v1/auth/cadastro` | Público | Cria a conta (`nome`, `email`, `senha`, `papel`: `CIDADAO` ou `CUIDADOR`, `consentimento`: `true`) |
 | `POST /api/v1/auth/login` | Público | Devolve `accessToken`, `tokenType`, `expiraEm` e os dados do usuário |
 | `GET /api/v1/auth/eu` | Token | Dados do usuário autenticado (com `consentimentoEm`) |
+| `PUT /api/v1/auth/eu` | Token | Corrige o nome (LGPD); papel e e-mail não mudam por aqui |
+| `PUT /api/v1/auth/eu/senha` | Token | Troca a senha com a senha atual: 204; senha atual errada, 400; 5 erros em 15 min, 429 |
 | `DELETE /api/v1/auth/eu` | Token | Exclui a própria conta (LGPD): 204, ou 401 sem token válido |
 
 Use o token em todas as outras chamadas:
@@ -298,7 +301,7 @@ configurado e um papel conhecido; valores desconhecidos nunca dão acesso.
 | `GET /v3/api-docs/**`, `GET /swagger-ui/**` | Público |
 | Consumo de dados de suporte (atendimentos próximos, verificação de golpes, classificação por voz...) | `CIDADAO` ou `CUIDADOR` |
 | Perfil de emergência e contatos (criar e alterar) | O próprio cidadão ou o cuidador responsável |
-| `GET /api/v1/auth/eu`, `DELETE /api/v1/auth/eu` | Qualquer papel, inclusive `GESTOR` |
+| `GET`, `PUT` e `DELETE /api/v1/auth/eu`, `PUT /api/v1/auth/eu/senha` | Qualquer papel, inclusive `GESTOR` |
 | Qualquer outra rota | Token válido |
 
 O `GESTOR` é o servidor da prefeitura que atende a zeladoria na API .NET. Aqui ele só faz login e cuida da
@@ -344,13 +347,18 @@ aceita campos públicos (perfis: `id`, `mobilidade`, `criadoEm`, `atualizadoEm`;
 - A mobilidade é dado de saúde e é opcional: sem ela, o perfil fica `NAO_INFORMADO` e a mensagem de socorro só
   não cita a mobilidade.
 - O cadastro exige `consentimento: true` e grava a data do aceite (`consentimentoEm`).
+- **Correção dos dados** (art. 18, III): `PUT /api/v1/auth/eu` corrige o nome, e `PUT /api/v1/auth/eu/senha` troca
+  a senha exigindo a atual (os erros contam no mesmo limite do login). O e-mail não muda por aqui: sem confirmar o
+  endereço novo por e-mail, quem tivesse o token conseguiria tomar a conta. O nome novo entra no token no próximo
+  login, e os tokens já emitidos continuam valendo até expirar.
 - `DELETE /api/v1/auth/eu` exclui a conta e o que depende dela:
   - do cidadão, apaga o perfil, os contatos, as emergências, os avisos e o histórico de voz;
   - do cuidador, os perfis que ele cuidava continuam com os cidadãos, só sem o vínculo;
   - as estatísticas de golpe já são anônimas e não guardam o usuário;
   - o token da conta excluída para de valer na hora em toda a API Java. Fica guardado só o id numérico da
-    conta, sem dados pessoais, em `contas_excluidas`. A API .NET só confere a assinatura, então aceita o token
-    até ele expirar (no máximo `JWT_EXPIRACAO`, 2 h).
+    conta, sem dados pessoais, em `contas_excluidas`;
+  - na API .NET, o app chama antes `DELETE /api/usuarios/eu` com o mesmo token: ela apaga os reportes e o
+    cadastro local e também passa a recusar o token na hora.
 
 **Limitação conhecida:** o cuidador vincula o perfil pelo e-mail da conta do cidadão, sem confirmação do
 cidadão. Num sistema em produção, o vínculo seria confirmado por convite.
@@ -581,7 +589,8 @@ desatualizado.
 | Azure SQL (servidor + banco `vozviva`, Basic) | Banco da API (PaaS) |
 | Azure Container Registry (Basic) | Imagens da API, uma por build |
 | Rede virtual `vnet-vozviva` (2 sub-redes) | Liga o App Service ao RabbitMQ por IP privado |
-| Container Instance com RabbitMQ | Fila do botão de emergência, sem IP público |
+| Container Instance com RabbitMQ (0,5 vCPU e 1 GB) | Fila do botão de emergência, sem IP público; imagem oficial pelo espelho `public.ecr.aws` (o Docker Hub limita downloads anônimos) |
+| Orçamento `vozviva-creditos` (do grupo) | Gasto **acumulado** do grupo (período anual, porque o crédito não renova por mês), com alerta por e-mail em 50% e 80% e na previsão de 100%: o Azure for Students para os recursos quando o crédito acaba |
 | App Service Linux B1 (container) | API Java; HTTPS obrigatório e health check em `/actuator/health/liveness` |
 | Segundo app no mesmo plano B1 (.NET 8, sem custo extra) + banco `zeladoria` (Basic) | API .NET de zeladoria, que o app mobile também usa; compilada a partir do repositório da equipe .NET e publicada pelo próprio script. Para pular: `PUBLICAR_DOTNET=nao` |
 
@@ -602,6 +611,12 @@ desatualizado.
   histórico.
 - O RabbitMQ não usa volume do Azure Files: a documentação do RabbitMQ desaconselha guardar os dados em
   sistemas de arquivos de rede.
+- A API fala com o RabbitMQ pelo IP privado do container. Se ele for recriado e o IP mudar, rodar o
+  `provisionar-azure.sh` de novo atualiza o `RABBITMQ_HOST`; até lá, as emergências esperam como `ACIONADA`.
+
+**Memória e logs:** as duas APIs dividem os 1,75 GB do plano B1, por isso a JVM fica limitada a 40% da memória
+(`JAVA_OPTS`). Os logs dos containers ficam ligados no próprio App Service (3 dias): *Log stream* no portal ou
+`az webapp log tail -g rg-vozviva -n <webAppName>`. A release confere `/actuator/health/readiness` (API e banco).
 
 **Passo a passo:**
 
@@ -648,9 +663,9 @@ desatualizado.
    - Organization settings → Billing: trial de Test Plans, para executar os testes manuais.
 4. **Backlog e casos de teste** (Compliance, QA & Tests), já prontos em [`docs/azure-boards/`](docs/azure-boards):
    - Boards → Work items → **Import Work Items** com [`backlog.csv`](docs/azure-boards/backlog.csv) (processo
-     Scrum): 5 Epics, 9 Features e 22 Product Backlog Items, com descrição e critérios de aceite.
+     Scrum): 5 Epics, 9 Features e 23 Product Backlog Items, com descrição e critérios de aceite.
    - Test Plans → crie um plano com uma suíte por Feature e, em cada suíte, **Import test cases** com o CSV da
-     Feature em [`casos-de-teste/`](docs/azure-boards/casos-de-teste): 45 casos, positivos e negativos, com
+     Feature em [`casos-de-teste/`](docs/azure-boards/casos-de-teste): 49 casos, positivos e negativos, com
      sumário (objetivo, preparação, entradas e saída esperada) e passos.
    - Os CSVs são gerados por [`gerar_csv.py`](docs/azure-boards/gerar_csv.py); para mudar um item, edite o script
      e rode `python docs/azure-boards/gerar_csv.py`.
@@ -673,7 +688,7 @@ desatualizado.
    crie, leia, altere e exclua perfis de emergência (`perfis_emergencia`) e contatos (`contatos_emergencia`).
    Confira cada operação com `SELECT` no Query editor do Azure SQL, por exemplo:
    `SELECT * FROM contatos_emergencia ORDER BY id DESC;`.
-8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro. Na OCI, exclua a API key, o orçamento e o
+8. **Ao terminar:** `./scripts/remover-azure.sh` apaga o grupo inteiro, com o orçamento dele. Na OCI, exclua a API key, o orçamento e o
    compartimento `vozviva` pelo console.
 
 Para testar a imagem localmente, com o SQL Server e o RabbitMQ do `docker compose` (o mesmo teste foi feito

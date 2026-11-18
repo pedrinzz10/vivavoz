@@ -23,3 +23,4 @@ fi
 
 az group delete -n "$GRUPO" --yes --no-wait
 echo "Remoção de ${GRUPO} iniciada (leva alguns minutos). Acompanhe com: az group show -n ${GRUPO}"
+echo "O orçamento vozviva-creditos é do grupo e sai junto com ele."
