@@ -12,10 +12,8 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -40,12 +38,12 @@ public class AnaliseIaIntencao {
 	private final ChatClient chatClient;
 	private final String instrucoes;
 
-	public AnaliseIaIntencao(ObjectProvider<ChatModel> modelo, @Value("${spring.ai.openai.api-key:}") String chaveApi) {
-		ChatModel chatModel = StringUtils.hasText(chaveApi) ? modelo.getIfAvailable() : null;
+	public AnaliseIaIntencao(ObjectProvider<ChatModel> modelo, CredencialIa credencial) {
+		ChatModel chatModel = credencial.configurada() ? modelo.getIfAvailable() : null;
 		this.chatClient = chatModel == null ? null : ChatClient.builder(chatModel).build();
 		this.instrucoes = lerInstrucoes();
 		if (chatClient == null) {
-			log.warn("Sem modelo de IA ou sem OCI_GENAI_API_KEY: a classificação por voz usará só as regras.");
+			log.warn("Sem modelo de IA ou sem credencial da OCI: a classificação por voz usará só as regras.");
 		}
 	}
 
