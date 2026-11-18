@@ -134,12 +134,18 @@ if [ "$AUTENTICACAO" = usuario ]; then
     reaproveitado "chave RSA em ${CHAVE_ASSINATURA}"
   fi
   openssl rsa -in "$CHAVE_ASSINATURA" -pubout -out "${CHAVE_ASSINATURA%.pem}-publica.pem" 2> /dev/null
-  FINGERPRINT=$(openssl rsa -in "$CHAVE_ASSINATURA" -pubout -outform DER 2> /dev/null | openssl md5 -c | awk '{print $NF}')
-  if oci iam user api-key list --user-id "$USUARIO" --all 2> /dev/null | jq -e --arg f "$FINGERPRINT" \
-      '[.data[]? | select(.fingerprint == $f)] | length > 0' > /dev/null; then
+  # O fingerprint vem da própria OCI (o Cloud Shell roda em modo FIPS, que bloqueia o MD5 do openssl): procura a
+  # chave pública entre as do usuário e, se não estiver lá, cadastra e lê o fingerprint da resposta.
+  PUBLICA=$(grep -v -- '-----' "${CHAVE_ASSINATURA%.pem}-publica.pem" | tr -d '\r\n')
+  FINGERPRINT=$(oci iam user api-key list --user-id "$USUARIO" --all 2> /dev/null | jq -r --arg p "$PUBLICA" \
+    '[.data[]? | select(."lifecycle-state" != "DELETED")
+      | select((."key-value" // "" | gsub("-----[A-Z ]+-----"; "") | gsub("[[:space:]]"; "")) == $p) | .fingerprint][0] // empty' 2> /dev/null || true)
+  if [ -n "$FINGERPRINT" ]; then
     reaproveitado "chave pública no usuário (fingerprint ${FINGERPRINT})"
   else
-    oci iam user api-key upload --user-id "$USUARIO" --key-file "${CHAVE_ASSINATURA%.pem}-publica.pem" > /dev/null
+    FINGERPRINT=$(oci iam user api-key upload --user-id "$USUARIO" --key-file "${CHAVE_ASSINATURA%.pem}-publica.pem" \
+      | jq -r '.data.fingerprint // empty')
+    [ -n "$FINGERPRINT" ] || { echo "    não consegui cadastrar a chave pública no usuário"; exit 1; }
     criado "chave pública no usuário (fingerprint ${FINGERPRINT})"
   fi
   {
