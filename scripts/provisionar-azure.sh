@@ -6,7 +6,7 @@
 #   ligado à rede virtual e puxando a imagem do ACR
 #   -> API .NET de zeladoria (outro app no mesmo plano, sem custo extra, com o próprio banco "zeladoria")
 #
-# Requer o sqlcmd (já vem no Azure Cloud Shell) para criar o usuário da aplicação no banco, e git, dotnet e zip
+# Requer o sqlcmd para criar o usuário da aplicação no banco (se faltar, baixa o go-sqlcmd para ~/bin), e git, dotnet e zip
 # (também no Cloud Shell) para publicar a API .NET.
 #
 # Idempotente: cada recurso é conferido antes de ser criado; rodar de novo só cria o que falta e
@@ -220,8 +220,17 @@ passo "Azure SQL: usuário da aplicação ${SQL_APP_USUARIO} (privilégio mínim
 # A API não usa o administrador do servidor: o usuário contido no banco só lê, grava e altera o esquema
 # deste banco (o Flyway precisa de DDL). O administrador fica só para o provisionamento.
 if ! command -v sqlcmd > /dev/null 2>&1; then
-  echo "sqlcmd não encontrado. Rode no Azure Cloud Shell ou instale o go-sqlcmd." >&2
-  exit 1
+  # O Cloud Shell novo não traz mais o sqlcmd: baixa o go-sqlcmd oficial da Microsoft (versão fixa) para ~/bin.
+  case "$(uname -m)" in x86_64) ARQ_SQLCMD=amd64 ;; aarch64|arm64) ARQ_SQLCMD=arm64 ;; *) ARQ_SQLCMD="" ;; esac
+  mkdir -p "${HOME}/bin"
+  if [ -n "$ARQ_SQLCMD" ] && curl -fsSL "https://github.com/microsoft/go-sqlcmd/releases/download/v1.10.0/sqlcmd-linux-${ARQ_SQLCMD}.tar.bz2" \
+      | tar -xj -C "${HOME}/bin" sqlcmd; then
+    export PATH="${HOME}/bin:${PATH}"
+    criado "sqlcmd em ${HOME}/bin (go-sqlcmd 1.10.0)"
+  else
+    echo "sqlcmd não encontrado e não consegui baixar o go-sqlcmd; instale-o e rode de novo." >&2
+    exit 1
+  fi
 fi
 IP_PROVISIONAMENTO="$(curl -fsS https://api.ipify.org)"
 az sql server firewall-rule create -g "$GRUPO" -s "$SQL_SERVIDOR" -n ProvisionamentoTemporario \
