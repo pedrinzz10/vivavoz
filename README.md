@@ -12,14 +12,19 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 | **Swagger local** | http://localhost:8080/swagger-ui.html |
 | **Vídeo pitch** | _a preencher_ |
 | **Roteiro das apresentações** | [`docs/roteiro-apresentacao.md`](docs/roteiro-apresentacao.md) |
+| **Arquivos de entrega** | [`docs/entrega/`](docs/entrega): `.txt` de identificação e folha de rosto do PDF de DevOps |
 | **Roteiro do vídeo de DevOps** | [`docs/roteiro-video-devops.md`](docs/roteiro-video-devops.md): preparação (deploy e pipeline) e gravação dos 10 itens |
 | **Requisito 5 (Java Advanced)** | **Opção A: RabbitMQ.** O botão de emergência publica o evento e um consumidor assíncrono avisa os contatos ([detalhes](#botão-de-emergência-arquitetura-distribuída--opção-a-rabbitmq)) |
 
-## Integrantes
+## Integrantes (grupo VozViva)
 
 | Nome | RM | Turma |
 |---|---|---|
-| _a preencher_ | _a preencher_ | _a preencher_ |
+| Fabrício Henrique Pereira | RM563237 | 2TDSPW |
+| Henrique Sinkevicius Maran | RM562977 | 2TDSPW |
+| Leonardo José Pereira | RM563065 | 2TDSPW |
+| Miguel Henrique Oliveira Dias | RM565492 | 2TDSPW |
+| Pedro Henrique de Oliveira | RM562312 | 2TDSPW |
 
 ## O problema e quem a solução atende
 
