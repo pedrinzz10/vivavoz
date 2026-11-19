@@ -60,7 +60,7 @@ class AvaliacaoPerguntasCidadaoTest {
 				Papel.CIDADAO)).getId();
 
 		Resultado semIa = avaliar(perguntas, p -> {
-			var orientada = IntencaoVozService.orientar(
+			var orientada = DuvidasVoz.orientar(
 					IntencaoVozService.decidir(RegrasIntencao.analisar(p.texto()), null, 1.0), p.texto(), servicos);
 			return new Obtido(orientada.decisao().intencao(), orientada.servico() == null ? null : orientada.servico().titulo(), "REGRAS");
 		});

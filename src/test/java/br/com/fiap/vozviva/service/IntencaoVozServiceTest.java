@@ -9,7 +9,7 @@ import br.com.fiap.vozviva.model.Intencao;
 import br.com.fiap.vozviva.model.TipoAtendimento;
 import br.com.fiap.vozviva.model.Urgencia;
 import br.com.fiap.vozviva.service.IntencaoVozService.Decisao;
-import br.com.fiap.vozviva.service.IntencaoVozService.Orientada;
+import br.com.fiap.vozviva.service.DuvidasVoz.Orientada;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -24,7 +24,7 @@ class IntencaoVozServiceTest {
 	private static final BaseServicosPublicos SERVICOS = new BaseServicosPublicos(JsonMapper.builder().build());
 
 	private static Orientada orientar(String fala, RespostaIa ia) {
-		return IntencaoVozService.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia, LIMITE), fala,
+		return DuvidasVoz.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia, LIMITE), fala,
 				SERVICOS);
 	}
 
@@ -51,7 +51,7 @@ class IntencaoVozServiceTest {
 		Orientada orientada = orientar("onde fica um lugar bom por aqui", ia);
 
 		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.BUSCAR_ATENDIMENTO);
-		assertThat(orientada.decisao().mensagemFalada()).isEqualTo(IntencaoVozService.PERGUNTA_TIPO_ATENDIMENTO);
+		assertThat(orientada.decisao().mensagemFalada()).isEqualTo(DuvidasVoz.PERGUNTA_TIPO_ATENDIMENTO);
 		assertThat(orientada.servico()).isNull();
 	}
 
@@ -140,7 +140,7 @@ class IntencaoVozServiceTest {
 		RespostaIa ia = new RespostaIa(Intencao.TIRAR_DUVIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA, "Vou ver.", 0.9);
 		String fala = "e quanto tempo demora pra sair?";
 
-		Orientada orientada = IntencaoVozService.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
+		Orientada orientada = DuvidasVoz.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
 				LIMITE), fala, java.util.List.of("quero pedir minha aposentadoria"), SERVICOS);
 
 		assertThat(orientada.servico().id()).isEqualTo("aposentadoria-inss");
@@ -151,7 +151,7 @@ class IntencaoVozServiceTest {
 		RespostaIa ia = new RespostaIa(Intencao.TIRAR_DUVIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA, "Vou ver.", 0.9);
 		String fala = "e precisa ter o cadastro único?";
 
-		Orientada orientada = IntencaoVozService.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
+		Orientada orientada = DuvidasVoz.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
 				LIMITE), fala, java.util.List.of("como tiro a carteira do idoso?"), SERVICOS);
 
 		assertThat(orientada.servico().id()).isEqualTo("cadastro-unico");

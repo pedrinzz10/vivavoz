@@ -246,6 +246,8 @@ quebra o build se um endpoint ficar fora do contrato ou sem descrição.
 | `OCI_GENAI_BASE_URL` | Endpoint compatível com OpenAI da OCI (padrão `https://inference.generativeai.sa-saopaulo-1.oci.oraclecloud.com/openai/v1`) |
 | `OCI_GENAI_MODEL` | Modelo usado (padrão `meta.llama-3.3-70b-instruct`) |
 | `VOZ_CONFIANCA_MINIMA` | Confiança mínima para a IA decidir a intenção sozinha (padrão `0.6`) |
+| `VOZ_RETENCAO_DIAS` | Prazo do histórico de voz; uma vez por dia apaga o que for mais velho (padrão `90`) |
+| `IA_LIMITE_POR_HORA` | Chamadas ao modelo por pessoa por hora; acima disso a resposta segue só com as regras e a base, sem bloquear (padrão `60`) |
 | `DB_URL` | URL JDBC do banco (Azure SQL em produção; padrão do dev aponta para o SQL Server do docker-compose) |
 | `DB_USERNAME` / `DB_PASSWORD` | Credenciais do banco (no dev, usuário `sa` e a senha do `.env`) |
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` | Endereço do RabbitMQ |
@@ -525,16 +527,26 @@ e com localização também o CRAS (ou outro local presencial do serviço) mais 
 - **Filtro de segurança:** a resposta é descartada se citar um site que não termine em gov.br (ou iti.br), um número
   longo ou um telefone fora das centrais oficiais (192, 190, 193, 100, 135, 121, 136, 180, 188). Aí vale a
   orientação da base. Saúde sem diagnóstico nem dose; urgência sempre 192.
+- **Limite de uso da IA:** até `IA_LIMITE_POR_HORA` chamadas ao modelo por pessoa por hora (padrão 60). Acima disso
+  a API não recusa nada: responde só com as regras e a base, como com a IA fora do ar. Um socorro nunca é bloqueado
+  por custo.
+- **Retenção (LGPD):** o histórico de voz, que agora dá contexto à conversa, é apagado depois de `VOZ_RETENCAO_DIAS`
+  (padrão 90), por uma tarefa diária (`RetencaoHistoricoVoz`).
 - **Limitações:** a resposta aberta vem do conhecimento geral do modelo e pode ter imprecisões; por isso termina
   indicando onde confirmar. Perguntas que dependem de dados em tempo real (previsão do tempo, resultado de jogo,
   preço) recebem uma resposta honesta de onde consultar.
 
-**Dúvidas sobre serviços públicos** (`conhecimento/servicos-publicos.json`, 15 serviços): as dúvidas mais frequentes
+**Dúvidas sobre serviços públicos** (`conhecimento/servicos-publicos.json`, 21 serviços): as dúvidas mais frequentes
 de idosos e pessoas com deficiência, levantadas nas centrais e portais oficiais (serviços mais procurados na Central
 135 do INSS, gov.br, MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC): aposentadoria, pagamento do benefício, prova
 de vida, perícia, BPC para idoso e para pessoa com deficiência, Cadastro Único, Carteira da Pessoa Idosa, Passe Livre,
-assinatura e conta gov.br, Farmácia Popular, Tarifa Social de energia, credencial de estacionamento e denúncia de
-violência (Disque 100). Os links foram conferidos em 19/11/2026.
+assinatura e conta gov.br, Farmácia Popular, Tarifa Social de energia, credencial de estacionamento, denúncia de
+violência (Disque 100), cartão do SUS, carteira de identidade, renovação da CNH, advogado gratuito (Defensoria) e os
+direitos da pessoa idosa e da pessoa com deficiência (prioridade, meia-entrada, acompanhante). Os links foram
+conferidos em 19/11/2026.
+- **Base sempre em dia:** cada serviço tem a data da última revisão (`revisadoEm`), e um teste falha de propósito
+  quando ela passa de 180 dias. O workflow `Links oficiais` (toda segunda-feira e em todo PR que muda a base) roda
+  `scripts/verificar-links-oficiais.py` e falha se algum link sair do ar.
 - A resposta vem **sempre da base**, nunca do texto do modelo: a IA só reconhece que é uma dúvida, e o link e o
   telefone são os oficiais.
 - Um serviço só responde se a fala citar um dos seus termos ("aposentadoria", "prova de vida", "assinar"...);
@@ -560,7 +572,8 @@ violência (Disque 100). Os links foram conferidos em 19/11/2026.
 - **Sem IA:** as regras determinísticas respondem, sempre no mesmo contrato JSON. Isso vale com o modelo fora
   do ar, sem chave ou com resposta malformada.
 - **LGPD:** o histórico guarda o texto, a intenção, a confiança e a latência, para o próprio usuário consultar
-  e para avaliar a IA. A localização nunca é gravada.
+  e para avaliar a IA, e as falas dos últimos 15 minutos dão contexto à conversa. A localização nunca é gravada, e o
+  histórico é apagado depois de 90 dias (`VOZ_RETENCAO_DIAS`).
 
 ### Avaliação
 
