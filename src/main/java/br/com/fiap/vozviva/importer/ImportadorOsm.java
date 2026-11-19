@@ -89,7 +89,8 @@ public final class ImportadorOsm {
 		try (HttpClient cliente = HttpClient.newHttpClient()) {
 			for (String servidor : SERVIDORES_OVERPASS) {
 				HttpRequest pedido = HttpRequest.newBuilder(URI.create(servidor))
-					.timeout(Duration.ofMinutes(2))
+					// Mais que o timeout da consulta (180 s), para o servidor terminar antes de o cliente desistir.
+					.timeout(Duration.ofMinutes(4))
 					.header("Content-Type", "application/x-www-form-urlencoded")
 					.header("User-Agent", "VozViva/0.1 (FIAP Global Solution; importacao unica)")
 					.POST(HttpRequest.BodyPublishers.ofString(corpo))
