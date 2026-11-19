@@ -485,7 +485,15 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
     echo "    o deploy da API .NET falhou; veja em Deployment Center" >&2
     exit 1
   fi
-  echo "    deploy enviado; conferindo a API..."
+  if [ "$STATUS_DEPLOY" = 4 ]; then
+    echo "    deploy concluído; conferindo a API..."
+  elif [ -n "$DEPLOY_ANTERIOR" ]; then
+    # Reenvio sem o status do deploy novo: a versão anterior ainda pode responder, então o /health/live não prova
+    # que o pacote novo entrou.
+    echo "    a Azure não informou o status do deploy novo; confira em Deployment Center se o commit ${COMMIT_DOTNET} entrou"
+  else
+    echo "    deploy enviado; conferindo a API..."
+  fi
   for tentativa in $(seq 1 30); do
     if [ "$(curl -s -m 15 -o /dev/null -w '%{http_code}' "https://${WEBAPP_DOTNET}.azurewebsites.net/health/live")" = 200 ]; then
       echo "    API .NET no ar (/health/live respondeu 200)"
