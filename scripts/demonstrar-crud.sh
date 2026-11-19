@@ -13,10 +13,13 @@ set -euo pipefail
 
 SUFIXO="${SUFIXO:-rm562312}"
 SUFIXO_LIMPO="$(echo "$SUFIXO" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]')"
+LOCALIZACAO="${LOCALIZACAO:-brazilsouth}"
 SQL_LOCALIZACAO="${SQL_LOCALIZACAO:-chilecentral}"
 GRUPO="${GRUPO:-rg-vozviva}"
 API="https://app-vozviva-${SUFIXO_LIMPO}.azurewebsites.net/api/v1"
-SQL_SERVIDOR="sql-vozviva-${SUFIXO_LIMPO}-${SQL_LOCALIZACAO}"
+# Mesma regra do provisionar-azure.sh: com o banco fora da região das APIs, a região entra no nome.
+SQL_SERVIDOR="sql-vozviva-${SUFIXO_LIMPO}"
+[ "$SQL_LOCALIZACAO" != "$LOCALIZACAO" ] && SQL_SERVIDOR="${SQL_SERVIDOR}-${SQL_LOCALIZACAO}"
 KEYVAULT="kv-vozviva-${SUFIXO_LIMPO}"
 # E-mail novo a cada execução: rodar de novo não esbarra numa conta que já existe.
 EMAIL="maria.video.$(date +%H%M%S)@vozviva.dev"
@@ -32,20 +35,25 @@ if ! command -v sqlcmd > /dev/null 2>&1; then
   fi
 fi
 
+# A resposta do login traz o token: o arquivo temporário só pode ser lido por você e é apagado no fim.
+umask 077
+ARQUIVO_RESPOSTA="$(mktemp)"
+trap 'rm -f "$ARQUIVO_RESPOSTA"' EXIT
+
 titulo() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 pausa() { [ "${PAUSA:-sim}" = nao ] || read -r -p "    (Enter para continuar) " _; }
 
 # Chama a API e mostra o status HTTP e a resposta formatada. A resposta fica em $RESPOSTA.
 chamar() {
   local metodo="$1" caminho="$2" corpo="${3:-}"
-  local args=(-s -o /tmp/crud-resposta.json -w '%{http_code}' -X "$metodo")
+  local args=(-s -o "$ARQUIVO_RESPOSTA" -w '%{http_code}' -X "$metodo")
   [ -n "${TOKEN:-}" ] && args+=(-H "Authorization: Bearer ${TOKEN}")
   [ -n "$corpo" ] && args+=(-H "Content-Type: application/json" -d "$corpo")
   echo "    ${metodo} ${caminho}"
   [ -n "$corpo" ] && echo "    corpo: ${corpo}"
   local status
   status=$(curl "${args[@]}" "${API}${caminho}")
-  RESPOSTA=$(cat /tmp/crud-resposta.json 2> /dev/null || true)
+  RESPOSTA=$(cat "$ARQUIVO_RESPOSTA" 2> /dev/null || true)
   echo "    HTTP ${status}"
   [ -n "$RESPOSTA" ] && jq -C . <<< "$RESPOSTA" 2> /dev/null | sed 's/^/    /' || true
   case "$status" in 2*) ;; *) echo "    a chamada falhou; confira a API e rode de novo" >&2; exit 1 ;; esac
@@ -92,6 +100,7 @@ echo "    token recebido (${#TOKEN} caracteres)"
 
 titulo "usuarios: READ"
 chamar GET /auth/eu
+selecionar "SELECT id, nome, email, papel FROM usuarios WHERE email = '${EMAIL}';"
 pausa
 
 titulo "usuarios: UPDATE (nome)"
@@ -108,6 +117,7 @@ pausa
 
 titulo "perfis_emergencia: READ"
 chamar GET /perfis-emergencia/meu
+selecionar "SELECT id, cidadao_id, mobilidade, condicoes_saude, medicamentos FROM perfis_emergencia WHERE id = ${PERFIL_ID};"
 pausa
 
 titulo "perfis_emergencia: UPDATE (mobilidade e remédio)"
@@ -124,6 +134,7 @@ pausa
 
 titulo "contatos_emergencia: READ"
 chamar GET "/perfis-emergencia/${PERFIL_ID}/contatos"
+selecionar "SELECT id, perfil_id, nome, telefone, parentesco, prioridade FROM contatos_emergencia WHERE perfil_id = ${PERFIL_ID};"
 pausa
 
 titulo "contatos_emergencia: UPDATE (telefone e prioridade)"
