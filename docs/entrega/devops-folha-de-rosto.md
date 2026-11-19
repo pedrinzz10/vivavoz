@@ -16,10 +16,12 @@
 
 **Projeto:** https://dev.azure.com/vozviva/vozviva
 
-**Vídeo (YouTube):** <link do vídeo>
+**Vídeo (YouTube):** https://www.youtube.com/watch?v=coxtKPCUOJw
 
-**Solução escolhida:** API Java (Spring Boot), publicada no Azure App Service (container), com Azure SQL, Azure
-Container Registry e RabbitMQ em Azure Container Instances, criados por scripts Azure CLI
+**API publicada:** https://app-vozviva-rm562312.azurewebsites.net/swagger-ui.html
+
+**Solução escolhida:** API Java (Spring Boot), publicada no Azure App Service (container), com Azure SQL, Azure Key
+Vault (senhas), Azure Container Registry e RabbitMQ em Azure Container Instances, criados por scripts Azure CLI
 (`scripts/provisionar-azure.sh`).
 
 ---
