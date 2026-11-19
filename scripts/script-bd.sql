@@ -206,6 +206,16 @@ ALTER TABLE usuarios ADD orgao NVARCHAR(20) NULL
 ALTER TABLE usuarios ADD CONSTRAINT ck_usuarios_orgao_do_gestor
     CHECK ((papel = 'GESTOR' AND orgao IS NOT NULL) OR (papel <> 'GESTOR' AND orgao IS NULL));
 
+-- V11__intencao_tirar_duvida.sql
+-- Nova intenção de voz: dúvida sobre um serviço público, respondida pela base curada (conhecimento/servicos-publicos.json).
+ALTER TABLE interacoes_voz DROP CONSTRAINT ck_interacoes_voz_intencao;
+ALTER TABLE interacoes_voz DROP CONSTRAINT ck_interacoes_voz_acao;
+ALTER TABLE interacoes_voz ADD CONSTRAINT ck_interacoes_voz_intencao CHECK (intencao IN
+    ('SOCORRO', 'BUSCAR_ATENDIMENTO', 'VERIFICAR_INFORMACAO', 'ZELADORIA_REPORT', 'TIRAR_DUVIDA', 'DESCONHECIDA'));
+ALTER TABLE interacoes_voz ADD CONSTRAINT ck_interacoes_voz_acao CHECK (acao IN
+    ('ACIONAR_SOCORRO', 'MOSTRAR_ATENDIMENTOS', 'MOSTRAR_VERIFICACAO', 'ABRIR_ZELADORIA_DOTNET', 'MOSTRAR_ORIENTACAO',
+     'PEDIR_REPETICAO'));
+
 -- R__carga_pontos_atendimento.sql
 -- SPEC-007: carga dos locais de atendimento de Osasco/SP e arredores.
 -- Gerado por ./gradlew importarOsm a partir da Overpass API. Não edite à mão.

@@ -1,0 +1,481 @@
+{
+  "descricao": "Base curada de dúvidas frequentes de pessoas idosas e pessoas com deficiência sobre serviços públicos. A resposta ao cidadão vem sempre daqui (resumo, passos, link e telefone oficiais), nunca do modelo. Um serviço só responde se a fala citar um dos seus \"termos\" (todas as palavras do termo, sem acento); entre os citados, vale o mais parecido pela busca TF-IDF, e um serviço de apoio (a conta gov.br, que é meio para os outros) só vence se nenhum outro for citado. Fontes: gov.br, INSS (serviços mais procurados na Central 135), MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC.",
+  "versao": "2026-11-19",
+  "servicos": [
+    {
+      "id": "aposentadoria-inss",
+      "titulo": "Pedir aposentadoria",
+      "termos": [
+        "aposentadoria",
+        "aposentar",
+        "aposentado"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "como pedir aposentadoria",
+        "quero me aposentar",
+        "onde dou entrada na aposentadoria",
+        "aposentadoria por idade",
+        "simular aposentadoria",
+        "quanto tempo falta para aposentar",
+        "aposentado aposentar INSS"
+      ],
+      "resumo": "A aposentadoria é pedida pelo Meu INSS, no site ou no aplicativo, sem ir a uma agência. Se precisar de ajuda, ligue 135, de segunda a sábado.",
+      "passos": [
+        "Entre no Meu INSS (meu.inss.gov.br ou aplicativo) com a sua conta gov.br.",
+        "Toque em Novo pedido e digite aposentadoria.",
+        "Escolha o tipo de aposentadoria e confira os dados.",
+        "Acompanhe a resposta em Consultar pedidos."
+      ],
+      "link": "https://www.gov.br/pt-br/servicos/solicitar-aposentadoria-por-idade-trabalhador-urbano",
+      "telefone": "135",
+      "orgao": "INSS",
+      "localPresencial": null
+    },
+    {
+      "id": "pagamento-beneficio-inss",
+      "titulo": "Pagamento da aposentadoria ou do benefício",
+      "termos": [
+        "pagamento inss",
+        "pagamento beneficio",
+        "pagamento aposentadoria",
+        "pagamento aposentados",
+        "pagamento pensao",
+        "extrato",
+        "sacar",
+        "saque",
+        "pensao",
+        "calendario",
+        "beneficio caiu",
+        "beneficio cai",
+        "aposentadoria caiu",
+        "aposentadoria cai"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "quando cai minha aposentadoria",
+        "calendário de pagamento do INSS",
+        "extrato do benefício",
+        "quanto vou receber",
+        "onde saco minha aposentadoria",
+        "sacar o dinheiro da aposentadoria",
+        "receber pensão",
+        "cartão do benefício",
+        "meu benefício não caiu"
+      ],
+      "resumo": "O extrato e a data de pagamento ficam no Meu INSS. O dinheiro é sacado no banco onde o benefício é pago, com o cartão do benefício. Dúvidas: ligue 135.",
+      "passos": [
+        "Entre no Meu INSS com a sua conta gov.br.",
+        "Toque em Extrato de pagamento para ver o valor e a data.",
+        "Saque no banco que aparece no extrato, com o cartão do benefício e um documento com foto.",
+        "Se o pagamento não caiu, ligue 135."
+      ],
+      "link": "https://meu.inss.gov.br",
+      "telefone": "135",
+      "orgao": "INSS",
+      "localPresencial": null
+    },
+    {
+      "id": "prova-de-vida",
+      "titulo": "Prova de vida do INSS",
+      "termos": [
+        "prova vida"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "prova de vida",
+        "como fazer a prova de vida",
+        "preciso fazer prova de vida",
+        "comprovar que estou vivo",
+        "bloquearam meu benefício por falta de prova de vida"
+      ],
+      "resumo": "Na maioria dos casos, o INSS faz a prova de vida sozinho, sem você sair de casa. Se precisar, o aviso aparece no Meu INSS ou chega pelo banco. Dúvidas: 135.",
+      "passos": [
+        "Você não precisa ir ao banco nem ao INSS se não for chamado.",
+        "Se for chamado, o aviso aparece no Meu INSS e no banco do pagamento.",
+        "Desconfie de quem liga ou manda link pedindo prova de vida: o INSS não faz isso."
+      ],
+      "link": "https://www.gov.br/inss/pt-br/assuntos/prova-de-vida-confira-as-perguntas-respostas-sobre-o-procedimento",
+      "telefone": "135",
+      "orgao": "INSS",
+      "localPresencial": null
+    },
+    {
+      "id": "pericia-inss",
+      "titulo": "Perícia médica e auxílio por incapacidade",
+      "termos": [
+        "pericia",
+        "auxilio doenca",
+        "incapacidade",
+        "afastado doenca"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "agendar perícia",
+        "perícia do INSS",
+        "resultado da perícia",
+        "auxílio doença",
+        "auxílio por incapacidade",
+        "estou afastado do trabalho por doença"
+      ],
+      "resumo": "A perícia médica é marcada pelo Meu INSS ou pelo telefone 135. Leve no dia os documentos médicos e um documento com foto. O resultado também sai no Meu INSS.",
+      "passos": [
+        "Entre no Meu INSS com a sua conta gov.br.",
+        "Toque em Novo pedido e digite perícia ou auxílio por incapacidade.",
+        "Escolha a data e a agência.",
+        "No dia, leve laudos, receitas, exames e um documento com foto."
+      ],
+      "link": "https://meu.inss.gov.br",
+      "telefone": "135",
+      "orgao": "INSS",
+      "localPresencial": null
+    },
+    {
+      "id": "bpc-idoso",
+      "titulo": "BPC para pessoa idosa",
+      "termos": [
+        "bpc",
+        "loas",
+        "prestacao continuada",
+        "nunca contribui",
+        "nunca paguei",
+        "nunca trabalhou",
+        "nunca trabalhei"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "BPC LOAS idoso",
+        "benefício para idoso que nunca contribuiu",
+        "nunca paguei INSS tenho direito",
+        "salário mínimo para idoso de baixa renda",
+        "benefício de prestação continuada"
+      ],
+      "resumo": "O BPC paga um salário mínimo por mês ao idoso a partir de 65 anos com renda baixa, mesmo sem ter contribuído. Precisa do Cadastro Único no CRAS. O pedido é pelo Meu INSS ou 135.",
+      "passos": [
+        "Faça ou atualize o Cadastro Único no CRAS da sua cidade.",
+        "Peça o BPC pelo Meu INSS ou ligando 135.",
+        "O BPC não é aposentadoria e não paga 13º."
+      ],
+      "link": "https://www.gov.br/pt-br/servicos/solicitar-beneficio-assistencial-ao-idoso",
+      "telefone": "135",
+      "orgao": "INSS",
+      "localPresencial": "CRAS"
+    },
+    {
+      "id": "bpc-deficiencia",
+      "titulo": "BPC para pessoa com deficiência",
+      "termos": [
+        "bpc",
+        "loas",
+        "autista",
+        "autismo",
+        "beneficio deficiencia",
+        "beneficio deficiente"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "BPC LOAS deficiente",
+        "benefício para pessoa com deficiência",
+        "auxílio para filho autista",
+        "salário mínimo para deficiente de baixa renda",
+        "LOAS para cadeirante"
+      ],
+      "resumo": "O BPC paga um salário mínimo por mês à pessoa com deficiência de família com renda baixa. Precisa do Cadastro Único no CRAS e de avaliação do INSS. O pedido é pelo Meu INSS ou 135.",
+      "passos": [
+        "Faça ou atualize o Cadastro Único no CRAS da sua cidade.",
+        "Separe laudos e exames que mostrem a deficiência.",
+        "Peça o BPC pelo Meu INSS ou ligando 135 e compareça à avaliação marcada."
+      ],
+      "link": "https://www.gov.br/pt-br/servicos/solicitar-beneficio-assistencial-a-pessoa-com-deficiencia",
+      "telefone": "135",
+      "orgao": "INSS",
+      "localPresencial": "CRAS"
+    },
+    {
+      "id": "cadastro-unico",
+      "titulo": "Cadastro Único",
+      "termos": [
+        "cadastro unico",
+        "cadunico",
+        "nis"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "Cadastro Único",
+        "CadÚnico",
+        "como me cadastrar nos programas do governo",
+        "atualizar o cadastro único",
+        "NIS",
+        "como conseguir benefício social"
+      ],
+      "resumo": "O Cadastro Único é feito ou atualizado no CRAS da sua cidade. Ele abre a porta para o BPC, a tarifa social de luz e outros programas. Dúvidas: Disque Social 121.",
+      "passos": [
+        "Vá ao CRAS com documento com foto e CPF de todos da casa.",
+        "Leve comprovante de endereço, se tiver.",
+        "Atualize o cadastro a cada dois anos ou quando algo mudar na família."
+      ],
+      "link": "https://www.gov.br/mds/pt-br/acoes-e-programas/cadastro-unico",
+      "telefone": "121",
+      "orgao": "Ministério do Desenvolvimento e Assistência Social",
+      "localPresencial": "CRAS"
+    },
+    {
+      "id": "carteira-pessoa-idosa",
+      "titulo": "Carteira da Pessoa Idosa",
+      "termos": [
+        "carteira idoso",
+        "carteira idosa",
+        "passagem idoso",
+        "onibus idoso",
+        "viajar idoso",
+        "viaja idoso"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "carteira do idoso",
+        "carteira da pessoa idosa",
+        "viajar de ônibus de graça idoso",
+        "passagem gratuita para idoso",
+        "ônibus interestadual gratuito"
+      ],
+      "resumo": "A Carteira da Pessoa Idosa é gratuita para quem tem 60 anos ou mais e renda de até dois salários mínimos. Dá viagem de ônibus entre estados de graça ou com desconto. Peça no CRAS ou pelo gov.br.",
+      "passos": [
+        "Tenha o Cadastro Único em dia, feito no CRAS.",
+        "Entre em carteiraidoso.cidadania.gov.br com a sua conta gov.br e toque em Emitir carteira.",
+        "Salve ou imprima a carteira. Ela vale por dois anos."
+      ],
+      "link": "https://www.gov.br/pt-br/servicos/adquirir-carteira-do-idoso",
+      "telefone": "121",
+      "orgao": "Ministério do Desenvolvimento e Assistência Social",
+      "localPresencial": "CRAS"
+    },
+    {
+      "id": "passe-livre-pcd",
+      "titulo": "Passe Livre interestadual para pessoa com deficiência",
+      "termos": [
+        "passe livre",
+        "passagem deficiente",
+        "onibus deficiente",
+        "viajar deficiente",
+        "viaja deficiente",
+        "passagem deficiencia"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "passe livre",
+        "passe livre interestadual",
+        "viajar de graça deficiente",
+        "passagem gratuita para deficiente",
+        "ônibus de graça para pessoa com deficiência"
+      ],
+      "resumo": "O Passe Livre dá viagem de graça entre estados à pessoa com deficiência de renda baixa. Peça em passelivre.antt.gov.br com a conta gov.br, o laudo médico e o Cadastro Único.",
+      "passos": [
+        "Tenha o Cadastro Único em dia, ou receba o BPC.",
+        "Separe um laudo médico de até um ano e uma foto 3x4.",
+        "Entre em passelivre.antt.gov.br com a conta gov.br e toque em Obter o Passe Livre."
+      ],
+      "link": "https://www.gov.br/pt-br/servicos/obter-passe-livre-interestadual-digital",
+      "telefone": null,
+      "orgao": "ANTT",
+      "localPresencial": null
+    },
+    {
+      "id": "assinatura-gov",
+      "titulo": "Assinar documentos pelo gov.br",
+      "termos": [
+        "assinar",
+        "assinatura",
+        "assino"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "como assinar documentos no gov",
+        "assinatura digital gov.br",
+        "assinatura eletrônica",
+        "assinar um documento pelo celular",
+        "assinar PDF de graça"
+      ],
+      "resumo": "Para assinar de graça, entre em assinador.iti.br com a conta gov.br prata ou ouro, envie o arquivo, escolha onde assinar e confirme com o código do celular.",
+      "passos": [
+        "Tenha a conta gov.br no nível prata ou ouro.",
+        "Entre em assinador.iti.br e envie o documento (PDF, Word ou imagem).",
+        "Escolha onde a assinatura vai ficar e toque em Assinar.",
+        "Digite o código que chega por SMS ou no aplicativo gov.br e baixe o documento assinado."
+      ],
+      "link": "https://www.gov.br/governodigital/pt-br/identidade/assinatura-eletronica",
+      "telefone": null,
+      "orgao": "Governo Digital (ITI)",
+      "localPresencial": null
+    },
+    {
+      "id": "conta-gov",
+      "titulo": "Conta gov.br",
+      "termos": [
+        "senha gov",
+        "conta gov",
+        "entrar gov",
+        "nivel prata",
+        "nivel ouro",
+        "conta prata",
+        "conta ouro"
+      ],
+      "apoio": true,
+      "perguntas": [
+        "esqueci a senha do gov",
+        "criar conta gov.br",
+        "recuperar senha gov.br",
+        "aumentar o nível da conta gov",
+        "conta prata ou ouro",
+        "não consigo entrar no gov.br"
+      ],
+      "resumo": "A conta gov.br é criada e recuperada em acesso.gov.br ou no aplicativo gov.br. Para subir para prata ou ouro, use o reconhecimento facial do aplicativo ou o login do seu banco.",
+      "passos": [
+        "Abra o aplicativo gov.br ou o site acesso.gov.br.",
+        "Para criar ou recuperar, digite o CPF e siga as instruções.",
+        "Para subir de nível, toque em Aumentar nível e use o reconhecimento facial ou o seu banco."
+      ],
+      "link": "https://acesso.gov.br",
+      "telefone": null,
+      "orgao": "Governo Digital",
+      "localPresencial": null
+    },
+    {
+      "id": "farmacia-popular",
+      "titulo": "Remédio de graça no Farmácia Popular",
+      "termos": [
+        "farmacia popular",
+        "remedio graca",
+        "remedio gratis",
+        "remedio gratuito",
+        "remedios graca",
+        "medicamento graca",
+        "medicamento gratis",
+        "medicamento gratuito"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "remédio de graça",
+        "Farmácia Popular",
+        "remédio gratuito para pressão e diabetes",
+        "medicamento grátis",
+        "como pegar remédio de graça"
+      ],
+      "resumo": "No Farmácia Popular, remédios para pressão alta, diabetes e asma, entre outros, são de graça. Leve a receita médica e um documento com CPF a uma farmácia credenciada.",
+      "passos": [
+        "Peça ao médico a receita, que pode ser do SUS ou particular.",
+        "Procure uma farmácia com a placa Aqui tem Farmácia Popular.",
+        "Leve a receita e um documento com foto e CPF."
+      ],
+      "link": "https://www.gov.br/saude/pt-br/composicao/sectics/farmacia-popular",
+      "telefone": "136",
+      "orgao": "Ministério da Saúde",
+      "localPresencial": null
+    },
+    {
+      "id": "tarifa-social-energia",
+      "titulo": "Desconto na conta de luz (Tarifa Social)",
+      "termos": [
+        "conta luz",
+        "tarifa social",
+        "desconto energia",
+        "luz graca",
+        "desconto luz"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "desconto na conta de luz",
+        "tarifa social de energia",
+        "conta de luz mais barata para idoso",
+        "luz de graça",
+        "desconto de energia para quem recebe BPC"
+      ],
+      "resumo": "Quem recebe o BPC ou está no Cadastro Único com renda baixa tem desconto na conta de luz. Costuma ser automático; se não vier, peça à empresa de energia.",
+      "passos": [
+        "Confira se o Cadastro Único está em dia e no nome de quem é titular da conta de luz.",
+        "Se o desconto não aparecer na conta, ligue para a empresa de energia e peça a Tarifa Social."
+      ],
+      "link": "https://www.gov.br/aneel/pt-br/assuntos/tarifas/tarifa-social",
+      "telefone": null,
+      "orgao": "ANEEL",
+      "localPresencial": "CRAS"
+    },
+    {
+      "id": "credencial-estacionamento",
+      "titulo": "Credencial para vaga de idoso ou de pessoa com deficiência",
+      "termos": [
+        "vaga idoso",
+        "vaga deficiente",
+        "credencial estacionamento",
+        "estacionar vaga"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "vaga de idoso",
+        "vaga de deficiente",
+        "credencial de estacionamento",
+        "cartão para estacionar na vaga especial"
+      ],
+      "resumo": "A credencial para estacionar nas vagas de idoso ou de pessoa com deficiência é gratuita. Peça pelo gov.br ou no órgão de trânsito da sua cidade.",
+      "passos": [
+        "Entre no gov.br e procure Credencial de Estacionamento.",
+        "Pessoa com deficiência: tenha o laudo médico em mãos.",
+        "Deixe a credencial à vista no painel do carro."
+      ],
+      "link": "https://www.gov.br/pt-br/servicos/emitir-credencial-de-estacionamento-digital",
+      "telefone": null,
+      "orgao": "Senatran",
+      "localPresencial": null
+    },
+    {
+      "id": "denuncia-violencia",
+      "titulo": "Denunciar violência ou maus-tratos",
+      "termos": [
+        "denunciar",
+        "denuncia",
+        "maus tratos",
+        "maltrata",
+        "maltratando",
+        "abandono",
+        "violencia",
+        "disque 100",
+        "pega dinheiro"
+      ],
+      "apoio": false,
+      "perguntas": [
+        "denunciar maus tratos",
+        "estão me maltratando",
+        "abandono de idoso",
+        "pegam meu dinheiro sem deixar",
+        "violência contra pessoa com deficiência",
+        "Disque 100"
+      ],
+      "resumo": "Para denunciar violência, maus-tratos, abandono ou abuso contra idoso ou pessoa com deficiência, ligue 100. É de graça, funciona 24 horas e você não precisa se identificar.",
+      "passos": [
+        "Ligue 100, de qualquer telefone.",
+        "Conte o que acontece, onde e com quem.",
+        "Em perigo agora, ligue 190."
+      ],
+      "link": "https://www.gov.br/mdh/pt-br/ondh",
+      "telefone": "100",
+      "orgao": "Ministério dos Direitos Humanos e da Cidadania",
+      "localPresencial": "DELEGACIA"
+    }
+  ],
+  "geral": {
+    "id": "orientacao-geral",
+    "titulo": "Ajuda com serviços públicos",
+    "termos": [],
+    "apoio": false,
+    "perguntas": [],
+    "resumo": "Ainda não sei orientar sobre isso. O CRAS da sua cidade ajuda com benefícios e cadastros, e o Disque Social 121 tira dúvidas de graça.",
+    "passos": [
+      "Ligue 121 (Disque Social), de graça.",
+      "Ou procure o CRAS mais perto de você.",
+      "Os serviços do governo federal ficam em gov.br."
+    ],
+    "link": "https://www.gov.br/pt-br",
+    "telefone": "121",
+    "orgao": "Governo Federal",
+    "localPresencial": "CRAS"
+  }
+}

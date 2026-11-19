@@ -2,12 +2,18 @@ package br.com.fiap.vozviva.service;
 
 import br.com.fiap.vozviva.ai.AnaliseIaIntencao;
 import br.com.fiap.vozviva.ai.AnaliseIaIntencao.RespostaIa;
+import br.com.fiap.vozviva.ai.BaseServicosPublicos;
+import br.com.fiap.vozviva.ai.BaseServicosPublicos.ServicoPublico;
 import br.com.fiap.vozviva.ai.ExemplosIntencao;
+import br.com.fiap.vozviva.ai.IndiceTfIdf;
 import br.com.fiap.vozviva.ai.RegrasIntencao;
+import br.com.fiap.vozviva.ai.RespostaIaDuvida;
+import br.com.fiap.vozviva.ai.TurnoAnterior;
 import br.com.fiap.vozviva.dto.AtendimentosProximosResponse;
 import br.com.fiap.vozviva.dto.IntencaoRequest;
 import br.com.fiap.vozviva.dto.IntencaoResponse;
 import br.com.fiap.vozviva.dto.InteracaoVozResponse;
+import br.com.fiap.vozviva.dto.OrientacaoServicoResponse;
 import br.com.fiap.vozviva.dto.PaginaResponse;
 import br.com.fiap.vozviva.model.EntidadesFala;
 import br.com.fiap.vozviva.model.Intencao;
@@ -24,10 +30,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Classifica a fala transcrita e devolve o comando para o app. Combina a IA (Spring AI + exemplos
@@ -35,6 +46,8 @@ import java.util.Set;
  * <ul>
  *   <li>socorro reconhecido pelas regras ou pela IA sempre vira SOCORRO (na dúvida, oferecer ajuda);</li>
  *   <li>a IA decide quando está confiante; abaixo do limite, valem as regras;</li>
+ *   <li>dúvida sobre um serviço público (aposentadoria, BPC, gov.br...) recebe a orientação da base curada, com o
+ *   link e o telefone oficiais, nunca um texto inventado pelo modelo;</li>
  *   <li>sem IA e sem regra segura, o app pede para a pessoa repetir.</li>
  * </ul>
  * A API só classifica e orienta: nenhuma ação é executada aqui.
@@ -47,29 +60,50 @@ public class IntencaoVozService {
 	static final int MAXIMO_MENSAGEM_FALADA = 200;
 	static final String PERGUNTA_REPETICAO = "Não entendi bem. Você quer pedir ajuda, achar um atendimento perto, "
 			+ "conferir uma mensagem ou avisar de um problema na rua?";
+	/** Busca sem o tipo de lugar: perguntar, em vez de pedir a localização (que não ajudaria). */
+	static final String PERGUNTA_TIPO_ATENDIMENTO = "Que lugar você procura? Posso achar hospital, UPA, posto de saúde, "
+			+ "farmácia, CRAS, delegacia ou Defensoria Pública.";
 
 	private static final int EXEMPLOS_RECUPERADOS = 4;
 	private static final int RAIO_ATENDIMENTOS_METROS = 5000;
 	private static final int ATENDIMENTOS_NA_RESPOSTA = 3;
+	/** Falas da mesma pessoa até este tempo atrás contam como a mesma conversa. */
+	static final Duration JANELA_DA_CONVERSA = Duration.ofMinutes(15);
 	private static final Set<String> ORDENACAO = Set.of("id", "criadaEm");
+	/**
+	 * Sinal de que a dúvida é sobre um serviço público, mesmo fora da base ("como tiro o título de eleitor"): só então a
+	 * orientação geral (CRAS e Disque Social 121) faz sentido. "Quanto custa o pão" não é dúvida de serviço público.
+	 */
+	private static final Pattern SERVICO_PUBLICO = Pattern.compile("\\b(gov|governo|prefeitura|inss|sus|cras|cpf|rg|"
+			+ "titulo|eleitor|documento|identidade|certidao|beneficio|direito|cadastro|carteira|auxilio|bolsa|pensao|"
+			+ "aposentad\\w*|imposto|receita|defensoria|cartorio|detran|consulta|exame|vacina|remedio)\\b");
+	/** Fala sobre uma mensagem ou ligação recebida: é checagem de golpe, nunca uma dúvida sobre o serviço citado. */
+	private static final Pattern MENSAGEM_RECEBIDA = Pattern.compile(
+			"\\b(golpe|golpista|mensagem|link|sms|whatsapp|ligaram|ligacao|pix)\\b|\\be verdade\\b");
 
 	private static final Map<Intencao, String> FRASES_PADRAO = Map.of(
 			Intencao.SOCORRO, "Entendi que você precisa de ajuda. Confirme na tela para avisar seus contatos, ou ligue 192.",
 			Intencao.BUSCAR_ATENDIMENTO, "Vou mostrar os atendimentos mais perto de você.",
 			Intencao.VERIFICAR_INFORMACAO, "Me mostre a mensagem que você recebeu, que eu confiro se é golpe.",
 			Intencao.ZELADORIA_REPORT, "Vou abrir o aviso de problema na rua para você confirmar.",
+			Intencao.TIRAR_DUVIDA, "Vou mostrar como resolver isso pelos canais oficiais.",
 			Intencao.DESCONHECIDA, PERGUNTA_REPETICAO);
 
 	private final AnaliseIaIntencao ia;
 	private final ExemplosIntencao exemplos;
+	private final BaseServicosPublicos servicos;
+	private final RespostaIaDuvida duvidas;
 	private final AtendimentoService atendimentos;
 	private final InteracaoVozRepository interacoes;
 	private final double confiancaMinima;
 
-	public IntencaoVozService(AnaliseIaIntencao ia, ExemplosIntencao exemplos, AtendimentoService atendimentos,
-			InteracaoVozRepository interacoes, @Value("${vozviva.voz.confianca-minima:0.6}") double confiancaMinima) {
+	public IntencaoVozService(AnaliseIaIntencao ia, ExemplosIntencao exemplos, BaseServicosPublicos servicos,
+			RespostaIaDuvida duvidas, AtendimentoService atendimentos, InteracaoVozRepository interacoes,
+			@Value("${vozviva.voz.confianca-minima:0.6}") double confiancaMinima) {
 		this.ia = ia;
 		this.exemplos = exemplos;
+		this.servicos = servicos;
+		this.duvidas = duvidas;
 		this.atendimentos = atendimentos;
 		this.interacoes = interacoes;
 		this.confiancaMinima = confiancaMinima;
@@ -79,13 +113,37 @@ public class IntencaoVozService {
 		long inicio = System.nanoTime();
 		String fala = request.texto().strip();
 
+		List<TurnoAnterior> anteriores = conversaRecente(usuarioId);
+
 		RegrasIntencao.Resultado regras = RegrasIntencao.analisar(fala);
-		Optional<RespostaIa> respostaIa = ia.analisar(fala, exemplos.parecidos(fala, EXEMPLOS_RECUPERADOS));
-		Decisao decisao = decidir(regras, respostaIa.orElse(null), confiancaMinima);
+		Optional<RespostaIa> respostaIa = ia.analisar(fala, exemplos.parecidos(fala, EXEMPLOS_RECUPERADOS), anteriores);
+		Decisao decidida = decidir(regras, respostaIa.orElse(null), confiancaMinima);
+		Orientada orientada = orientar(decidida, fala, anteriores.stream().map(TurnoAnterior::fala).toList(), servicos);
+		Decisao decisao = orientada.decisao();
+		OrientacaoServicoResponse orientacao = orientada.servico() == null ? null
+				: OrientacaoServicoResponse.de(orientada.servico());
+
+		// Qualquer dúvida recebe uma resposta à pergunta feita (com os fatos da base, quando ela tem o serviço). Link,
+		// telefone e passos continuam vindo da base; sem resposta segura da IA, fica a orientação da base.
+		if (decidida.intencao() == Intencao.TIRAR_DUVIDA || decisao.intencao() == Intencao.TIRAR_DUVIDA) {
+			ServicoPublico daBase = orientada.servico() == null || orientada.servico().id().equals(servicos.geral().id())
+					? null : orientada.servico();
+			Optional<String> resposta = duvidas.responder(fala, anteriores, daBase);
+			if (resposta.isPresent()) {
+				orientacao = daBase != null ? OrientacaoServicoResponse.de(daBase, resposta.get())
+						: OrientacaoServicoResponse.aberta(resposta.get());
+				EntidadesFala entidades = daBase != null ? decisao.entidades() : EntidadesFala.NENHUMA;
+				Urgencia urgencia = decisao.urgencia() == null ? Urgencia.BAIXA : decisao.urgencia();
+				decisao = new Decisao(Intencao.TIRAR_DUVIDA, urgencia, entidades, resposta.get(),
+						Math.max(decisao.confianca(), confiancaMinima));
+			}
+		}
 
 		AtendimentosProximosResponse proximos = buscarAtendimentos(decisao, request);
-		// Com a busca feita, vale a frase dela (inclusive "não encontrei..."), nunca uma promessa genérica.
-		String mensagemFalada = proximos != null ? proximos.mensagemFalada() : decisao.mensagemFalada();
+		// Com a busca feita, vale a frase dela (inclusive "não encontrei..."), nunca uma promessa genérica. Numa dúvida,
+		// a frase é a orientação da base; o lugar mais perto aparece na lista.
+		boolean falaDaBusca = proximos != null && decisao.intencao() != Intencao.TIRAR_DUVIDA;
+		String mensagemFalada = falaDaBusca ? proximos.mensagemFalada() : decisao.mensagemFalada();
 		String analisadoPor = respostaIa.isPresent() ? "IA_E_REGRAS" : "REGRAS";
 
 		int latenciaMs = (int) ((System.nanoTime() - inicio) / 1_000_000);
@@ -93,7 +151,18 @@ public class IntencaoVozService {
 				decisao.confianca(), latenciaMs, analisadoPor, Instant.now()));
 
 		return new IntencaoResponse(decisao.intencao(), decisao.intencao().acao(), decisao.urgencia(),
-				decisao.entidades(), mensagemFalada, decisao.confianca(), analisadoPor, proximos);
+				decisao.entidades(), mensagemFalada, decisao.confianca(), analisadoPor, proximos, orientacao);
+	}
+
+	/** As falas da pessoa nos últimos minutos, da mais antiga para a mais nova: o contexto da conversa. */
+	private List<TurnoAnterior> conversaRecente(Long usuarioId) {
+		List<TurnoAnterior> turnos = new ArrayList<>(interacoes
+			.findTop3ByUsuarioIdAndCriadaEmAfterOrderByCriadaEmDesc(usuarioId, Instant.now().minus(JANELA_DA_CONVERSA))
+			.stream()
+			.map(i -> new TurnoAnterior(i.getTexto(), i.getIntencao()))
+			.toList());
+		Collections.reverse(turnos);
+		return turnos;
 	}
 
 	public PaginaResponse<InteracaoVozResponse> historico(Long usuarioId, Pageable pageable) {
@@ -102,6 +171,14 @@ public class IntencaoVozService {
 				i.getId(), i.getTexto(), i.getIntencao(), i.getAcao(), i.getUrgencia(),
 				i.getConfianca() == null ? null : i.getConfianca().doubleValue(), i.getLatenciaMs(), i.getAnalisadoPor(),
 				i.getCriadaEm()));
+	}
+
+	/**
+	 * O que a API responde sem IA (fora do ar, sem chave ou timeout): as regras e a base de serviços públicos. É a
+	 * linha de base da avaliação ({@code somente-regras.md}).
+	 */
+	public static Intencao classificarSemIa(String fala, BaseServicosPublicos servicos) {
+		return orientar(decidir(RegrasIntencao.analisar(fala), null, 1.0), fala, servicos).decisao().intencao();
 	}
 
 	static Decisao decidir(RegrasIntencao.Resultado regras, RespostaIa ia, double confiancaMinima) {
@@ -132,6 +209,77 @@ public class IntencaoVozService {
 	}
 
 	/**
+	 * Liga a decisão à base de serviços públicos. A resposta de uma dúvida vem sempre da base (com o link e o telefone
+	 * oficiais); o socorro, a verificação de golpe e o problema na rua nunca são trocados.
+	 * <ul>
+	 *   <li>TIRAR_DUVIDA: o serviço mais parecido; fora da base, a orientação geral (CRAS e Disque Social 121) se a fala
+	 *   for sobre um serviço público, ou o pedido para repetir se não for ("quanto custa o pão");</li>
+	 *   <li>busca de atendimento ou fala não entendida que cite um serviço da base ("onde resolvo minha aposentadoria",
+	 *   "remédio de graça na Farmácia Popular") vira TIRAR_DUVIDA, mantendo o tipo de lugar para a busca;</li>
+	 *   <li>busca sem tipo e fora da base pergunta que lugar a pessoa procura;</li>
+	 *   <li>fala sobre mensagem, link ou ligação ("recebi uma mensagem da Farmácia Popular, é golpe?") nunca vira
+	 *   dúvida: a orientação do serviço não pode tomar o lugar da checagem de golpe; se as regras não a entenderam,
+	 *   ela vai para a checagem de golpe.</li>
+	 * </ul>
+	 */
+	static Orientada orientar(Decisao decisao, String fala, BaseServicosPublicos servicos) {
+		return orientar(decisao, fala, List.of(), servicos);
+	}
+
+	/**
+	 * @param falasAnteriores falas recentes da mesma pessoa (da mais antiga para a mais nova): numa dúvida que não cita
+	 *                        o serviço ("e quanto tempo demora?"), vale o serviço da fala anterior mais recente
+	 */
+	static Orientada orientar(Decisao decisao, String fala, List<String> falasAnteriores, BaseServicosPublicos servicos) {
+		Intencao intencao = decisao.intencao();
+		TipoAtendimento tipoPedido = decisao.entidades().tipoAtendimento();
+		boolean buscaSemTipo = intencao == Intencao.BUSCAR_ATENDIMENTO && tipoPedido == null;
+		boolean mensagemRecebida = MENSAGEM_RECEBIDA.matcher(IndiceTfIdf.normalizar(fala)).find();
+		ServicoPublico servico = null;
+		if (intencao == Intencao.TIRAR_DUVIDA) {
+			boolean sobreServicoPublico = SERVICO_PUBLICO.matcher(IndiceTfIdf.normalizar(fala)).find();
+			servico = servicos.buscar(fala).or(() -> doContexto(falasAnteriores, servicos))
+				.orElse(sobreServicoPublico ? servicos.geral() : null);
+			if (servico == null) {
+				return new Orientada(new Decisao(Intencao.DESCONHECIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA,
+						PERGUNTA_REPETICAO, decisao.confianca()), null);
+			}
+		}
+		else if ((intencao == Intencao.BUSCAR_ATENDIMENTO || intencao == Intencao.DESCONHECIDA) && !mensagemRecebida) {
+			servico = servicos.buscar(fala).orElse(null);
+		}
+		if (servico != null) {
+			TipoAtendimento local = servico.localPresencial() != null ? servico.localPresencial() : tipoPedido;
+			EntidadesFala entidades = new EntidadesFala(local, decisao.entidades().exigeAcessibilidade(), null, null,
+					decisao.entidades().referenciaLocal());
+			Urgencia urgencia = decisao.urgencia() == null ? Urgencia.BAIXA : decisao.urgencia();
+			return new Orientada(new Decisao(Intencao.TIRAR_DUVIDA, urgencia, entidades, servico.resumo(),
+					Math.max(decisao.confianca(), RegrasIntencao.CONFIANCA_REGRAS)), servico);
+		}
+		if (intencao == Intencao.DESCONHECIDA && mensagemRecebida) {
+			// Sem IA, as regras não entenderam, mas a fala é sobre uma mensagem, um link ou um pix: oferecer a checagem
+			// de golpe (a pessoa confirma na tela) é melhor do que pedir para repetir.
+			return new Orientada(new Decisao(Intencao.VERIFICAR_INFORMACAO, Urgencia.MEDIA, EntidadesFala.NENHUMA,
+					FRASES_PADRAO.get(Intencao.VERIFICAR_INFORMACAO), RegrasIntencao.CONFIANCA_REGRAS), null);
+		}
+		if (buscaSemTipo) {
+			return new Orientada(new Decisao(intencao, decisao.urgencia(), decisao.entidades(), PERGUNTA_TIPO_ATENDIMENTO,
+					decisao.confianca()), null);
+		}
+		return new Orientada(decisao, null);
+	}
+
+	private static Optional<ServicoPublico> doContexto(List<String> falasAnteriores, BaseServicosPublicos servicos) {
+		for (int i = falasAnteriores.size() - 1; i >= 0; i--) {
+			Optional<ServicoPublico> servico = servicos.buscar(falasAnteriores.get(i));
+			if (servico.isPresent()) {
+				return servico;
+			}
+		}
+		return Optional.empty();
+	}
+
+	/**
 	 * O histórico é secundário: se não puder ser gravado (ex.: a conta do token não existe mais), a resposta
 	 * sai mesmo assim. Um pedido de socorro nunca se perde por causa do histórico.
 	 */
@@ -145,10 +293,14 @@ public class IntencaoVozService {
 		}
 	}
 
-	/** Em "farmácia perto" com localização, a resposta já traz os locais: um toque a menos para o cidadão. */
+	/**
+	 * Em "farmácia perto" com localização, a resposta já traz os locais: um toque a menos para o cidadão. Numa dúvida
+	 * com atendimento presencial (ex.: BPC no CRAS), traz o lugar mais perto onde resolver.
+	 */
 	private AtendimentosProximosResponse buscarAtendimentos(Decisao decisao, IntencaoRequest request) {
 		TipoAtendimento tipo = decisao.entidades().tipoAtendimento();
-		if (decisao.intencao() != Intencao.BUSCAR_ATENDIMENTO || tipo == null || request.localizacao() == null) {
+		boolean buscaLocais = decisao.intencao() == Intencao.BUSCAR_ATENDIMENTO || decisao.intencao() == Intencao.TIRAR_DUVIDA;
+		if (!buscaLocais || tipo == null || request.localizacao() == null) {
 			return null;
 		}
 		return atendimentos.proximos(tipo, request.localizacao().latitude(), request.localizacao().longitude(),
@@ -170,6 +322,10 @@ public class IntencaoVozService {
 
 	record Decisao(Intencao intencao, Urgencia urgencia, EntidadesFala entidades, String mensagemFalada,
 			double confianca) {
+	}
+
+	/** A decisão final e, numa dúvida, o serviço da base que responde. */
+	record Orientada(Decisao decisao, ServicoPublico servico) {
 	}
 
 }

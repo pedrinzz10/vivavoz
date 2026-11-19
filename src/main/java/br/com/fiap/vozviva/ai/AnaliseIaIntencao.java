@@ -48,12 +48,20 @@ public class AnaliseIaIntencao {
 	}
 
 	public Optional<RespostaIa> analisar(String fala, List<Exemplo> exemplos) {
+		return analisar(fala, exemplos, List.of());
+	}
+
+	/**
+	 * @param anteriores falas recentes da mesma pessoa, da mais antiga para a mais nova: dão continuidade à conversa
+	 *                   ("quero me aposentar" e depois "e quanto tempo demora?")
+	 */
+	public Optional<RespostaIa> analisar(String fala, List<Exemplo> exemplos, List<TurnoAnterior> anteriores) {
 		if (chatClient == null) {
 			return Optional.empty();
 		}
 		try {
 			// Mensagens montadas prontas (sem template): chaves como "{nome}" na fala não são interpretadas.
-			Prompt prompt = new Prompt(List.of(new SystemMessage(instrucoes), new UserMessage(montarPedido(fala, exemplos))));
+			Prompt prompt = new Prompt(List.of(new SystemMessage(instrucoes), new UserMessage(montarPedido(fala, exemplos, anteriores))));
 			RespostaIa resposta = chatClient.prompt(prompt).call().entity(SaidaEstruturadaTolerante.para(RespostaIa.class));
 			return Optional.ofNullable(resposta).filter(r -> r.intencao() != null);
 		}
@@ -66,14 +74,24 @@ public class AnaliseIaIntencao {
 	}
 
 	static String montarPedido(String fala, List<Exemplo> exemplos) {
+		return montarPedido(fala, exemplos, List.of());
+	}
+
+	static String montarPedido(String fala, List<Exemplo> exemplos, List<TurnoAnterior> anteriores) {
 		String contexto = exemplos.stream().map(AnaliseIaIntencao::descrever).collect(Collectors.joining("\n"));
-		return "<exemplos_parecidos>\n" + contexto + "\n</exemplos_parecidos>\n\n"
+		String conversa = anteriores.isEmpty() ? ""
+				: "<conversa_anterior>\n" + anteriores.stream()
+					.map(t -> "- \"" + neutralizarDelimitadores(t.fala()) + "\" -> intencao=" + t.intencao())
+					.collect(Collectors.joining("\n")) + "\n</conversa_anterior>\n\n";
+		return "<exemplos_parecidos>\n" + contexto + "\n</exemplos_parecidos>\n\n" + conversa
 				+ "<fala_do_cidadao>\n" + neutralizarDelimitadores(fala) + "\n</fala_do_cidadao>";
 	}
 
 	/** Impede que a fala "feche" o delimitador e passe a ser lida como instrução. */
 	static String neutralizarDelimitadores(String fala) {
-		return fala.replaceAll("(?i)</?\\s*(fala_do_cidadao|exemplos_parecidos)\\s*>", "[removido]");
+		return fala.replaceAll(
+				"(?i)</?\\s*(fala_do_cidadao|exemplos_parecidos|conversa_anterior|pergunta|documento_oficial)\\s*>",
+				"[removido]");
 	}
 
 	private static String descrever(Exemplo exemplo) {
