@@ -386,6 +386,8 @@ CONFIGURACOES=(
   "JWT_ISSUER=${JWT_ISSUER}"
   "JWT_AUDIENCE=${JWT_AUDIENCE}"
 )
+# A API Java avisa a .NET quando o cidadão exclui a conta (LGPD): a zeladoria apaga os dados e recusa o token.
+[ "$PUBLICAR_DOTNET" = "sim" ] && CONFIGURACOES+=("ZELADORIA_URL=https://${WEBAPP_DOTNET}.azurewebsites.net")
 [ -n "${OCI_GENAI_API_KEY:-}" ] && CONFIGURACOES+=("OCI_GENAI_API_KEY=$(ref oci-genai-api-key)")
 [ -n "${OCI_GENAI_BASE_URL:-}" ] && CONFIGURACOES+=("OCI_GENAI_BASE_URL=${OCI_GENAI_BASE_URL}")
 [ -n "${OCI_GENAI_MODEL:-}" ] && CONFIGURACOES+=("OCI_GENAI_MODEL=${OCI_GENAI_MODEL}")
