@@ -9,6 +9,7 @@ import br.com.fiap.vozviva.dto.TrocarSenhaRequest;
 import br.com.fiap.vozviva.dto.UsuarioResponse;
 import br.com.fiap.vozviva.security.UsuarioAutenticado;
 import br.com.fiap.vozviva.service.AutenticacaoService;
+import br.com.fiap.vozviva.service.ZeladoriaCliente;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -18,6 +19,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,10 +36,13 @@ public class AutenticacaoController {
 
 	private final AutenticacaoService autenticacao;
 	private final UsuarioAutenticado usuarioAutenticado;
+	private final ZeladoriaCliente zeladoria;
 
-	public AutenticacaoController(AutenticacaoService autenticacao, UsuarioAutenticado usuarioAutenticado) {
+	public AutenticacaoController(AutenticacaoService autenticacao, UsuarioAutenticado usuarioAutenticado,
+			ZeladoriaCliente zeladoria) {
 		this.autenticacao = autenticacao;
 		this.usuarioAutenticado = usuarioAutenticado;
+		this.zeladoria = zeladoria;
 	}
 
 	@PostMapping("/cadastro")
@@ -69,8 +75,11 @@ public class AutenticacaoController {
 	@ApiResponse(responseCode = "204", description = "Conta e dados apagados")
 	@Operation(summary = "Excluir minha conta (LGPD)", description = "Apaga a conta do token e o que depende dela: o perfil "
 			+ "de emergência do cidadão, com contatos, emergências e avisos, e o histórico de voz. Os perfis que um cuidador "
-			+ "cuidava continuam com os cidadãos, sem o vínculo. As estatísticas de golpe já são anônimas.")
-	public ResponseEntity<Void> excluirConta() {
+			+ "cuidava continuam com os cidadãos, sem o vínculo. As estatísticas de golpe já são anônimas. A API .NET de "
+			+ "zeladoria também é avisada: apaga os reportes da pessoa e passa a recusar o token.")
+	public ResponseEntity<Void> excluirConta(@AuthenticationPrincipal Jwt jwt) {
+		// Primeiro a zeladoria, enquanto o token ainda vale para ela; depois a conta aqui.
+		zeladoria.excluirConta(jwt == null ? null : jwt.getTokenValue());
 		autenticacao.excluirConta(usuarioAutenticado.idNumerico());
 		return ResponseEntity.noContent().build();
 	}
