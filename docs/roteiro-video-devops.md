@@ -37,7 +37,7 @@ Nomes que vão aparecer (o sufixo `rm562312` deixa os nomes únicos na Azure):
 | Grupo de recursos (a "pasta" com tudo na Azure) | `rg-vozviva` |
 | API Java | `app-vozviva-rm562312` |
 | API .NET | `app-zeladoria-rm562312` |
-| Banco de dados (Azure SQL) | `sql-vozviva-rm562312`, com os bancos `vozviva` e `zeladoria` |
+| Banco de dados (Azure SQL, no Chile) | `sql-vozviva-rm562312-chilecentral`, com os bancos `vozviva` e `zeladoria` |
 | Registro de imagens (Container Registry) | `acrvozvivarm562312` |
 | Azure DevOps | organização `vozviva`, projeto `vozviva` |
 
@@ -281,6 +281,7 @@ O que falar sobre cada bloco do script:
 | No terminal aparece | O que falar |
 |---|---|
 | Grupo de recursos | "Primeiro o grupo `rg-vozviva`, em `brazilsouth`, que reúne tudo." |
+| Azure SQL no Chile | "O banco fica em `chilecentral`: em São Paulo a Azure não estava conseguindo criar servidores SQL, e o Chile é a região permitida mais perto, a uns 50 ms das APIs." |
 | Key Vault | "Logo depois, o Key Vault: o script grava nele todas as senhas que carreguei. Daqui para a frente, as APIs só recebem uma referência ao cofre." |
 | Azure SQL | "O servidor SQL com os bancos `vozviva` e `zeladoria`. A API não usa o administrador: o script cria o usuário `vozviva_app`, que só mexe nos bancos da aplicação." |
 | Container Registry | "O registro privado onde a pipeline vai guardar as imagens da API." |
@@ -538,6 +539,8 @@ grupo `rg-vozviva` inteiro (com o alerta de gastos). Não tem volta: os dados do
 
 | O que aconteceu | O que fazer |
 |---|---|
+| Rodou o `provisionar-azure.sh` logo depois de um `remover-azure.sh` | Espere o grupo sumir de vez antes: `az group exists -n rg-vozviva` tem que dar `false`, e `az sql server list -o table` não pode mostrar o servidor antigo. Criar um servidor SQL enquanto o antigo ainda está sendo apagado trava |
+| A criação do servidor SQL passou de 10 minutos | A região está com problema. Interrompa (Ctrl+C), apague com `remover-azure.sh` e rode de novo com outra região só para o banco, por exemplo `export SQL_LOCALIZACAO=mexicocentral` (a assinatura de estudante permite chilecentral, mexicocentral, eastus, eastus2 e brazilsouth) |
 | O comando colado deu erro estranho (`command not found`, `expected one argument`) | A linha quebrou ao colar. Cole de novo, um comando por vez, ou digite à mão |
 | `Defina SQL_ADMIN_SENHA` (ou outra variável) | As senhas não foram carregadas. Rode de novo o `set -a; . ~/vozviva-segredos.env; set +a`. Se o arquivo sumiu, o Cloud Shell reiniciou: refaça a etapa A2 fora da gravação |
 | O Cloud Shell caiu no meio do script | Reabra, recrie o arquivo de senhas com as mesmas senhas do gerenciador e rode o script de novo: ele continua de onde parou. No vídeo, isso exige regravar |

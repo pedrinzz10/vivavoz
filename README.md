@@ -137,7 +137,8 @@ Versão editável no draw.io: [`docs/arquitetura.drawio`](docs/arquitetura.drawi
 
 O App Service Plan B1 roda as **duas APIs**: a API Java (container, imagem do ACR) e a API .NET de zeladoria. O Azure
 SQL tem **dois bancos** (`vozviva`, da API Java, e `zeladoria`, da API .NET), cada um com o usuário de privilégio
-mínimo `vozviva_app`. O RabbitMQ não tem IP público: só as APIs o alcançam, pela rede virtual. As senhas ficam no
+mínimo `vozviva_app`; o servidor SQL fica em `chilecentral` (em `brazilsouth` a Azure não estava criando servidores
+SQL, e o Chile é a região permitida mais perto, a uns 50 ms das APIs). O RabbitMQ não tem IP público: só as APIs o alcançam, pela rede virtual. As senhas ficam no
 **Key Vault** `kv-vozviva-<sufixo>`: as configurações das APIs guardam só referências ao cofre, que o App Service
 resolve com a identidade gerenciada de cada API (permissão só de leitura).
 
@@ -610,7 +611,7 @@ desatualizado.
 | Container Instance com RabbitMQ (0,5 vCPU e 1 GB) | Fila do botão de emergência, sem IP público; imagem oficial pelo espelho `public.ecr.aws` (o Docker Hub limita downloads anônimos) |
 | Orçamento `vozviva-creditos` (do grupo) | Gasto **acumulado** do grupo (período anual, porque o crédito não renova por mês), com alerta por e-mail em 50% e 80% e na previsão de 100%: o Azure for Students para os recursos quando o crédito acaba |
 | App Service Linux B1 (container) | API Java; HTTPS obrigatório e health check em `/actuator/health/liveness` |
-| Segundo app no mesmo plano B1 (.NET 8, sem custo extra) + banco `zeladoria` (Basic) | API .NET de zeladoria, que o app mobile também usa; compilada a partir do repositório da equipe .NET e publicada pelo próprio script. Para pular: `PUBLICAR_DOTNET=nao` |
+| Segundo app no mesmo plano B1 (.NET 10, a API compilada para net8.0 roda com `DOTNET_ROLL_FORWARD=Major`; sem custo extra) + banco `zeladoria` (Basic) | API .NET de zeladoria, que o app mobile também usa; compilada a partir do repositório da equipe .NET e publicada pelo próprio script. Para pular: `PUBLICAR_DOTNET=nao` |
 
 **Segurança do ambiente:**
 - O App Service puxa a imagem do ACR com identidade gerenciada (`AcrPull`), sem senha de registry.

@@ -20,7 +20,7 @@
 #   export JWT_SECRET='...'                # 32+ caracteres, o mesmo da API .NET
 #   ./scripts/provisionar-azure.sh
 #
-# Opcionais: LOCALIZACAO (padrão brazilsouth), GRUPO, JWT_ISSUER (padrão voz-e-via-java), JWT_AUDIENCE (padrão
+# Opcionais: LOCALIZACAO (padrão brazilsouth), SQL_LOCALIZACAO (padrão chilecentral, região do Azure SQL), GRUPO, JWT_ISSUER (padrão voz-e-via-java), JWT_AUDIENCE (padrão
 # voz-e-via; os dois iguais aos da API .NET), OCI_GENAI_API_KEY, OCI_GENAI_BASE_URL, OCI_GENAI_MODEL ou, sem API
 # key, as variáveis OCI_GENAI_TENANCY_OCID, OCI_GENAI_USER_OCID, OCI_GENAI_FINGERPRINT, OCI_GENAI_PRIVATE_KEY e
 # OCI_GENAI_COMPARTMENT_OCID (todas geradas por scripts/provisionar-oci.sh), USUARIOS_TESTE_SENHA (cria os usuários de teste, útil na demonstração) e
@@ -47,8 +47,14 @@ fi
 
 SUFIXO_LIMPO="$(echo "$SUFIXO" | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]')"
 LOCALIZACAO="${LOCALIZACAO:-brazilsouth}"
+# Azure SQL em outra região: em brazilsouth a criação do servidor estourou o tempo da Azure duas vezes seguidas
+# ("OperationTimedOut") e eastus2 não aceitava servidores novos ("RegionDoesNotAllowProvisioning") em 18/11/2026.
+# chilecentral, permitida na assinatura de estudante, é a mais perto das APIs (cerca de 50 ms).
+SQL_LOCALIZACAO="${SQL_LOCALIZACAO:-chilecentral}"
 GRUPO="${GRUPO:-rg-vozviva}"
 SQL_SERVIDOR="sql-vozviva-${SUFIXO_LIMPO}"
+# Com o banco fora da região das APIs, a região entra no nome (nomes de servidor SQL valem para a Azure inteira).
+[ "$SQL_LOCALIZACAO" != "$LOCALIZACAO" ] && SQL_SERVIDOR="${SQL_SERVIDOR}-${SQL_LOCALIZACAO}"
 SQL_BANCO="vozviva"
 SQL_ADMIN="vozvivaadmin"
 SQL_APP_USUARIO="vozviva_app"
@@ -122,7 +128,8 @@ KEYVAULT_ID="$(az keyvault show -g "$GRUPO" -n "$KEYVAULT" --query id -o tsv)"
 # Dá um papel a uma identidade num escopo (o cofre inteiro ou um segredo só), se ela ainda não tiver.
 papel_em() {
   local escopo="$1" objeto="$2" tipo="$3" papel="$4" descricao="$5"
-  if [ -n "$(az role assignment list --assignee "$objeto" --scope "$escopo" --role "$papel" --query '[].id' -o tsv)" ]; then
+  # Uma identidade recém-criada pode ainda não aparecer na busca: aí a lista vem vazia e o papel é criado pelo id.
+  if [ -n "$(az role assignment list --assignee "$objeto" --scope "$escopo" --role "$papel" --query '[].id' -o tsv 2> /dev/null)" ]; then
     reaproveitado "$descricao"
   else
     az role assignment create --assignee-object-id "$objeto" --assignee-principal-type "$tipo" \
@@ -169,11 +176,11 @@ guardar jwt-secret "$JWT_SECRET"
 [ -n "${OCI_GENAI_API_KEY:-}" ] && guardar oci-genai-api-key "$OCI_GENAI_API_KEY"
 [ -n "${OCI_GENAI_PRIVATE_KEY:-}" ] && guardar oci-genai-private-key "$OCI_GENAI_PRIVATE_KEY"
 
-passo "Azure SQL: servidor ${SQL_SERVIDOR}"
+passo "Azure SQL: servidor ${SQL_SERVIDOR} (${SQL_LOCALIZACAO})"
 if existe az sql server show -g "$GRUPO" -n "$SQL_SERVIDOR"; then
   reaproveitado "$SQL_SERVIDOR"
 else
-  az sql server create -g "$GRUPO" -n "$SQL_SERVIDOR" -l "$LOCALIZACAO" \
+  az sql server create -g "$GRUPO" -n "$SQL_SERVIDOR" -l "$SQL_LOCALIZACAO" \
     --admin-user "$SQL_ADMIN" --admin-password "$SQL_ADMIN_SENHA" --minimal-tls-version 1.2 -o none
   criado "$SQL_SERVIDOR"
 fi
@@ -330,7 +337,7 @@ fi
 
 passo "Identidade gerenciada do App Service com permissão de leitura no ACR (AcrPull)"
 PRINCIPAL="$(az webapp identity assign -g "$GRUPO" -n "$WEBAPP" --query principalId -o tsv)"
-if [ -n "$(az role assignment list --assignee "$PRINCIPAL" --scope "$ACR_ID" --role AcrPull --query '[].id' -o tsv)" ]; then
+if [ -n "$(az role assignment list --assignee "$PRINCIPAL" --scope "$ACR_ID" --role AcrPull --query '[].id' -o tsv 2> /dev/null)" ]; then
   reaproveitado "permissão AcrPull"
 else
   az role assignment create --assignee-object-id "$PRINCIPAL" --assignee-principal-type ServicePrincipal \
@@ -400,7 +407,9 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
     reaproveitado "$WEBAPP_DOTNET"
   else
     # Aplicativo .NET nativo (não container): o Cloud Shell compila e publica, sem depender de ACR Tasks.
-    az webapp create -g "$GRUPO" -p "$PLANO" -n "$WEBAPP_DOTNET" --runtime "DOTNETCORE:8.0" -o none
+    # O App Service não cria mais apps com .NET 8 (fim do suporte em 10/11/2026): roda no .NET 10 (LTS), e a API,
+    # compilada para net8.0, sobe nele com DOTNET_ROLL_FORWARD=Major (variável abaixo).
+    az webapp create -g "$GRUPO" -p "$PLANO" -n "$WEBAPP_DOTNET" --runtime "DOTNETCORE:10.0" -o none
     criado "$WEBAPP_DOTNET"
   fi
   az webapp update -g "$GRUPO" -n "$WEBAPP_DOTNET" --https-only true -o none
@@ -419,6 +428,7 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
   passo "API .NET: variáveis de ambiente (mesmo JWT da API Java, banco ${SQL_BANCO_DOTNET}, senhas no cofre)"
   CONFIGURACOES_DOTNET=(
     "ASPNETCORE_ENVIRONMENT=Production"
+    "DOTNET_ROLL_FORWARD=Major"
     "JWT_SECRET=$(ref jwt-secret)"
     "Jwt__Issuer=${JWT_ISSUER}"
     "Jwt__Audience=${JWT_AUDIENCE}"
