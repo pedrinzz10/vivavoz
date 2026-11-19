@@ -11,6 +11,6 @@ RM565492 - Miguel Henrique Oliveira Dias - 2TDSPW
 RM562312 - Pedro Henrique de Oliveira - 2TDSPW
 
 Repositório (público): https://github.com/pedrinzz10/vivavoz
-Vídeo pitch: <link do vídeo>
+Vídeo pitch: https://www.youtube.com/watch?v=XSaXWFm4FMs
 API publicada (Swagger): https://app-vozviva-rm562312.azurewebsites.net/swagger-ui.html
 Requisito 5: opção A (RabbitMQ)
