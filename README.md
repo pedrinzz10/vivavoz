@@ -672,8 +672,10 @@ Tipos: `HOSPITAL`, `UPA`, `UBS`, `FARMACIA`, `CRAS`, `DELEGACIA`, `DEFENSORIA`.
 
 ### Dados (OpenStreetMap)
 
-Os locais vêm de uma importação única de dados abertos do **OpenStreetMap** para Osasco/SP e arredores
-(bairros vizinhos de São Paulo, Carapicuíba e Barueri):
+Os locais vêm de uma importação de dados abertos do **OpenStreetMap** para a cidade de São Paulo inteira, Osasco e
+os vizinhos (Carapicuíba, Barueri). A API não consulta o OpenStreetMap a cada busca: os dados ficam no nosso banco.
+Uma busca fora dessa área volta vazia, com a orientação de ligar 192 em hospital e UPA. Até 19/11/2026 a carga era
+só de Osasco, e uma busca no centro de São Paulo (Praça da Sé) não achava nada:
 
 ```bash
 ./scripts/importar-osm.sh                                 # consulta a Overpass API (com espelhos de reserva)
@@ -686,8 +688,8 @@ entram como `DELEGACIA`), converte a tag `wheelchair` (`yes`/`limited`/`no`) em 
 o mesmo local mapeado duas vezes e gera `R__carga_pontos_atendimento.sql`, uma migração repetível do Flyway
 (reaplicada quando o conteúdo muda).
 
-Carga atual (base OSM de 28/07/2026): 237 locais, sendo 130 farmácias, 40 hospitais, 38 UBS, 25 delegacias
-e 4 UPAs. Só 28 têm a acessibilidade informada no OSM; os demais aparecem como "acessibilidade não
+Carga atual (base OSM de 19/11/2026): 2.222 locais, sendo 1.272 farmácias, 359 hospitais, 347 UBS, 173 delegacias,
+43 UPAs, 19 CRAS e 9 Defensorias. Só 310 têm a acessibilidade informada no OSM; os demais aparecem como "acessibilidade não
 informada".
 
 **Dados © colaboradores do OpenStreetMap**, sob a licença [ODbL](https://www.openstreetmap.org/copyright).
@@ -875,8 +877,8 @@ docker run --rm -p 8081:8080 --network vozviva_default \
 - A suíte completa passou 3 vezes seguidas sem falhas. Os testes de concorrência usam 10 threads, porque com 2
   eles não pegavam a condição de corrida de forma estável.
 
-**Dados para a demonstração:** o perfil dev cria os usuários de teste e o Flyway aplica a carga real de 237
-locais de Osasco/SP do OpenStreetMap. Os testes de atendimento usam uma área sem dados reais (latitude e
+**Dados para a demonstração:** o perfil dev cria os usuários de teste e o Flyway aplica a carga real de 2.222
+locais da cidade de São Paulo e de Osasco do OpenStreetMap. Os testes de atendimento usam uma área sem dados reais (latitude e
 longitude 10), para não depender da carga.
 
 Os testes de integração com infraestrutura real precisam de Docker. Sem Docker, eles são ignorados

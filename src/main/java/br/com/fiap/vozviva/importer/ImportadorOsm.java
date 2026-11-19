@@ -29,7 +29,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * Importa os locais de atendimento da região de Osasco/SP do OpenStreetMap (Overpass API) e gera a
+ * Importa os locais de atendimento da cidade de São Paulo e de Osasco do OpenStreetMap (Overpass API) e gera a
  * migração repetível do Flyway com a carga ({@code R__carga_pontos_atendimento.sql}).
  * <p>
  * Ferramenta de linha de comando, fora da aplicação: rode {@code ./gradlew importarOsm} (consulta a
@@ -37,8 +37,11 @@ import java.util.stream.Stream;
  */
 public final class ImportadorOsm {
 
-	/** Osasco/SP com margem para os bairros vizinhos de São Paulo, Carapicuíba e Barueri (sul, oeste, norte, leste). */
-	static final String AREA = "-23.600,-46.850,-23.460,-46.700";
+	/**
+	 * Cidade de São Paulo inteira mais Osasco e vizinhos (Carapicuíba, Barueri), em sul, oeste, norte e leste. Antes era
+	 * só Osasco: uma busca no centro de São Paulo (Praça da Sé) voltava vazia, porque o ponto ficava fora da carga.
+	 */
+	static final String AREA = "-24.010,-46.850,-23.350,-46.360";
 	/** Servidor principal e espelhos públicos, tentados em ordem (o principal recusa pedidos quando está lotado). */
 	static final List<String> SERVIDORES_OVERPASS = List.of("https://overpass-api.de/api/interpreter",
 			"https://overpass.private.coffee/api/interpreter", "https://overpass.kumi.systems/api/interpreter");
@@ -52,7 +55,7 @@ public final class ImportadorOsm {
 	private static final String COLUNAS = String.join(", ", TODAS_AS_COLUNAS);
 
 	static final String CONSULTA = """
-			[out:json][timeout:90][bbox:%s];
+			[out:json][timeout:180][bbox:%s];
 			(
 			  nwr["amenity"~"^(hospital|clinic|doctors|pharmacy|police|social_facility)$"];
 			  nwr["healthcare"];
@@ -86,7 +89,8 @@ public final class ImportadorOsm {
 		try (HttpClient cliente = HttpClient.newHttpClient()) {
 			for (String servidor : SERVIDORES_OVERPASS) {
 				HttpRequest pedido = HttpRequest.newBuilder(URI.create(servidor))
-					.timeout(Duration.ofMinutes(2))
+					// Mais que o timeout da consulta (180 s), para o servidor terminar antes de o cliente desistir.
+					.timeout(Duration.ofMinutes(4))
 					.header("Content-Type", "application/x-www-form-urlencoded")
 					.header("User-Agent", "VozViva/0.1 (FIAP Global Solution; importacao unica)")
 					.POST(HttpRequest.BodyPublishers.ofString(corpo))
@@ -158,7 +162,7 @@ public final class ImportadorOsm {
 		}
 		String data = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneOffset.UTC).format(dataBase);
 		StringBuilder sql = new StringBuilder()
-			.append("-- SPEC-007: carga dos locais de atendimento de Osasco/SP e arredores.\n")
+			.append("-- SPEC-007: carga dos locais de atendimento da cidade de São Paulo e de Osasco/SP.\n")
 			.append("-- Gerado por ./gradlew importarOsm a partir da Overpass API. Não edite à mão.\n")
 			.append("-- Dados © colaboradores do OpenStreetMap, licença ODbL (https://www.openstreetmap.org/copyright).\n")
 			.append("-- Base OSM de ").append(data).append(" UTC; ").append(pontos.size()).append(" locais.\n")
