@@ -12,7 +12,9 @@ import br.com.fiap.vozviva.model.Urgencia;
  * @param mensagemFalada frase curta (até 200 caracteres) para o app ler em voz alta
  * @param confianca      de 0 a 1
  * @param analisadoPor   {@code IA_E_REGRAS} ou {@code REGRAS} (sem IA disponível)
- * @param atendimentos   em BUSCAR_ATENDIMENTO com localização, os locais mais próximos já encontrados
+ * @param atendimentos   em BUSCAR_ATENDIMENTO com localização, os locais mais próximos já encontrados (também em
+ *                       TIRAR_DUVIDA, quando o serviço tem atendimento presencial, como o CRAS)
+ * @param orientacao     em TIRAR_DUVIDA, a orientação oficial (passos, link e telefone) da base curada
  */
 public record IntencaoResponse(
 		Intencao intencao,
@@ -22,5 +24,6 @@ public record IntencaoResponse(
 		String mensagemFalada,
 		double confianca,
 		String analisadoPor,
-		AtendimentosProximosResponse atendimentos) {
+		AtendimentosProximosResponse atendimentos,
+		OrientacaoServicoResponse orientacao) {
 }

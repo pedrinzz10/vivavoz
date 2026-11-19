@@ -503,17 +503,36 @@ Ela só classifica e orienta: não executa nenhuma ação, e o socorro, por exem
 | `BUSCAR_ATENDIMENTO` | `MOSTRAR_ATENDIMENTOS` | "Onde tem farmácia aqui perto?" |
 | `VERIFICAR_INFORMACAO` | `MOSTRAR_VERIFICACAO` | "Recebi uma mensagem do INSS, é golpe?" |
 | `ZELADORIA_REPORT` | `ABRIR_ZELADORIA_DOTNET` | "Tem um buraco na calçada e não passo com a cadeira" |
+| `TIRAR_DUVIDA` | `MOSTRAR_ORIENTACAO` | "Como faço para pedir minha aposentadoria?", "Como assino um documento no gov.br?" |
 | `DESCONHECIDA` | `PEDIR_REPETICAO` | "Bom dia" |
 
 A resposta traz `intencao`, `acao`, `urgencia` (`BAIXA` a `CRITICA`), `entidades` (`tipoAtendimento`,
 `exigeAcessibilidade`, `problemaRua`, `impedeCadeirante`, `referenciaLocal`), `mensagemFalada` (até 200
 caracteres), `confianca` e `analisadoPor`. Em `BUSCAR_ATENDIMENTO` com localização, ela já traz os
-atendimentos mais próximos (o mesmo resultado de `GET /api/v1/atendimentos/proximos`): um toque a menos.
+atendimentos mais próximos (o mesmo resultado de `GET /api/v1/atendimentos/proximos`): um toque a menos. Em
+`TIRAR_DUVIDA`, ela traz `orientacao` (`titulo`, `resumo`, `passos`, `link` oficial, `telefone` e `localPresencial`),
+e com localização também o CRAS (ou outro local presencial do serviço) mais perto.
+
+**Dúvidas sobre serviços públicos** (`conhecimento/servicos-publicos.json`, 15 serviços): as dúvidas mais frequentes
+de idosos e pessoas com deficiência, levantadas nas centrais e portais oficiais (serviços mais procurados na Central
+135 do INSS, gov.br, MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC): aposentadoria, pagamento do benefício, prova
+de vida, perícia, BPC para idoso e para pessoa com deficiência, Cadastro Único, Carteira da Pessoa Idosa, Passe Livre,
+assinatura e conta gov.br, Farmácia Popular, Tarifa Social de energia, credencial de estacionamento e denúncia de
+violência (Disque 100). Os links foram conferidos em 19/11/2026.
+- A resposta vem **sempre da base**, nunca do texto do modelo: a IA só reconhece que é uma dúvida, e o link e o
+  telefone são os oficiais.
+- Um serviço só responde se a fala citar um dos seus termos ("aposentadoria", "prova de vida", "assinar"...);
+  palavras comuns como "onde" ou "lugar" nunca bastam. Dúvida fora da base recebe a orientação geral (CRAS e Disque
+  Social 121).
+- Uma busca de atendimento sem tipo de lugar ("onde resolvo minha aposentadoria") vira a orientação do serviço, ou
+  a API pergunta que lugar a pessoa procura. Antes, o app pedia a localização e recebia a mesma resposta, em loop.
+- Socorro, verificação de golpe e problema na rua nunca viram dúvida: "recebi uma mensagem pedindo prova de vida
+  por um link" continua sendo verificação de golpe.
 
 - **Saída estruturada:** o Spring AI mapeia a resposta do modelo direto para um record (`entity()`). A ação
   não vem do modelo: ela é decidida no servidor a partir da intenção, então a IA nunca dispara uma ação
   incoerente.
-- **RAG:** os exemplos curados mais parecidos com a fala (`conhecimento/exemplos-intencoes.json`, 29 falas,
+- **RAG:** os exemplos curados mais parecidos com a fala (`conhecimento/exemplos-intencoes.json`, 37 falas,
   recuperadas com o mesmo TF-IDF do assistente contra golpes) vão no prompt.
 - **Segurança:**
   - Um pedido de socorro reconhecido pelas regras ou pelo modelo sempre vira `SOCORRO`, mesmo com pouca
@@ -529,14 +548,16 @@ atendimentos mais próximos (o mesmo resultado de `GET /api/v1/atendimentos/prox
 
 ### Avaliação
 
-Conjunto versionado de 32 falas rotuladas (`src/test/resources/avaliacao/frases-intencoes.json`), diferentes
+Conjunto versionado de 39 falas rotuladas (`src/test/resources/avaliacao/frases-intencoes.json`), diferentes
 dos exemplos do RAG. Inclui transcrições sem acento e armadilhas, como "pronto socorro" (um lugar, não um pedido
-de socorro) e "a árvore caiu" (zeladoria, não queda de uma pessoa).
+de socorro), "a árvore caiu" (zeladoria, não queda de uma pessoa) e "recebi uma mensagem dizendo que tenho que
+fazer a prova de vida por um link" (golpe, não dúvida). Sete falas foram incluídas em 19/11/2026 com as dúvidas
+sobre serviços públicos.
 
 | Configuração | Acurácia | Socorros reconhecidos | Socorros falsos | Como rodar |
 |---|---|---|---|---|
-| Só regras (linha de base) | 96,9% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-intencoes/`) |
-| IA + regras (API publicada, 19/11/2026) | **100%** | **100%** | **0** | `python scripts/avaliar-ia-publicada.py` (relatório em [`docs/avaliacao/intencoes-ia-e-regras.md`](docs/avaliacao/intencoes-ia-e-regras.md)); ou `./gradlew avaliarIa` com as credenciais da OCI |
+| Sem IA: regras e base de serviços (linha de base, 39 falas) | 97,4% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-intencoes/`) |
+| IA + regras (API publicada, 19/11/2026, 32 falas, antes das dúvidas) | **100%** | **100%** | **0** | `python scripts/avaliar-ia-publicada.py` (relatório em [`docs/avaliacao/intencoes-ia-e-regras.md`](docs/avaliacao/intencoes-ia-e-regras.md)); ou `./gradlew avaliarIa` com as credenciais da OCI |
 
 Medição com o modelo real na API publicada: as 32 respostas vieram da IA, incluindo a fala que as regras erravam
 ("meu remédio acabou, onde eu compro") e as armadilhas ("pronto socorro", "a árvore caiu").

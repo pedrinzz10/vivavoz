@@ -1,5 +1,5 @@
 {
-  "descricao": "Falas rotuladas para avaliar a classificação de intenção (diferentes dos exemplos usados no RAG). Inclui transcrições sem acento, falas indiretas e armadilhas (pronto-socorro, árvore que caiu).",
+  "descricao": "Falas rotuladas para avaliar a classificação de intenção (diferentes dos exemplos usados no RAG). Inclui transcrições sem acento, falas indiretas e armadilhas (pronto-socorro, árvore que caiu, aviso de prova de vida recebido por link).",
   "frases": [
     { "texto": "Caí e não consigo levantar", "intencao": "SOCORRO" },
     { "texto": "socorro meu marido desmaiou", "intencao": "SOCORRO" },
@@ -31,6 +31,13 @@
     { "texto": "qual a previsão do tempo pra amanhã", "intencao": "DESCONHECIDA" },
     { "texto": "liga a televisão", "intencao": "DESCONHECIDA" },
     { "texto": "obrigado", "intencao": "DESCONHECIDA" },
+    { "texto": "onde eu acho um lugar para resgatar minha aposentadoria", "intencao": "TIRAR_DUVIDA" },
+    { "texto": "como assinar documentos no gov", "intencao": "TIRAR_DUVIDA" },
+    { "texto": "quando vai cair o pagamento do inss esse mes", "intencao": "TIRAR_DUVIDA" },
+    { "texto": "tenho direito a desconto na conta de luz?", "intencao": "TIRAR_DUVIDA" },
+    { "texto": "como faco o cadastro unico", "intencao": "TIRAR_DUVIDA" },
+    { "texto": "quero denunciar que meu sobrinho pega meu dinheiro sem eu deixar", "intencao": "TIRAR_DUVIDA" },
+    { "texto": "recebi uma mensagem dizendo que tenho que fazer a prova de vida por um link", "intencao": "VERIFICAR_INFORMACAO" },
     { "texto": "é... não sei", "intencao": "DESCONHECIDA" },
     { "texto": "quanto custa o pão", "intencao": "DESCONHECIDA" }
   ]

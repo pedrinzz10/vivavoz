@@ -1,6 +1,7 @@
 package br.com.fiap.vozviva.service;
 
 import br.com.fiap.vozviva.ai.AnaliseIaIntencao.RespostaIa;
+import br.com.fiap.vozviva.ai.BaseServicosPublicos;
 import br.com.fiap.vozviva.ai.RegrasIntencao;
 import br.com.fiap.vozviva.model.AcaoApp;
 import br.com.fiap.vozviva.model.EntidadesFala;
@@ -8,9 +9,11 @@ import br.com.fiap.vozviva.model.Intencao;
 import br.com.fiap.vozviva.model.TipoAtendimento;
 import br.com.fiap.vozviva.model.Urgencia;
 import br.com.fiap.vozviva.service.IntencaoVozService.Decisao;
+import br.com.fiap.vozviva.service.IntencaoVozService.Orientada;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,6 +21,77 @@ import static org.assertj.core.api.Assertions.assertThat;
 class IntencaoVozServiceTest {
 
 	private static final double LIMITE = 0.6;
+	private static final BaseServicosPublicos SERVICOS = new BaseServicosPublicos(JsonMapper.builder().build());
+
+	private static Orientada orientar(String fala, RespostaIa ia) {
+		return IntencaoVozService.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia, LIMITE), fala,
+				SERVICOS);
+	}
+
+	@Test
+	void buscaSemTipoDeLugarSobreAposentadoriaViraOrientacaoDoInss() {
+		// Era o loop do app: a IA dizia BUSCAR_ATENDIMENTO sem tipo, e a localização nunca resolvia.
+		String fala = "onde eu acho um lugar para resgatar minha aposentadoria";
+		RespostaIa ia = new RespostaIa(Intencao.BUSCAR_ATENDIMENTO, Urgencia.MEDIA, EntidadesFala.NENHUMA,
+				"Vou ajudar a encontrar um local para resgatar sua aposentadoria", 0.8);
+
+		Orientada orientada = orientar(fala, ia);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(orientada.decisao().intencao().acao()).isEqualTo(AcaoApp.MOSTRAR_ORIENTACAO);
+		assertThat(orientada.servico().telefone()).isEqualTo("135");
+		assertThat(orientada.decisao().mensagemFalada()).isEqualTo(orientada.servico().resumo());
+	}
+
+	@Test
+	void buscaSemTipoEForaDaBasePerguntaOLugarEmVezDePedirLocalizacao() {
+		RespostaIa ia = new RespostaIa(Intencao.BUSCAR_ATENDIMENTO, Urgencia.BAIXA, EntidadesFala.NENHUMA,
+				"Vou procurar um lugar para você", 0.8);
+
+		Orientada orientada = orientar("onde fica um lugar bom por aqui", ia);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.BUSCAR_ATENDIMENTO);
+		assertThat(orientada.decisao().mensagemFalada()).isEqualTo(IntencaoVozService.PERGUNTA_TIPO_ATENDIMENTO);
+		assertThat(orientada.servico()).isNull();
+	}
+
+	@Test
+	void duvidaRespondidaPelaBaseENuncaPeloTextoDoModelo() {
+		RespostaIa ia = new RespostaIa(Intencao.TIRAR_DUVIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA,
+				"Entre no site www.assinaturas-gratis.com", 0.9);
+
+		Orientada orientada = orientar("como assinar documentos no gov", ia);
+
+		assertThat(orientada.servico().id()).isEqualTo("assinatura-gov");
+		assertThat(orientada.decisao().mensagemFalada()).doesNotContain("assinaturas-gratis").contains("assinador.iti.br");
+	}
+
+	@Test
+	void duvidaForaDaBaseRecebeAOrientacaoGeral() {
+		RespostaIa ia = new RespostaIa(Intencao.TIRAR_DUVIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA, "Vou ver.", 0.9);
+
+		Orientada orientada = orientar("como tiro o título de eleitor", ia);
+
+		assertThat(orientada.servico().id()).isEqualTo("orientacao-geral");
+		assertThat(orientada.decisao().entidades().tipoAtendimento()).isEqualTo(TipoAtendimento.CRAS);
+	}
+
+	@Test
+	void verificacaoDeGolpeESocorroNuncaViramDuvida() {
+		RespostaIa golpe = new RespostaIa(Intencao.VERIFICAR_INFORMACAO, Urgencia.MEDIA, EntidadesFala.NENHUMA,
+				"Vou conferir a mensagem.", 0.9);
+		assertThat(orientar("recebi mensagem pedindo prova de vida pelo link", golpe).decisao().intencao())
+			.isEqualTo(Intencao.VERIFICAR_INFORMACAO);
+
+		assertThat(orientar("caí e não consigo levantar, preciso da aposentadoria", null).decisao().intencao())
+			.isEqualTo(Intencao.SOCORRO);
+	}
+
+	@Test
+	void semIaADuvidaVemDaBase() {
+		assertThat(IntencaoVozService.classificarSemIa("como faço a prova de vida", SERVICOS))
+			.isEqualTo(Intencao.TIRAR_DUVIDA);
+	}
 
 	@Test
 	void iaConfianteDecideEARegraCompletaAsEntidades() {

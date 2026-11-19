@@ -1,6 +1,7 @@
 package br.com.fiap.vozviva.ai;
 
 import br.com.fiap.vozviva.model.Intencao;
+import br.com.fiap.vozviva.service.IntencaoVozService;
 import br.com.fiap.vozviva.model.ProblemaRua;
 import br.com.fiap.vozviva.model.TipoAtendimento;
 import br.com.fiap.vozviva.model.Urgencia;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -102,8 +104,11 @@ class RegrasIntencaoTest {
 
 	@Test
 	void linhaDeBaseDasRegrasNoConjuntoRotulado() {
-		var metricas = FrasesRotuladas.avaliar(FrasesRotuladas.carregar(), f -> RegrasIntencao.analisar(f.texto()).intencao());
-		metricas.salvar("somente-regras.md", "Avaliação: somente regras determinísticas (linha de base)");
+		// Sem IA, a API responde com as regras e a base de serviços públicos (as dúvidas vêm da base, não das regras).
+		BaseServicosPublicos servicos = new BaseServicosPublicos(JsonMapper.builder().build());
+		var metricas = FrasesRotuladas.avaliar(FrasesRotuladas.carregar(),
+				f -> IntencaoVozService.classificarSemIa(f.texto(), servicos));
+		metricas.salvar("somente-regras.md", "Avaliação: sem IA, só regras determinísticas e base de serviços (linha de base)");
 
 		// O erro mais grave é não reconhecer um pedido de socorro: as regras precisam pegar todos do conjunto.
 		assertThat(metricas.recallSocorro()).isEqualTo(1.0);

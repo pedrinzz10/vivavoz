@@ -11,6 +11,8 @@ public enum Intencao {
 	VERIFICAR_INFORMACAO(AcaoApp.MOSTRAR_VERIFICACAO),
 	/** Problema na rua: a zeladoria fica na API .NET; aqui só se encaminha. */
 	ZELADORIA_REPORT(AcaoApp.ABRIR_ZELADORIA_DOTNET),
+	/** Dúvida sobre um serviço público (aposentadoria, BPC, gov.br...): a resposta vem da base curada, com o link oficial. */
+	TIRAR_DUVIDA(AcaoApp.MOSTRAR_ORIENTACAO),
 	DESCONHECIDA(AcaoApp.PEDIR_REPETICAO);
 
 	private final AcaoApp acao;
