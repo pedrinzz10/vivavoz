@@ -507,8 +507,8 @@ Ela só classifica e orienta: não executa nenhuma ação, e o socorro, por exem
 | `DESCONHECIDA` | `PEDIR_REPETICAO` | "Bom dia" |
 
 A resposta traz `intencao`, `acao`, `urgencia` (`BAIXA` a `CRITICA`), `entidades` (`tipoAtendimento`,
-`exigeAcessibilidade`, `problemaRua`, `impedeCadeirante`, `referenciaLocal`), `mensagemFalada` (até 200, ou 400 na resposta de uma dúvida;
-caracteres), `confianca` e `analisadoPor`. Em `BUSCAR_ATENDIMENTO` com localização, ela já traz os
+`exigeAcessibilidade`, `problemaRua`, `impedeCadeirante`, `referenciaLocal`), `mensagemFalada` (até 200
+caracteres, ou 400 na resposta de uma dúvida), `confianca` e `analisadoPor`. Em `BUSCAR_ATENDIMENTO` com localização, ela já traz os
 atendimentos mais próximos (o mesmo resultado de `GET /api/v1/atendimentos/proximos`): um toque a menos. Em
 `TIRAR_DUVIDA`, ela traz `orientacao` (`titulo`, `resumo`, `passos`, `link` oficial, `telefone` e `localPresencial`),
 e com localização também o CRAS (ou outro local presencial do serviço) mais perto.
