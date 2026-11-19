@@ -79,6 +79,29 @@ else
   criado "$PIPELINE (a primeira execução fica para depois do provisionamento)"
 fi
 
+# O estágio de deploy usa o environment "producao". Ele só é criado sozinho quando uma pessoa roda a pipeline; numa
+# execução disparada pelo merge, a pipeline para antes de começar ("Environment producao could not be found").
+passo "Environment producao (deploy da pipeline)"
+# Identificador público e fixo do Azure DevOps na Microsoft Entra (o mesmo para todas as organizações).
+RECURSO_DEVOPS="499b84ac-1321-427f-aa17-267ca6975798"
+API_PROJETO="${ORG}/${PROJETO}/_apis"
+ENV_ID=$(az rest --resource "$RECURSO_DEVOPS" --method get --only-show-errors \
+  --url "${API_PROJETO}/distributedtask/environments?name=producao&api-version=7.1" --query 'value[0].id' -o tsv)
+if [ -n "$ENV_ID" ]; then
+  reaproveitado "producao"
+else
+  ENV_ID=$(az rest --resource "$RECURSO_DEVOPS" --method post --only-show-errors \
+    --url "${API_PROJETO}/distributedtask/environments?api-version=7.1" \
+    --body '{"name":"producao","description":"App Service da API Java (deploy da pipeline vozviva-ci-cd)"}' \
+    --query id -o tsv)
+  criado "producao"
+fi
+PIPELINE_ID=$(adop pipelines show --name "$PIPELINE" --query id -o tsv)
+az rest --resource "$RECURSO_DEVOPS" --method patch --only-show-errors -o none \
+  --url "${API_PROJETO}/pipelines/pipelinePermissions/environment/${ENV_ID}?api-version=7.1-preview.1" \
+  --body "{\"pipelines\":[{\"id\":${PIPELINE_ID},\"authorized\":true}]}"
+echo "    pipeline ${PIPELINE} liberada para usar o producao"
+
 passo "Políticas da main"
 POLITICAS=$(adop repos policy list --repository-id "$REPO_ID" --branch main --query '[].type.displayName' -o tsv)
 if grep -q "Minimum number of reviewers" <<< "$POLITICAS"; then
