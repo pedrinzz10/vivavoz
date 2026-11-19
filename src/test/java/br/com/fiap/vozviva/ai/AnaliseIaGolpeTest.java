@@ -61,6 +61,24 @@ class AnaliseIaGolpeTest {
 	}
 
 	@Test
+	void respostaForaDoFormatoNaoDescartaAAnalise() {
+		// Classificação em minúsculas e tipo fora da lista: a análise continua, só o tipo fica vazio.
+		responder("""
+				{"classificacao": "provavel_golpe", "tipoGolpe": "PHISHING_BANCARIO", "sinais": ["Pede a senha"],
+				 "orientacao": "Não informe a senha.", "canalOficial": "Central 135", "mensagemFalada": "Não passe a senha.",
+				 "confianca": 0.9, "extra": true}
+				""");
+
+		Optional<RespostaIa> resposta = ia().analisar("Informe sua senha do INSS", CanalMensagem.SMS,
+				base.buscar("INSS senha", 2));
+
+		assertThat(resposta).isPresent();
+		assertThat(resposta.get().classificacao()).isEqualTo(ClassificacaoGolpe.PROVAVEL_GOLPE);
+		assertThat(resposta.get().tipoGolpe()).isNull();
+		assertThat(resposta.get().canalOficial()).isEqualTo("Central 135");
+	}
+
+	@Test
 	void enviaInstrucoesOrientacoesOficiaisEAMensagemDelimitada() {
 		responder(RESPOSTA_JSON);
 

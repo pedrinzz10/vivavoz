@@ -54,7 +54,7 @@ public class AnaliseIaIntencao {
 		try {
 			// Mensagens montadas prontas (sem template): chaves como "{nome}" na fala não são interpretadas.
 			Prompt prompt = new Prompt(List.of(new SystemMessage(instrucoes), new UserMessage(montarPedido(fala, exemplos))));
-			RespostaIa resposta = chatClient.prompt(prompt).call().entity(RespostaIa.class);
+			RespostaIa resposta = chatClient.prompt(prompt).call().entity(SaidaEstruturadaTolerante.para(RespostaIa.class));
 			return Optional.ofNullable(resposta).filter(r -> r.intencao() != null);
 		}
 		catch (RuntimeException ex) {

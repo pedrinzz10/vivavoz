@@ -3,6 +3,7 @@ package br.com.fiap.vozviva.ai;
 import br.com.fiap.vozviva.ai.AnaliseIaIntencao.RespostaIa;
 import br.com.fiap.vozviva.model.Intencao;
 import br.com.fiap.vozviva.model.TipoAtendimento;
+import br.com.fiap.vozviva.model.Urgencia;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -55,6 +56,26 @@ class AnaliseIaIntencaoTest {
 		assertThat(resposta.get().entidades().tipoAtendimento()).isEqualTo(TipoAtendimento.HOSPITAL);
 		assertThat(resposta.get().entidades().exigeAcessibilidade()).isTrue();
 		assertThat(resposta.get().confianca()).isEqualTo(0.91);
+	}
+
+	@Test
+	void respostaForaDoFormatoNaoDescartaAAnalise() {
+		// Como o Llama às vezes escreve: minúsculas, valor fora da lista, texto vazio e um campo a mais.
+		responder("""
+				{"intencao": "socorro", "urgencia": "Critica", "entidades": {"tipoAtendimento": "N/A",
+				 "exigeAcessibilidade": null, "problemaRua": "", "impedeCadeirante": null, "referenciaLocal": "banheiro"},
+				 "mensagemFalada": "Vou avisar seus contatos.", "confianca": 0.9, "observacao": "campo a mais"}
+				""");
+
+		Optional<RespostaIa> resposta = ia().analisar("caí no banheiro e não consigo levantar",
+				exemplos.parecidos("caí no banheiro", 3));
+
+		assertThat(resposta).isPresent();
+		assertThat(resposta.get().intencao()).isEqualTo(Intencao.SOCORRO);
+		assertThat(resposta.get().urgencia()).isEqualTo(Urgencia.CRITICA);
+		assertThat(resposta.get().entidades().tipoAtendimento()).isNull();
+		assertThat(resposta.get().entidades().problemaRua()).isNull();
+		assertThat(resposta.get().entidades().referenciaLocal()).isEqualTo("banheiro");
 	}
 
 	@Test

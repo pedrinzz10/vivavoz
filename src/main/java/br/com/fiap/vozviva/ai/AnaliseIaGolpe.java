@@ -59,7 +59,7 @@ public class AnaliseIaGolpe {
 			// Mensagens montadas prontas (sem template): chaves como "{nome}" no texto recebido não são interpretadas.
 			Prompt prompt = new Prompt(List.of(new SystemMessage(instrucoes),
 					new UserMessage(montarPedido(mensagem, canal, orientacoes))));
-			RespostaIa resposta = chatClient.prompt(prompt).call().entity(RespostaIa.class);
+			RespostaIa resposta = chatClient.prompt(prompt).call().entity(SaidaEstruturadaTolerante.para(RespostaIa.class));
 			return Optional.ofNullable(resposta).filter(r -> r.classificacao() != null);
 		}
 		catch (RuntimeException ex) {
