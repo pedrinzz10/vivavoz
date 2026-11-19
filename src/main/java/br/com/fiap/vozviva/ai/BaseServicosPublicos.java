@@ -101,6 +101,8 @@ public class BaseServicosPublicos {
 	 *
 	 * @param termos          palavras que a fala precisa citar para o serviço responder (todas as de um termo)
 	 * @param apoio           serviço que é meio para os outros (conta gov.br): perde para qualquer outro citado
+	 * @param sobreGolpe      ajuda contra golpe (vítima de golpe, como reconhecer um golpe): responde mesmo quando a fala
+	 *                        cita mensagem, link ou Pix, e o app mostra com o destaque de golpe
 	 * @param perguntas       jeitos comuns de perguntar sobre o serviço (só para a busca)
 	 * @param resumo          frase curta (até 200 caracteres) que o app lê em voz alta
 	 * @param link            página oficial do serviço
@@ -108,7 +110,8 @@ public class BaseServicosPublicos {
 	 * @param localPresencial onde a pessoa pode ser atendida perto de casa, quando fizer sentido (ex.: CRAS)
 	 * @param revisadoEm      quando o conteúdo foi conferido nas fontes oficiais (regras de benefício mudam)
 	 */
-	public record ServicoPublico(String id, String titulo, List<String> termos, boolean apoio, List<String> perguntas,
+	public record ServicoPublico(String id, String titulo, List<String> termos, boolean apoio, boolean sobreGolpe,
+			List<String> perguntas,
 			String resumo, List<String> passos, String link, String telefone, String orgao,
 			TipoAtendimento localPresencial, LocalDate revisadoEm) {
 

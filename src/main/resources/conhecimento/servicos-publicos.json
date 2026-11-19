@@ -1,5 +1,5 @@
 {
-  "descricao": "Base curada de dúvidas frequentes de pessoas idosas e pessoas com deficiência sobre serviços públicos. A resposta ao cidadão vem sempre daqui (resumo, passos, link e telefone oficiais), nunca do modelo. Um serviço só responde se a fala citar um dos seus \"termos\" (todas as palavras do termo, sem acento); entre os citados, vale o mais parecido pela busca TF-IDF, e um serviço de apoio (a conta gov.br, que é meio para os outros) só vence se nenhum outro for citado. Cada serviço tem a data da última revisão (revisadoEm): um teste avisa quando passa de 180 dias, e um workflow semanal confere se os links continuam no ar. Fontes: gov.br, INSS (serviços mais procurados na Central 135), MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC.",
+  "descricao": "Base curada de dúvidas frequentes de pessoas idosas e pessoas com deficiência sobre serviços públicos. A resposta ao cidadão vem sempre daqui (resumo, passos, link e telefone oficiais), nunca do modelo. Um serviço só responde se a fala citar um dos seus \"termos\" (todas as palavras do termo, sem acento); entre os citados, vale o mais parecido pela busca TF-IDF, e um serviço de apoio (a conta gov.br, que é meio para os outros) só vence se nenhum outro for citado. Serviços com sobreGolpe=true (vítima de golpe, como reconhecer um golpe) respondem mesmo quando a fala cita mensagem ou link; os outros nunca tomam o lugar da checagem de golpe. Cada serviço tem a data da última revisão (revisadoEm): um teste avisa quando passa de 180 dias, e um workflow semanal confere se os links continuam no ar. Fontes: gov.br, INSS (serviços mais procurados na Central 135), MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC.",
   "versao": "2026-11-19",
   "servicos": [
     {
@@ -11,6 +11,7 @@
         "aposentado"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "como pedir aposentadoria",
         "quero me aposentar",
@@ -53,6 +54,7 @@
         "aposentadoria cai"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "quando cai minha aposentadoria",
         "calendário de pagamento do INSS",
@@ -84,6 +86,7 @@
         "prova vida"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "prova de vida",
         "como fazer a prova de vida",
@@ -113,6 +116,7 @@
         "afastado doenca"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "agendar perícia",
         "perícia do INSS",
@@ -147,6 +151,7 @@
         "nunca trabalhei"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "BPC LOAS idoso",
         "benefício para idoso que nunca contribuiu",
@@ -178,6 +183,7 @@
         "beneficio deficiente"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "BPC LOAS deficiente",
         "benefício para pessoa com deficiência",
@@ -206,6 +212,7 @@
         "nis"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "Cadastro Único",
         "CadÚnico",
@@ -238,6 +245,7 @@
         "viaja idoso"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "carteira do idoso",
         "carteira da pessoa idosa",
@@ -269,6 +277,7 @@
         "passagem deficiencia"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "passe livre",
         "passe livre interestadual",
@@ -297,6 +306,7 @@
         "assino"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "como assinar documentos no gov",
         "assinatura digital gov.br",
@@ -330,6 +340,7 @@
         "conta ouro"
       ],
       "apoio": true,
+      "sobreGolpe": false,
       "perguntas": [
         "esqueci a senha do gov",
         "criar conta gov.br",
@@ -364,6 +375,7 @@
         "medicamento gratuito"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "remédio de graça",
         "Farmácia Popular",
@@ -394,6 +406,7 @@
         "desconto luz"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "desconto na conta de luz",
         "tarifa social de energia",
@@ -422,6 +435,7 @@
         "estacionar vaga"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "vaga de idoso",
         "vaga de deficiente",
@@ -455,6 +469,7 @@
         "pega dinheiro"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "denunciar maus tratos",
         "estão me maltratando",
@@ -486,6 +501,7 @@
         "meu sus"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "como tiro o cartão do SUS",
         "segunda via do cartão do SUS",
@@ -514,6 +530,7 @@
         "segunda via documento"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "como tiro a segunda via do RG",
         "perdi minha identidade",
@@ -542,6 +559,7 @@
         "carteira habilitacao"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "como renovo a carteira de motorista",
         "renovar CNH depois dos 70 anos",
@@ -570,6 +588,7 @@
         "processo"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "como peço um advogado de graça",
         "o que é a defensoria pública",
@@ -600,6 +619,7 @@
         "desconto idoso"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "idoso tem prioridade na fila",
         "atendimento prioritário",
@@ -631,6 +651,7 @@
         "prioridade deficiente"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "pessoa com deficiência paga meia entrada",
         "quais os direitos da pessoa com deficiência",
@@ -648,6 +669,81 @@
       "orgao": "Ministério dos Direitos Humanos e da Cidadania",
       "localPresencial": null,
       "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "golpe-sofrido",
+      "titulo": "Caí em um golpe: o que fazer agora",
+      "termos": [
+        "vitima golpe",
+        "pix golpista",
+        "pix golpe",
+        "passei senha",
+        "passei codigo",
+        "clonaram",
+        "clonado",
+        "invadiram conta",
+        "roubaram conta",
+        "dinheiro golpista",
+        "fui enganado",
+        "fui enganada",
+        "enganaram"
+      ],
+      "apoio": false,
+      "sobreGolpe": true,
+      "perguntas": [
+        "caí num golpe o que eu faço",
+        "fiz um pix para um golpista",
+        "passei minha senha para um golpista",
+        "clonaram meu whatsapp",
+        "fui vítima de golpe",
+        "como recupero o dinheiro do golpe"
+      ],
+      "resumo": "Ligue agora para o seu banco pelo número atrás do cartão: peça o bloqueio e conteste o Pix pelo MED, que pode devolver o dinheiro. Depois, registre um boletim de ocorrência.",
+      "passos": [
+        "Ligue já para o banco pelo número que está atrás do cartão ou no aplicativo do banco.",
+        "Peça o bloqueio da conta e do cartão e conteste o Pix pelo MED, o quanto antes (até 80 dias).",
+        "Troque as senhas e não passe nenhum código para ninguém.",
+        "Registre o boletim de ocorrência na delegacia ou na delegacia online do seu estado.",
+        "WhatsApp clonado: avise seus contatos para não mandarem dinheiro."
+      ],
+      "link": "https://www.bcb.gov.br/estabilidadefinanceira/pix",
+      "telefone": null,
+      "orgao": "Banco Central do Brasil",
+      "localPresencial": "DELEGACIA",
+      "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "reconhecer-golpe",
+      "titulo": "Como reconhecer um golpe",
+      "termos": [
+        "reconhecer golpe",
+        "identificar golpe",
+        "saber golpe",
+        "sei golpe",
+        "evitar golpe",
+        "proteger golpe",
+        "cair golpe"
+      ],
+      "apoio": false,
+      "sobreGolpe": true,
+      "perguntas": [
+        "como sei se uma mensagem é golpe",
+        "como evitar cair em golpe",
+        "como me proteger de golpes",
+        "como identificar um golpe"
+      ],
+      "resumo": "Banco, INSS e governo nunca pedem senha, código ou Pix por mensagem ou ligação. Desconfie de pressa, prêmio e link. Na dúvida, desligue e confirme pelo número oficial.",
+      "passos": [
+        "Nunca passe senha, código que chegou por SMS ou dados do cartão.",
+        "Desconfie de mensagens com pressa, ameaça de bloqueio, prêmio ou link.",
+        "Não clique no link: digite o endereço oficial ou ligue para o número oficial.",
+        "Use o botão É golpe? do app para conferir a mensagem."
+      ],
+      "link": "https://www.gov.br/mcom/pt-br/noticias/2026/copy_of_julho/ataque-phishing-como-identificar-tentativas-de-fraude-na-internet",
+      "telefone": null,
+      "orgao": "Ministério das Comunicações",
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     }
   ],
   "geral": {
@@ -655,6 +751,7 @@
     "titulo": "Ajuda com serviços públicos",
     "termos": [],
     "apoio": false,
+    "sobreGolpe": false,
     "perguntas": [],
     "resumo": "Ainda não sei orientar sobre isso. O CRAS da sua cidade ajuda com benefícios e cadastros, e o Disque Social 121 tira dúvidas de graça.",
     "passos": [

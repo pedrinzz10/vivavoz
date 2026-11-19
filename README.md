@@ -536,7 +536,23 @@ e com localização também o CRAS (ou outro local presencial do serviço) mais 
   indicando onde confirmar. Perguntas que dependem de dados em tempo real (previsão do tempo, resultado de jogo,
   preço) recebem uma resposta honesta de onde consultar.
 
-**Dúvidas sobre serviços públicos** (`conhecimento/servicos-publicos.json`, 21 serviços): as dúvidas mais frequentes
+**Três ajudas diferentes contra golpe.** Golpe tem tratamento próprio porque a pressa e a ajuda são outras:
+
+| A pessoa diz | Intenção | O que recebe |
+|---|---|---|
+| "É golpe essa mensagem: seu CPF será bloqueado, clique no link" | `VERIFICAR_INFORMACAO` | A checagem da mensagem (`POST /api/v1/verificacoes`): risco, sinais e canal oficial |
+| "Caí num golpe, fiz um Pix pra um golpista", "passei minha senha", "clonaram meu WhatsApp" | `TIRAR_DUVIDA` (serviço `golpe-sofrido`) | O que fazer agora: ligar para o banco, contestar o Pix pelo MED (até 80 dias), trocar senhas, boletim de ocorrência |
+| "Como sei se uma mensagem é golpe?" | `TIRAR_DUVIDA` (serviço `reconhecer-golpe`) | Como reconhecer: órgãos não pedem senha nem Pix, desconfiar de pressa e link |
+
+- "Caí num golpe" não é queda: a regra de segurança do socorro ignora "caí num/no golpe" (antes virava SOCORRO e o
+  app oferecia avisar os contatos e ligar 192).
+- Quem já caiu num golpe não tem mensagem para conferir: mesmo que a IA marque `VERIFICAR_INFORMACAO`, a API entrega
+  a ajuda da base. Com uma mensagem concreta para conferir, a checagem continua.
+- A orientação traz `sobreGolpe: true`, e o app mostra o selo **Ajuda contra golpe** (o parecer de uma mensagem
+  tem o selo **Verificação de golpe**; uma dúvida comum, **Orientação**). O app ganhou a tela **É golpe?**, com a
+  checagem da mensagem colada e o botão **Já caí num golpe**.
+
+**Dúvidas sobre serviços públicos** (`conhecimento/servicos-publicos.json`, 23 serviços, 2 deles sobre golpe): as dúvidas mais frequentes
 de idosos e pessoas com deficiência, levantadas nas centrais e portais oficiais (serviços mais procurados na Central
 135 do INSS, gov.br, MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC): aposentadoria, pagamento do benefício, prova
 de vida, perícia, BPC para idoso e para pessoa com deficiência, Cadastro Único, Carteira da Pessoa Idosa, Passe Livre,
@@ -589,14 +605,14 @@ sobre serviços públicos.
 | IA + regras (modelo real, 39 falas, 19/11/2026) | **100%** | **100%** | **0** | `./gradlew avaliarIa` com as credenciais da OCI |
 | IA + regras (API publicada, 19/11/2026, 32 falas, antes das dúvidas) | **100%** | **100%** | **0** | `python scripts/avaliar-ia-publicada.py` (relatório em [`docs/avaliacao/intencoes-ia-e-regras.md`](docs/avaliacao/intencoes-ia-e-regras.md)); ou `./gradlew avaliarIa` com as credenciais da OCI |
 
-**Perguntas do cidadão** (`src/test/resources/avaliacao/perguntas-cidadao.json`, 49 perguntas do dia a dia: 27
-dúvidas sobre serviços públicos, socorros, buscas, golpes, problemas na rua e falas fora do tema), com o relatório em
+**Perguntas do cidadão** (`src/test/resources/avaliacao/perguntas-cidadao.json`, 54 perguntas do dia a dia: 31
+dúvidas, inclusive de quem caiu num golpe e de como reconhecer um, socorros, buscas, golpes, problemas na rua e falas fora do tema), com o relatório em
 [`docs/avaliacao/perguntas-cidadao-ia-e-regras.md`](docs/avaliacao/perguntas-cidadao-ia-e-regras.md):
 
 | Configuração | Intenção certa | Serviço certo nas dúvidas | Socorros reconhecidos | Socorros falsos |
 |---|---|---|---|---|
-| Sem IA (regras e base de serviços) | 93,9% (46/49) | 100% (27/27) | 100% | 0 |
-| IA + regras (modelo real) | **100% (49/49)** | **100% (27/27)** | **100%** | **0** |
+| Sem IA (regras e base de serviços) | 94,4% (51/54) | 100% (31/31) | 100% | 0 |
+| IA + regras (modelo real) | **98,1% (53/54)** | **96,8% (30/31)** | **100%** | **0** |
 
 A primeira rodada mostrou três falhas, corrigidas por padrão e não por frase: "que dia **cai** o pagamento" virava
 socorro (agora "cai o pagamento/benefício/dinheiro" é dinheiro que entra, como "pronto socorro" é um lugar),

@@ -173,6 +173,50 @@ class IntencaoVozServiceTest {
 	}
 
 	@Test
+	void caiNumGolpeNaoESocorroERecebeAAjudaDeQuemFoiVitima() {
+		assertThat(RegrasIntencao.analisar("caí num golpe, fiz um pix pra um golpista").intencao())
+			.isNotEqualTo(Intencao.SOCORRO);
+		assertThat(RegrasIntencao.analisar("caí no banheiro e não consigo levantar").intencao()).isEqualTo(Intencao.SOCORRO);
+
+		Orientada orientada = orientar("caí num golpe, fiz um pix pra um golpista, o que eu faço?", null);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(orientada.servico().id()).isEqualTo("golpe-sofrido");
+		assertThat(orientada.servico().sobreGolpe()).isTrue();
+	}
+
+	@Test
+	void vitimaQueAIaMandouConferirRecebeOQueFazerAgora() {
+		RespostaIa ia = new RespostaIa(Intencao.VERIFICAR_INFORMACAO, Urgencia.MEDIA, EntidadesFala.NENHUMA,
+				"Vou verificar se é um golpe.", 0.9);
+
+		Orientada orientada = orientar("passei minha senha do banco pra um homem no telefone", ia);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(orientada.servico().id()).isEqualTo("golpe-sofrido");
+	}
+
+	@Test
+	void mensagemParaConferirContinuaSendoChecagemDeGolpe() {
+		RespostaIa ia = new RespostaIa(Intencao.VERIFICAR_INFORMACAO, Urgencia.MEDIA, EntidadesFala.NENHUMA,
+				"Vou verificar a mensagem.", 0.9);
+
+		Orientada orientada = orientar("é golpe essa mensagem: seu cpf será bloqueado hoje, clique no link", ia);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.VERIFICAR_INFORMACAO);
+		assertThat(orientada.servico()).isNull();
+	}
+
+	@Test
+	void comoReconhecerUmGolpeEDuvidaComDestaqueDeGolpe() {
+		Orientada orientada = orientar("como sei se uma mensagem é golpe?", null);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(orientada.servico().id()).isEqualTo("reconhecer-golpe");
+		assertThat(orientada.servico().sobreGolpe()).isTrue();
+	}
+
+	@Test
 	void semIaADuvidaVemDaBase() {
 		assertThat(IntencaoVozService.classificarSemIa("como faço a prova de vida", SERVICOS))
 			.isEqualTo(Intencao.TIRAR_DUVIDA);

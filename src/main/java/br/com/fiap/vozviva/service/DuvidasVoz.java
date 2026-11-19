@@ -126,10 +126,15 @@ public class DuvidasVoz {
 						IntencaoVozService.PERGUNTA_REPETICAO, decisao.confianca()), null);
 			}
 		}
-		else if ((intencao == Intencao.BUSCAR_ATENDIMENTO || intencao == Intencao.DESCONHECIDA) && !mensagemRecebida) {
+		else if (intencao == Intencao.BUSCAR_ATENDIMENTO || intencao == Intencao.DESCONHECIDA
+				|| intencao == Intencao.VERIFICAR_INFORMACAO) {
 			// "Onde fica a Defensoria mais perto?" pede o lugar: se ele já é o atendimento presencial do serviço, segue
-			// como busca (com a lista); "remédio de graça na Farmácia Popular" pede a orientação.
+			// como busca (com a lista); "remédio de graça na Farmácia Popular" pede a orientação. Quem fala de mensagem,
+			// link ou Pix só recebe a ajuda contra golpe ("caí num golpe", "passei minha senha"): com uma mensagem para
+			// conferir, a checagem de golpe continua.
+			boolean soAjudaContraGolpe = mensagemRecebida || intencao == Intencao.VERIFICAR_INFORMACAO;
 			servico = servicos.buscar(fala)
+				.filter(s -> !soAjudaContraGolpe || s.sobreGolpe())
 				.filter(s -> tipoPedido == null || s.localPresencial() != tipoPedido)
 				.orElse(null);
 		}
