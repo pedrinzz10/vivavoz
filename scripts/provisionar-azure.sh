@@ -452,10 +452,21 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
   dotnet publish "${PASTA_DOTNET}/codigo/src/CaminhoLivre.Api/CaminhoLivre.Api.csproj" -c Release \
     -o "${PASTA_DOTNET}/publicado" --nologo -v q
   (cd "${PASTA_DOTNET}/publicado" && zip -qr "${PASTA_DOTNET}/zeladoria.zip" .)
-  az webapp deploy -g "$GRUPO" -n "$WEBAPP_DOTNET" --src-path "${PASTA_DOTNET}/zeladoria.zip" --type zip -o none
+  # --async: o "az webapp deploy" às vezes fica minutos conferindo a partida do site mesmo com a API já no ar.
+  # O envio é confirmado aqui, e a partida é conferida pelo /health/live da própria API, com limite de tempo.
+  az webapp deploy -g "$GRUPO" -n "$WEBAPP_DOTNET" --src-path "${PASTA_DOTNET}/zeladoria.zip" --type zip \
+    --async true -o none
   COMMIT_DOTNET="$(git -C "${PASTA_DOTNET}/codigo" rev-parse --short HEAD)"
   rm -rf "$PASTA_DOTNET"
-  echo "    publicado o commit ${COMMIT_DOTNET}"
+  echo "    enviado o commit ${COMMIT_DOTNET}; esperando a API .NET subir..."
+  for tentativa in $(seq 1 30); do
+    if [ "$(curl -s -m 15 -o /dev/null -w '%{http_code}' "https://${WEBAPP_DOTNET}.azurewebsites.net/health/live")" = 200 ]; then
+      echo "    API .NET no ar (/health/live respondeu 200)"
+      break
+    fi
+    [ "$tentativa" = 30 ] && echo "    a API .NET ainda não respondeu; confira em alguns minutos: https://${WEBAPP_DOTNET}.azurewebsites.net/health/live"
+    sleep 10
+  done
 fi
 
 ASSINATURA="$(az account show --query id -o tsv)"
