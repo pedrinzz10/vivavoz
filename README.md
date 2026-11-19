@@ -15,6 +15,7 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 | **Roteiro das apresentações** | [`docs/roteiro-apresentacao.md`](docs/roteiro-apresentacao.md) |
 | **Arquivos de entrega** | [`docs/entrega/`](docs/entrega): `.txt` de identificação e folha de rosto do PDF de DevOps |
 | **Roteiro do vídeo de DevOps** | [`docs/roteiro-video-devops.md`](docs/roteiro-video-devops.md): preparação (deploy e pipeline) e gravação dos 10 itens |
+| **Roteiro do vídeo pitch (Java)** | [`docs/roteiro-video-java.md`](docs/roteiro-video-java.md): pitch de 5 minutos com a demonstração na API publicada |
 | **Requisito 5 (Java Advanced)** | **Opção A: RabbitMQ.** O botão de emergência publica o evento e um consumidor assíncrono avisa os contatos ([detalhes](#botão-de-emergência-arquitetura-distribuída--opção-a-rabbitmq)) |
 
 ## Integrantes (grupo VozViva)
