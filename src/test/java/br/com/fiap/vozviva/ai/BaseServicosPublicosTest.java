@@ -46,7 +46,8 @@ class BaseServicosPublicosTest {
 			"quero denunciar maus tratos | denuncia-violencia",
 			"como faco o cadastro unico | cadastro-unico",
 			"Como pedir aposentadoria com conta gov.br? | aposentadoria-inss",
-			"esqueci a senha da minha conta gov | conta-gov"
+			"esqueci a senha da minha conta gov | conta-gov",
+			"minha mãe nunca trabalhou de carteira, ela recebe alguma coisa | bpc-idoso"
 	})
 	void encontraOServicoCerto(String fala, String idEsperado) {
 		assertThat(base.buscar(fala)).map(ServicoPublico::id).contains(idEsperado);

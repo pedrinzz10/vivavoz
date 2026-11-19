@@ -557,7 +557,24 @@ sobre serviços públicos.
 | Configuração | Acurácia | Socorros reconhecidos | Socorros falsos | Como rodar |
 |---|---|---|---|---|
 | Sem IA: regras e base de serviços (linha de base, 39 falas) | 97,4% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-intencoes/`) |
+| IA + regras (modelo real, 39 falas, 19/11/2026) | **100%** | **100%** | **0** | `./gradlew avaliarIa` com as credenciais da OCI |
 | IA + regras (API publicada, 19/11/2026, 32 falas, antes das dúvidas) | **100%** | **100%** | **0** | `python scripts/avaliar-ia-publicada.py` (relatório em [`docs/avaliacao/intencoes-ia-e-regras.md`](docs/avaliacao/intencoes-ia-e-regras.md)); ou `./gradlew avaliarIa` com as credenciais da OCI |
+
+**Perguntas do cidadão** (`src/test/resources/avaliacao/perguntas-cidadao.json`, 49 perguntas do dia a dia: 27
+dúvidas sobre serviços públicos, socorros, buscas, golpes, problemas na rua e falas fora do tema), com o relatório em
+[`docs/avaliacao/perguntas-cidadao-ia-e-regras.md`](docs/avaliacao/perguntas-cidadao-ia-e-regras.md):
+
+| Configuração | Intenção certa | Serviço certo nas dúvidas | Socorros reconhecidos | Socorros falsos |
+|---|---|---|---|---|
+| Sem IA (regras e base de serviços) | 95,9% (47/49) | 100% (27/27) | 100% | 0 |
+| IA + regras (modelo real) | **100% (49/49)** | **100% (27/27)** | **100%** | **0** |
+
+A primeira rodada mostrou três falhas, corrigidas por padrão e não por frase: "que dia **cai** o pagamento" virava
+socorro (agora "cai o pagamento/benefício/dinheiro" é dinheiro que entra, como "pronto socorro" é um lugar),
+"nunca trabalhou de carteira" não chegava ao BPC, e sem IA mensagens com link ou pix ficavam sem classificação (agora
+vão para a checagem de golpe). Uma dúvida que a IA marca mas que não é sobre serviço público ("quanto custa o pão")
+pede para repetir em vez de mostrar a orientação geral. Sem IA, ainda escapam dois problemas na rua ditos de forma
+indireta ("ta toda quebrada", "carro em cima da rampa"), que a IA acerta.
 
 Medição com o modelo real na API publicada: as 32 respostas vieram da IA, incluindo a fala que as regras erravam
 ("meu remédio acabou, onde eu compro") e as armadilhas ("pronto socorro", "a árvore caiu").

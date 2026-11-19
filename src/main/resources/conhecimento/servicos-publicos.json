@@ -132,7 +132,9 @@
         "loas",
         "prestacao continuada",
         "nunca contribui",
-        "nunca paguei"
+        "nunca paguei",
+        "nunca trabalhou",
+        "nunca trabalhei"
       ],
       "apoio": false,
       "perguntas": [

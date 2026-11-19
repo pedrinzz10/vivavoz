@@ -27,6 +27,10 @@ public final class RegrasIntencao {
 	/** Confiança atribuída a uma classificação feita só pelas regras. */
 	public static final double CONFIANCA_REGRAS = 0.7;
 
+	/** "Quando cai o pagamento": dinheiro que entra na conta, não uma queda (como "pronto socorro" é um lugar). */
+	private static final Pattern DINHEIRO_QUE_CAI = Pattern.compile(
+			"\\bcai (o |a |na |no |meu |minha )?(pagamento|beneficio|aposentadoria|dinheiro|salario|pensao|conta|deposito|bpc|loas)\\b");
+
 	/** Sinais de perigo agora: sempre viram SOCORRO. */
 	private static final Pattern SOCORRO = padrao(
 			"\\b(socorro|me acuda|emergencia)\\b",
@@ -92,7 +96,8 @@ public final class RegrasIntencao {
 	public static Resultado analisar(String fala) {
 		String texto = SEPARADORES.matcher(IndiceTfIdf.normalizar(fala)).replaceAll(" ").strip();
 		// "Pronto socorro" é um lugar, não um pedido de socorro.
-		String semNomesDeLugar = texto.replace("pronto socorro", "pronto atendimento");
+		String semNomesDeLugar = DINHEIRO_QUE_CAI.matcher(texto.replace("pronto socorro", "pronto atendimento"))
+			.replaceAll("entra $2");
 		if (SOCORRO.matcher(semNomesDeLugar).find()) {
 			return socorro();
 		}

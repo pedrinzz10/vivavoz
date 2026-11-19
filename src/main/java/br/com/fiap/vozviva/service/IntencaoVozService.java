@@ -62,6 +62,13 @@ public class IntencaoVozService {
 	private static final int RAIO_ATENDIMENTOS_METROS = 5000;
 	private static final int ATENDIMENTOS_NA_RESPOSTA = 3;
 	private static final Set<String> ORDENACAO = Set.of("id", "criadaEm");
+	/**
+	 * Sinal de que a dúvida é sobre um serviço público, mesmo fora da base ("como tiro o título de eleitor"): só então a
+	 * orientação geral (CRAS e Disque Social 121) faz sentido. "Quanto custa o pão" não é dúvida de serviço público.
+	 */
+	private static final Pattern SERVICO_PUBLICO = Pattern.compile("\\b(gov|governo|prefeitura|inss|sus|cras|cpf|rg|"
+			+ "titulo|eleitor|documento|identidade|certidao|beneficio|direito|cadastro|carteira|auxilio|bolsa|pensao|"
+			+ "aposentad\\w*|imposto|receita|defensoria|cartorio|detran|consulta|exame|vacina|remedio)\\b");
 	/** Fala sobre uma mensagem ou ligação recebida: é checagem de golpe, nunca uma dúvida sobre o serviço citado. */
 	private static final Pattern MENSAGEM_RECEBIDA = Pattern.compile(
 			"\\b(golpe|golpista|mensagem|link|sms|whatsapp|ligaram|ligacao|pix)\\b|\\be verdade\\b");
@@ -164,12 +171,14 @@ public class IntencaoVozService {
 	 * Liga a decisão à base de serviços públicos. A resposta de uma dúvida vem sempre da base (com o link e o telefone
 	 * oficiais); o socorro, a verificação de golpe e o problema na rua nunca são trocados.
 	 * <ul>
-	 *   <li>TIRAR_DUVIDA: o serviço mais parecido, ou a orientação geral (CRAS e Disque Social 121);</li>
+	 *   <li>TIRAR_DUVIDA: o serviço mais parecido; fora da base, a orientação geral (CRAS e Disque Social 121) se a fala
+	 *   for sobre um serviço público, ou o pedido para repetir se não for ("quanto custa o pão");</li>
 	 *   <li>busca de atendimento ou fala não entendida que cite um serviço da base ("onde resolvo minha aposentadoria",
 	 *   "remédio de graça na Farmácia Popular") vira TIRAR_DUVIDA, mantendo o tipo de lugar para a busca;</li>
 	 *   <li>busca sem tipo e fora da base pergunta que lugar a pessoa procura;</li>
 	 *   <li>fala sobre mensagem, link ou ligação ("recebi uma mensagem da Farmácia Popular, é golpe?") nunca vira
-	 *   dúvida: a orientação do serviço não pode tomar o lugar da checagem de golpe.</li>
+	 *   dúvida: a orientação do serviço não pode tomar o lugar da checagem de golpe; se as regras não a entenderam,
+	 *   ela vai para a checagem de golpe.</li>
 	 * </ul>
 	 */
 	static Orientada orientar(Decisao decisao, String fala, BaseServicosPublicos servicos) {
@@ -179,7 +188,12 @@ public class IntencaoVozService {
 		boolean mensagemRecebida = MENSAGEM_RECEBIDA.matcher(IndiceTfIdf.normalizar(fala)).find();
 		ServicoPublico servico = null;
 		if (intencao == Intencao.TIRAR_DUVIDA) {
-			servico = servicos.buscar(fala).orElse(servicos.geral());
+			boolean sobreServicoPublico = SERVICO_PUBLICO.matcher(IndiceTfIdf.normalizar(fala)).find();
+			servico = servicos.buscar(fala).orElse(sobreServicoPublico ? servicos.geral() : null);
+			if (servico == null) {
+				return new Orientada(new Decisao(Intencao.DESCONHECIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA,
+						PERGUNTA_REPETICAO, decisao.confianca()), null);
+			}
 		}
 		else if ((intencao == Intencao.BUSCAR_ATENDIMENTO || intencao == Intencao.DESCONHECIDA) && !mensagemRecebida) {
 			servico = servicos.buscar(fala).orElse(null);
@@ -191,6 +205,12 @@ public class IntencaoVozService {
 			Urgencia urgencia = decisao.urgencia() == null ? Urgencia.BAIXA : decisao.urgencia();
 			return new Orientada(new Decisao(Intencao.TIRAR_DUVIDA, urgencia, entidades, servico.resumo(),
 					Math.max(decisao.confianca(), RegrasIntencao.CONFIANCA_REGRAS)), servico);
+		}
+		if (intencao == Intencao.DESCONHECIDA && mensagemRecebida) {
+			// Sem IA, as regras não entenderam, mas a fala é sobre uma mensagem, um link ou um pix: oferecer a checagem
+			// de golpe (a pessoa confirma na tela) é melhor do que pedir para repetir.
+			return new Orientada(new Decisao(Intencao.VERIFICAR_INFORMACAO, Urgencia.MEDIA, EntidadesFala.NENHUMA,
+					FRASES_PADRAO.get(Intencao.VERIFICAR_INFORMACAO), RegrasIntencao.CONFIANCA_REGRAS), null);
 		}
 		if (buscaSemTipo) {
 			return new Orientada(new Decisao(intencao, decisao.urgencia(), decisao.entidades(), PERGUNTA_TIPO_ATENDIMENTO,

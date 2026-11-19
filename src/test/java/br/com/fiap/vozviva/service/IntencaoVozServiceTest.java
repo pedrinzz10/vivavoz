@@ -77,6 +77,16 @@ class IntencaoVozServiceTest {
 	}
 
 	@Test
+	void duvidaQueNaoESobreServicoPublicoPedeParaRepetir() {
+		RespostaIa ia = new RespostaIa(Intencao.TIRAR_DUVIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA, "Vou ver.", 0.9);
+
+		Orientada orientada = orientar("quanto custa o pão", ia);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.DESCONHECIDA);
+		assertThat(orientada.servico()).isNull();
+	}
+
+	@Test
 	void verificacaoDeGolpeESocorroNuncaViramDuvida() {
 		RespostaIa golpe = new RespostaIa(Intencao.VERIFICAR_INFORMACAO, Urgencia.MEDIA, EntidadesFala.NENHUMA,
 				"Vou conferir a mensagem.", 0.9);
@@ -109,6 +119,20 @@ class IntencaoVozServiceTest {
 	void naoRecebiAAposentadoriaContinuaSendoDuvida() {
 		assertThat(IntencaoVozService.classificarSemIa("não recebi minha aposentadoria esse mês", SERVICOS))
 			.isEqualTo(Intencao.TIRAR_DUVIDA);
+	}
+
+	@Test
+	void diaDoPagamentoNaoESocorroMasQuedaContinuaSendo() {
+		assertThat(IntencaoVozService.classificarSemIa("que dia cai o pagamento dos aposentados", SERVICOS))
+			.isEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(IntencaoVozService.classificarSemIa("cai no banheiro e não consigo levantar", SERVICOS))
+			.isEqualTo(Intencao.SOCORRO);
+	}
+
+	@Test
+	void semIaMensagemComLinkOuPixVaiParaAChecagemDeGolpe() {
+		assertThat(IntencaoVozService.classificarSemIa("disseram que tenho valor do inss e pediram um pix", SERVICOS))
+			.isEqualTo(Intencao.VERIFICAR_INFORMACAO);
 	}
 
 	@Test

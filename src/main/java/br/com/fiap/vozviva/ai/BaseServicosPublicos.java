@@ -29,11 +29,13 @@ public class BaseServicosPublicos {
 
 	static final String ARQUIVO = "conhecimento/servicos-publicos.json";
 
+	private final List<ServicoPublico> todos;
 	private final IndiceTfIdf<ServicoPublico> indice;
 	private final ServicoPublico geral;
 
 	public BaseServicosPublicos(ObjectMapper json) {
 		Arquivo arquivo = carregar(json);
+		this.todos = List.copyOf(arquivo.servicos());
 		this.indice = new IndiceTfIdf<>(arquivo.servicos(), ServicoPublico::textoIndexado);
 		this.geral = arquivo.geral();
 	}
@@ -45,6 +47,14 @@ public class BaseServicosPublicos {
 			.filter(s -> s.citadoEm(palavrasDaFala))
 			.toList();
 		return citados.stream().filter(s -> !s.apoio()).findFirst().or(() -> citados.stream().findFirst());
+	}
+
+	/** O serviço com este id (usado na avaliação, para comparar com o esperado). */
+	public ServicoPublico buscarPorId(String id) {
+		return todos.stream()
+			.filter(s -> s.id().equals(id))
+			.findFirst()
+			.orElseThrow(() -> new IllegalArgumentException("Serviço desconhecido: " + id));
 	}
 
 	/** Orientação para uma dúvida que a base não cobre: CRAS e Disque Social 121. */
