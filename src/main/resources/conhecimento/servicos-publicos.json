@@ -1,5 +1,5 @@
 {
-  "descricao": "Base curada de dúvidas frequentes de pessoas idosas e pessoas com deficiência sobre serviços públicos. A resposta ao cidadão vem sempre daqui (resumo, passos, link e telefone oficiais), nunca do modelo. Um serviço só responde se a fala citar um dos seus \"termos\" (todas as palavras do termo, sem acento); entre os citados, vale o mais parecido pela busca TF-IDF. Fontes: gov.br, INSS (serviços mais procurados na Central 135), MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC.",
+  "descricao": "Base curada de dúvidas frequentes de pessoas idosas e pessoas com deficiência sobre serviços públicos. A resposta ao cidadão vem sempre daqui (resumo, passos, link e telefone oficiais), nunca do modelo. Um serviço só responde se a fala citar um dos seus \"termos\" (todas as palavras do termo, sem acento); entre os citados, vale o mais parecido pela busca TF-IDF, e um serviço de apoio (a conta gov.br, que é meio para os outros) só vence se nenhum outro for citado. Fontes: gov.br, INSS (serviços mais procurados na Central 135), MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC.",
   "versao": "2026-11-19",
   "servicos": [
     {
@@ -10,6 +10,7 @@
         "aposentar",
         "aposentado"
       ],
+      "apoio": false,
       "perguntas": [
         "como pedir aposentadoria",
         "quero me aposentar",
@@ -44,6 +45,7 @@
         "beneficio caiu",
         "beneficio cai"
       ],
+      "apoio": false,
       "perguntas": [
         "quando cai minha aposentadoria",
         "calendário de pagamento do INSS",
@@ -73,6 +75,7 @@
       "termos": [
         "prova vida"
       ],
+      "apoio": false,
       "perguntas": [
         "prova de vida",
         "como fazer a prova de vida",
@@ -100,6 +103,7 @@
         "incapacidade",
         "afastado doenca"
       ],
+      "apoio": false,
       "perguntas": [
         "agendar perícia",
         "perícia do INSS",
@@ -130,6 +134,7 @@
         "nunca contribui",
         "nunca paguei"
       ],
+      "apoio": false,
       "perguntas": [
         "BPC LOAS idoso",
         "benefício para idoso que nunca contribuiu",
@@ -159,6 +164,7 @@
         "beneficio deficiencia",
         "beneficio deficiente"
       ],
+      "apoio": false,
       "perguntas": [
         "BPC LOAS deficiente",
         "benefício para pessoa com deficiência",
@@ -185,6 +191,7 @@
         "cadunico",
         "nis"
       ],
+      "apoio": false,
       "perguntas": [
         "Cadastro Único",
         "CadÚnico",
@@ -215,6 +222,7 @@
         "viajar idoso",
         "viaja idoso"
       ],
+      "apoio": false,
       "perguntas": [
         "carteira do idoso",
         "carteira da pessoa idosa",
@@ -244,6 +252,7 @@
         "viaja deficiente",
         "passagem deficiencia"
       ],
+      "apoio": false,
       "perguntas": [
         "passe livre",
         "passe livre interestadual",
@@ -270,6 +279,7 @@
         "assinatura",
         "assino"
       ],
+      "apoio": false,
       "perguntas": [
         "como assinar documentos no gov",
         "assinatura digital gov.br",
@@ -301,6 +311,7 @@
         "conta prata",
         "conta ouro"
       ],
+      "apoio": true,
       "perguntas": [
         "esqueci a senha do gov",
         "criar conta gov.br",
@@ -333,6 +344,7 @@
         "medicamento gratis",
         "medicamento gratuito"
       ],
+      "apoio": false,
       "perguntas": [
         "remédio de graça",
         "Farmácia Popular",
@@ -361,6 +373,7 @@
         "luz graca",
         "desconto luz"
       ],
+      "apoio": false,
       "perguntas": [
         "desconto na conta de luz",
         "tarifa social de energia",
@@ -387,6 +400,7 @@
         "credencial estacionamento",
         "estacionar vaga"
       ],
+      "apoio": false,
       "perguntas": [
         "vaga de idoso",
         "vaga de deficiente",
@@ -418,6 +432,7 @@
         "disque 100",
         "pega dinheiro"
       ],
+      "apoio": false,
       "perguntas": [
         "denunciar maus tratos",
         "estão me maltratando",
@@ -442,6 +457,7 @@
     "id": "orientacao-geral",
     "titulo": "Ajuda com serviços públicos",
     "termos": [],
+    "apoio": false,
     "perguntas": [],
     "resumo": "Ainda não sei orientar sobre isso. O CRAS da sua cidade ajuda com benefícios e cadastros, e o Disque Social 121 tira dúvidas de graça.",
     "passos": [

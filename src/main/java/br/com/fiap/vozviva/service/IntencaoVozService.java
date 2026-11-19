@@ -5,6 +5,7 @@ import br.com.fiap.vozviva.ai.AnaliseIaIntencao.RespostaIa;
 import br.com.fiap.vozviva.ai.BaseServicosPublicos;
 import br.com.fiap.vozviva.ai.BaseServicosPublicos.ServicoPublico;
 import br.com.fiap.vozviva.ai.ExemplosIntencao;
+import br.com.fiap.vozviva.ai.IndiceTfIdf;
 import br.com.fiap.vozviva.ai.RegrasIntencao;
 import br.com.fiap.vozviva.dto.AtendimentosProximosResponse;
 import br.com.fiap.vozviva.dto.IntencaoRequest;
@@ -31,6 +32,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Classifica a fala transcrita e devolve o comando para o app. Combina a IA (Spring AI + exemplos
@@ -60,6 +62,9 @@ public class IntencaoVozService {
 	private static final int RAIO_ATENDIMENTOS_METROS = 5000;
 	private static final int ATENDIMENTOS_NA_RESPOSTA = 3;
 	private static final Set<String> ORDENACAO = Set.of("id", "criadaEm");
+	/** Fala sobre uma mensagem ou ligação recebida: é checagem de golpe, nunca uma dúvida sobre o serviço citado. */
+	private static final Pattern MENSAGEM_RECEBIDA = Pattern.compile(
+			"\\b(golpe|golpista|mensagem|link|sms|whatsapp|ligaram|ligacao|pix)\\b|\\be verdade\\b");
 
 	private static final Map<Intencao, String> FRASES_PADRAO = Map.of(
 			Intencao.SOCORRO, "Entendi que você precisa de ajuda. Confirme na tela para avisar seus contatos, ou ligue 192.",
@@ -160,23 +165,29 @@ public class IntencaoVozService {
 	 * oficiais); o socorro, a verificação de golpe e o problema na rua nunca são trocados.
 	 * <ul>
 	 *   <li>TIRAR_DUVIDA: o serviço mais parecido, ou a orientação geral (CRAS e Disque Social 121);</li>
-	 *   <li>busca sem tipo de lugar ("onde resolvo minha aposentadoria") ou fala não entendida: se a base tiver o
-	 *   serviço, vira TIRAR_DUVIDA; senão, a busca pergunta que lugar a pessoa procura.</li>
+	 *   <li>busca de atendimento ou fala não entendida que cite um serviço da base ("onde resolvo minha aposentadoria",
+	 *   "remédio de graça na Farmácia Popular") vira TIRAR_DUVIDA, mantendo o tipo de lugar para a busca;</li>
+	 *   <li>busca sem tipo e fora da base pergunta que lugar a pessoa procura;</li>
+	 *   <li>fala sobre mensagem, link ou ligação ("recebi uma mensagem da Farmácia Popular, é golpe?") nunca vira
+	 *   dúvida: a orientação do serviço não pode tomar o lugar da checagem de golpe.</li>
 	 * </ul>
 	 */
 	static Orientada orientar(Decisao decisao, String fala, BaseServicosPublicos servicos) {
 		Intencao intencao = decisao.intencao();
-		boolean buscaSemTipo = intencao == Intencao.BUSCAR_ATENDIMENTO && decisao.entidades().tipoAtendimento() == null;
+		TipoAtendimento tipoPedido = decisao.entidades().tipoAtendimento();
+		boolean buscaSemTipo = intencao == Intencao.BUSCAR_ATENDIMENTO && tipoPedido == null;
+		boolean mensagemRecebida = MENSAGEM_RECEBIDA.matcher(IndiceTfIdf.normalizar(fala)).find();
 		ServicoPublico servico = null;
 		if (intencao == Intencao.TIRAR_DUVIDA) {
 			servico = servicos.buscar(fala).orElse(servicos.geral());
 		}
-		else if (buscaSemTipo || intencao == Intencao.DESCONHECIDA) {
+		else if ((intencao == Intencao.BUSCAR_ATENDIMENTO || intencao == Intencao.DESCONHECIDA) && !mensagemRecebida) {
 			servico = servicos.buscar(fala).orElse(null);
 		}
 		if (servico != null) {
-			EntidadesFala entidades = new EntidadesFala(servico.localPresencial(), decisao.entidades().exigeAcessibilidade(),
-					null, null, decisao.entidades().referenciaLocal());
+			TipoAtendimento local = servico.localPresencial() != null ? servico.localPresencial() : tipoPedido;
+			EntidadesFala entidades = new EntidadesFala(local, decisao.entidades().exigeAcessibilidade(), null, null,
+					decisao.entidades().referenciaLocal());
 			Urgencia urgencia = decisao.urgencia() == null ? Urgencia.BAIXA : decisao.urgencia();
 			return new Orientada(new Decisao(Intencao.TIRAR_DUVIDA, urgencia, entidades, servico.resumo(),
 					Math.max(decisao.confianca(), RegrasIntencao.CONFIANCA_REGRAS)), servico);

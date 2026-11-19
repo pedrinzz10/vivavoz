@@ -21,7 +21,8 @@ import java.util.Set;
  * <p>
  * Um serviço só responde se a fala citar um dos seus termos (ex.: "aposentadoria", "prova de vida"): palavras comuns
  * como "onde", "quanto" ou "lugar" nunca bastam. Entre os citados, vale o mais parecido pela mesma busca do RAG dos
- * golpes ({@link IndiceTfIdf}).
+ * golpes ({@link IndiceTfIdf}). Um serviço de apoio (a conta gov.br, meio para quase todos os outros) só vence se a
+ * fala não citar outro: "como pedir aposentadoria com a conta gov.br" é sobre aposentadoria.
  */
 @Component
 public class BaseServicosPublicos {
@@ -40,9 +41,10 @@ public class BaseServicosPublicos {
 	/** O serviço de que a fala trata, se a base tiver um com relação suficiente. */
 	public Optional<ServicoPublico> buscar(String fala) {
 		Set<String> palavrasDaFala = IndiceTfIdf.contar(fala).keySet();
-		return indice.buscar(fala, indice.tamanho()).stream()
+		List<ServicoPublico> citados = indice.buscar(fala, indice.tamanho()).stream()
 			.filter(s -> s.citadoEm(palavrasDaFala))
-			.findFirst();
+			.toList();
+		return citados.stream().filter(s -> !s.apoio()).findFirst().or(() -> citados.stream().findFirst());
 	}
 
 	/** Orientação para uma dúvida que a base não cobre: CRAS e Disque Social 121. */
@@ -77,14 +79,16 @@ public class BaseServicosPublicos {
 	 * Um serviço da base.
 	 *
 	 * @param termos          palavras que a fala precisa citar para o serviço responder (todas as de um termo)
+	 * @param apoio           serviço que é meio para os outros (conta gov.br): perde para qualquer outro citado
 	 * @param perguntas       jeitos comuns de perguntar sobre o serviço (só para a busca)
 	 * @param resumo          frase curta (até 200 caracteres) que o app lê em voz alta
 	 * @param link            página oficial do serviço
 	 * @param telefone        central oficial gratuita, quando houver (ex.: 135 do INSS)
 	 * @param localPresencial onde a pessoa pode ser atendida perto de casa, quando fizer sentido (ex.: CRAS)
 	 */
-	public record ServicoPublico(String id, String titulo, List<String> termos, List<String> perguntas, String resumo,
-			List<String> passos, String link, String telefone, String orgao, TipoAtendimento localPresencial) {
+	public record ServicoPublico(String id, String titulo, List<String> termos, boolean apoio, List<String> perguntas,
+			String resumo, List<String> passos, String link, String telefone, String orgao,
+			TipoAtendimento localPresencial) {
 
 		String textoIndexado() {
 			return titulo + " " + String.join(" ", termos) + " " + String.join(" ", perguntas);

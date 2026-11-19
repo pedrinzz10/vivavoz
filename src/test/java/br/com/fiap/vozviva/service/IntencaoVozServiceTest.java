@@ -88,6 +88,30 @@ class IntencaoVozServiceTest {
 	}
 
 	@Test
+	void mensagemRecebidaSobreUmServicoNuncaViraDuvida() {
+		// Sem IA, as regras deixam esta fala como DESCONHECIDA; a base não pode trocá-la pela orientação da farmácia.
+		Orientada orientada = orientar("Recebi uma mensagem da Farmácia Popular, é golpe?", null);
+
+		assertThat(orientada.decisao().intencao()).isNotEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(orientada.servico()).isNull();
+	}
+
+	@Test
+	void beneficioDaFarmaciaPopularViraOrientacaoSemPerderABuscaDaFarmacia() {
+		Orientada orientada = orientar("Como pego remédio de graça na Farmácia Popular?", null);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(orientada.servico().id()).isEqualTo("farmacia-popular");
+		assertThat(orientada.decisao().entidades().tipoAtendimento()).isEqualTo(TipoAtendimento.FARMACIA);
+	}
+
+	@Test
+	void naoRecebiAAposentadoriaContinuaSendoDuvida() {
+		assertThat(IntencaoVozService.classificarSemIa("não recebi minha aposentadoria esse mês", SERVICOS))
+			.isEqualTo(Intencao.TIRAR_DUVIDA);
+	}
+
+	@Test
 	void semIaADuvidaVemDaBase() {
 		assertThat(IntencaoVozService.classificarSemIa("como faço a prova de vida", SERVICOS))
 			.isEqualTo(Intencao.TIRAR_DUVIDA);

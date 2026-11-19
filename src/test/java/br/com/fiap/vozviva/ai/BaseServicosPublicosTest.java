@@ -44,7 +44,9 @@ class BaseServicosPublicosTest {
 			"como pego remédio de graça | farmacia-popular",
 			"tenho direito a desconto na conta de luz | tarifa-social-energia",
 			"quero denunciar maus tratos | denuncia-violencia",
-			"como faco o cadastro unico | cadastro-unico"
+			"como faco o cadastro unico | cadastro-unico",
+			"Como pedir aposentadoria com conta gov.br? | aposentadoria-inss",
+			"esqueci a senha da minha conta gov | conta-gov"
 	})
 	void encontraOServicoCerto(String fala, String idEsperado) {
 		assertThat(base.buscar(fala)).map(ServicoPublico::id).contains(idEsperado);
