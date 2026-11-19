@@ -552,6 +552,21 @@ Pegue a senha do banco no cofre: portal → Key vaults → `kv-vozviva-rm562312`
 `vozvivaadmin` e cole a senha (o campo esconde o que é digitado). Se pedir, clique em **Allowlist IP**.
 > "A senha do banco também está no Key Vault: copio de lá sem mostrar."
 
+**4.0 O banco antes do CRUD.** As tabelas só existem depois que a API Java sobe pela primeira vez (no deploy da
+Parte 3): o Flyway cria as tabelas e carrega os locais de atendimento, e a API cria os usuários de teste. Se o Query
+editor não mostrar as tabelas, confira se a API está no ar
+(`https://app-vozviva-rm562312.azurewebsites.net/actuator/health/readiness` responde `UP`). Rode no Query editor:
+
+```sql
+SELECT COUNT(*) AS locais FROM pontos_atendimento;
+SELECT email, papel FROM usuarios;
+SELECT COUNT(*) AS perfis FROM perfis_emergencia;
+```
+**O que mostra:** os 237 locais de atendimento carregados do OpenStreetMap; os usuários de teste (cidadão, cuidador
+e gestores); e nenhum perfil ainda. Os dados do CRUD a seguir são criados agora, pelo Swagger.
+> "As tabelas foram criadas pelo Flyway quando a API subiu. Agora vou criar, ler, alterar e apagar dados pela API e
+> conferir cada operação aqui no banco."
+
 **Regra da disciplina:** para provar que gravou, use **`SELECT` no Query editor**, nunca o GET. Faça o `SELECT`
 depois de **cada** operação. Faltar qualquer operação tira 30 pontos.
 
