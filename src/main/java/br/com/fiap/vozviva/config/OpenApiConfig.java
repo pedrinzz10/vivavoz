@@ -78,7 +78,7 @@ public class OpenApiConfig {
 					new Tag().name(TAG_AUTENTICACAO).description("Cadastro, login e emissão do JWT"),
 					new Tag().name(TAG_VOZ).description("Classificação da fala transcrita (Spring AI + RAG)"),
 					new Tag().name(TAG_EMERGENCIA).description("Socorro assíncrono pelo RabbitMQ"),
-					new Tag().name(TAG_PERFIL).description("Perfil de emergência mantido pelo cuidador"),
+					new Tag().name(TAG_PERFIL).description("Perfil de emergência mantido pelo cidadão ou pelo cuidador"),
 					new Tag().name(TAG_CONTATOS).description("Quem é avisado quando o cidadão pede socorro"),
 					new Tag().name(TAG_GOLPES).description("\"Isso é golpe?\" (Spring AI + RAG + regras)"),
 					new Tag().name(TAG_ATENDIMENTOS).description("Atendimento mais próximo, com acessibilidade e rota")));
