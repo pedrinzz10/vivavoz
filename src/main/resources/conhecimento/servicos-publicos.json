@@ -36,14 +36,20 @@
       "id": "pagamento-beneficio-inss",
       "titulo": "Pagamento da aposentadoria ou do benefício",
       "termos": [
-        "pagamento",
+        "pagamento inss",
+        "pagamento beneficio",
+        "pagamento aposentadoria",
+        "pagamento aposentados",
+        "pagamento pensao",
         "extrato",
         "sacar",
         "saque",
         "pensao",
         "calendario",
         "beneficio caiu",
-        "beneficio cai"
+        "beneficio cai",
+        "aposentadoria caiu",
+        "aposentadoria cai"
       ],
       "apoio": false,
       "perguntas": [

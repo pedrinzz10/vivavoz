@@ -1,0 +1,140 @@
+{
+  "descricao": "Dúvidas abertas (fora da base de serviços) e conversas em que a pergunta seguinte depende da anterior. Nas conversas, só o último turno é avaliado: as intenções aceitas e, quando houver, os serviços aceitos da base ou o tipo de lugar. Usado por ./gradlew avaliarIa.",
+  "duvidasAbertas": [
+    "qual a diferença entre UPA e UBS?",
+    "idoso tem prioridade na fila do banco?",
+    "como eu tiro o cartão do SUS?",
+    "como marco uma consulta no posto de saúde?",
+    "pessoa com deficiência paga meia entrada no cinema?",
+    "posso levar acompanhante quando for internado no hospital?",
+    "como renovo a carteira de motorista depois dos 70 anos?",
+    "como tiro a segunda via do meu RG?",
+    "o que eu faço se cortarem minha luz por falta de pagamento?",
+    "idoso precisa pagar ônibus dentro da cidade?",
+    "como funciona o atendimento prioritário?",
+    "como peço um advogado de graça?",
+    "o que é a Defensoria Pública?",
+    "tenho direito a acompanhante no ônibus interestadual sendo cadeirante?",
+    "como faço para vacinar contra a gripe?",
+    "qual a previsão do tempo pra amanhã?",
+    "quanto custa o pão?",
+    "qual é o resultado do jogo de ontem?"
+  ],
+  "conversas": [
+    {
+      "turnos": [
+        "quero pedir minha aposentadoria",
+        "e quanto tempo demora pra sair?"
+      ],
+      "servicos": [
+        "aposentadoria-inss"
+      ],
+      "intencoes": [
+        "TIRAR_DUVIDA"
+      ]
+    },
+    {
+      "turnos": [
+        "como faço a prova de vida?",
+        "e se eu não conseguir fazer pelo celular?"
+      ],
+      "servicos": [
+        "prova-de-vida"
+      ],
+      "intencoes": [
+        "TIRAR_DUVIDA"
+      ]
+    },
+    {
+      "turnos": [
+        "como pego remédio de graça?",
+        "precisa levar receita?"
+      ],
+      "servicos": [
+        "farmacia-popular"
+      ],
+      "intencoes": [
+        "TIRAR_DUVIDA"
+      ]
+    },
+    {
+      "turnos": [
+        "como peço o BPC para minha mãe de 68 anos?",
+        "e quem pode pedir por ela?"
+      ],
+      "servicos": [
+        "bpc-idoso"
+      ],
+      "intencoes": [
+        "TIRAR_DUVIDA"
+      ]
+    },
+    {
+      "turnos": [
+        "esqueci a senha do gov.br",
+        "e agora, o que eu faço?"
+      ],
+      "servicos": [
+        "conta-gov"
+      ],
+      "intencoes": [
+        "TIRAR_DUVIDA"
+      ]
+    },
+    {
+      "turnos": [
+        "onde tem hospital perto de mim?",
+        "e tem algum com rampa?"
+      ],
+      "tipoAtendimento": "HOSPITAL",
+      "intencoes": [
+        "BUSCAR_ATENDIMENTO"
+      ]
+    },
+    {
+      "turnos": [
+        "tem farmácia aqui perto?",
+        "e uma UPA?"
+      ],
+      "tipoAtendimento": "UPA",
+      "intencoes": [
+        "BUSCAR_ATENDIMENTO"
+      ]
+    },
+    {
+      "turnos": [
+        "recebi uma mensagem dizendo que meu benefício vai ser bloqueado",
+        "o que eu faço agora?"
+      ],
+      "intencoes": [
+        "VERIFICAR_INFORMACAO",
+        "TIRAR_DUVIDA"
+      ]
+    },
+    {
+      "turnos": [
+        "como tiro a carteira do idoso?",
+        "precisa ter o cadastro único?"
+      ],
+      "servicos": [
+        "carteira-pessoa-idosa",
+        "cadastro-unico"
+      ],
+      "intencoes": [
+        "TIRAR_DUVIDA"
+      ]
+    },
+    {
+      "turnos": [
+        "quero denunciar maus-tratos contra minha vizinha idosa",
+        "precisa falar meu nome?"
+      ],
+      "servicos": [
+        "denuncia-violencia"
+      ],
+      "intencoes": [
+        "TIRAR_DUVIDA"
+      ]
+    }
+  ]
+}

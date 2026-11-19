@@ -7,6 +7,8 @@ import br.com.fiap.vozviva.ai.BaseServicosPublicos.ServicoPublico;
 import br.com.fiap.vozviva.ai.ExemplosIntencao;
 import br.com.fiap.vozviva.ai.IndiceTfIdf;
 import br.com.fiap.vozviva.ai.RegrasIntencao;
+import br.com.fiap.vozviva.ai.RespostaIaDuvida;
+import br.com.fiap.vozviva.ai.TurnoAnterior;
 import br.com.fiap.vozviva.dto.AtendimentosProximosResponse;
 import br.com.fiap.vozviva.dto.IntencaoRequest;
 import br.com.fiap.vozviva.dto.IntencaoResponse;
@@ -28,7 +30,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -61,6 +67,8 @@ public class IntencaoVozService {
 	private static final int EXEMPLOS_RECUPERADOS = 4;
 	private static final int RAIO_ATENDIMENTOS_METROS = 5000;
 	private static final int ATENDIMENTOS_NA_RESPOSTA = 3;
+	/** Falas da mesma pessoa até este tempo atrás contam como a mesma conversa. */
+	static final Duration JANELA_DA_CONVERSA = Duration.ofMinutes(15);
 	private static final Set<String> ORDENACAO = Set.of("id", "criadaEm");
 	/**
 	 * Sinal de que a dúvida é sobre um serviço público, mesmo fora da base ("como tiro o título de eleitor"): só então a
@@ -84,16 +92,18 @@ public class IntencaoVozService {
 	private final AnaliseIaIntencao ia;
 	private final ExemplosIntencao exemplos;
 	private final BaseServicosPublicos servicos;
+	private final RespostaIaDuvida duvidas;
 	private final AtendimentoService atendimentos;
 	private final InteracaoVozRepository interacoes;
 	private final double confiancaMinima;
 
 	public IntencaoVozService(AnaliseIaIntencao ia, ExemplosIntencao exemplos, BaseServicosPublicos servicos,
-			AtendimentoService atendimentos, InteracaoVozRepository interacoes,
+			RespostaIaDuvida duvidas, AtendimentoService atendimentos, InteracaoVozRepository interacoes,
 			@Value("${vozviva.voz.confianca-minima:0.6}") double confiancaMinima) {
 		this.ia = ia;
 		this.exemplos = exemplos;
 		this.servicos = servicos;
+		this.duvidas = duvidas;
 		this.atendimentos = atendimentos;
 		this.interacoes = interacoes;
 		this.confiancaMinima = confiancaMinima;
@@ -103,10 +113,31 @@ public class IntencaoVozService {
 		long inicio = System.nanoTime();
 		String fala = request.texto().strip();
 
+		List<TurnoAnterior> anteriores = conversaRecente(usuarioId);
+
 		RegrasIntencao.Resultado regras = RegrasIntencao.analisar(fala);
-		Optional<RespostaIa> respostaIa = ia.analisar(fala, exemplos.parecidos(fala, EXEMPLOS_RECUPERADOS));
-		Orientada orientada = orientar(decidir(regras, respostaIa.orElse(null), confiancaMinima), fala, servicos);
+		Optional<RespostaIa> respostaIa = ia.analisar(fala, exemplos.parecidos(fala, EXEMPLOS_RECUPERADOS), anteriores);
+		Decisao decidida = decidir(regras, respostaIa.orElse(null), confiancaMinima);
+		Orientada orientada = orientar(decidida, fala, anteriores.stream().map(TurnoAnterior::fala).toList(), servicos);
 		Decisao decisao = orientada.decisao();
+		OrientacaoServicoResponse orientacao = orientada.servico() == null ? null
+				: OrientacaoServicoResponse.de(orientada.servico());
+
+		// Qualquer dúvida recebe uma resposta à pergunta feita (com os fatos da base, quando ela tem o serviço). Link,
+		// telefone e passos continuam vindo da base; sem resposta segura da IA, fica a orientação da base.
+		if (decidida.intencao() == Intencao.TIRAR_DUVIDA || decisao.intencao() == Intencao.TIRAR_DUVIDA) {
+			ServicoPublico daBase = orientada.servico() == null || orientada.servico().id().equals(servicos.geral().id())
+					? null : orientada.servico();
+			Optional<String> resposta = duvidas.responder(fala, anteriores, daBase);
+			if (resposta.isPresent()) {
+				orientacao = daBase != null ? OrientacaoServicoResponse.de(daBase, resposta.get())
+						: OrientacaoServicoResponse.aberta(resposta.get());
+				EntidadesFala entidades = daBase != null ? decisao.entidades() : EntidadesFala.NENHUMA;
+				Urgencia urgencia = decisao.urgencia() == null ? Urgencia.BAIXA : decisao.urgencia();
+				decisao = new Decisao(Intencao.TIRAR_DUVIDA, urgencia, entidades, resposta.get(),
+						Math.max(decisao.confianca(), confiancaMinima));
+			}
+		}
 
 		AtendimentosProximosResponse proximos = buscarAtendimentos(decisao, request);
 		// Com a busca feita, vale a frase dela (inclusive "não encontrei..."), nunca uma promessa genérica. Numa dúvida,
@@ -120,8 +151,18 @@ public class IntencaoVozService {
 				decisao.confianca(), latenciaMs, analisadoPor, Instant.now()));
 
 		return new IntencaoResponse(decisao.intencao(), decisao.intencao().acao(), decisao.urgencia(),
-				decisao.entidades(), mensagemFalada, decisao.confianca(), analisadoPor, proximos,
-				orientada.servico() == null ? null : OrientacaoServicoResponse.de(orientada.servico()));
+				decisao.entidades(), mensagemFalada, decisao.confianca(), analisadoPor, proximos, orientacao);
+	}
+
+	/** As falas da pessoa nos últimos minutos, da mais antiga para a mais nova: o contexto da conversa. */
+	private List<TurnoAnterior> conversaRecente(Long usuarioId) {
+		List<TurnoAnterior> turnos = new ArrayList<>(interacoes
+			.findTop3ByUsuarioIdAndCriadaEmAfterOrderByCriadaEmDesc(usuarioId, Instant.now().minus(JANELA_DA_CONVERSA))
+			.stream()
+			.map(i -> new TurnoAnterior(i.getTexto(), i.getIntencao()))
+			.toList());
+		Collections.reverse(turnos);
+		return turnos;
 	}
 
 	public PaginaResponse<InteracaoVozResponse> historico(Long usuarioId, Pageable pageable) {
@@ -182,6 +223,14 @@ public class IntencaoVozService {
 	 * </ul>
 	 */
 	static Orientada orientar(Decisao decisao, String fala, BaseServicosPublicos servicos) {
+		return orientar(decisao, fala, List.of(), servicos);
+	}
+
+	/**
+	 * @param falasAnteriores falas recentes da mesma pessoa (da mais antiga para a mais nova): numa dúvida que não cita
+	 *                        o serviço ("e quanto tempo demora?"), vale o serviço da fala anterior mais recente
+	 */
+	static Orientada orientar(Decisao decisao, String fala, List<String> falasAnteriores, BaseServicosPublicos servicos) {
 		Intencao intencao = decisao.intencao();
 		TipoAtendimento tipoPedido = decisao.entidades().tipoAtendimento();
 		boolean buscaSemTipo = intencao == Intencao.BUSCAR_ATENDIMENTO && tipoPedido == null;
@@ -189,7 +238,8 @@ public class IntencaoVozService {
 		ServicoPublico servico = null;
 		if (intencao == Intencao.TIRAR_DUVIDA) {
 			boolean sobreServicoPublico = SERVICO_PUBLICO.matcher(IndiceTfIdf.normalizar(fala)).find();
-			servico = servicos.buscar(fala).orElse(sobreServicoPublico ? servicos.geral() : null);
+			servico = servicos.buscar(fala).or(() -> doContexto(falasAnteriores, servicos))
+				.orElse(sobreServicoPublico ? servicos.geral() : null);
 			if (servico == null) {
 				return new Orientada(new Decisao(Intencao.DESCONHECIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA,
 						PERGUNTA_REPETICAO, decisao.confianca()), null);
@@ -217,6 +267,16 @@ public class IntencaoVozService {
 					decisao.confianca()), null);
 		}
 		return new Orientada(decisao, null);
+	}
+
+	private static Optional<ServicoPublico> doContexto(List<String> falasAnteriores, BaseServicosPublicos servicos) {
+		for (int i = falasAnteriores.size() - 1; i >= 0; i--) {
+			Optional<ServicoPublico> servico = servicos.buscar(falasAnteriores.get(i));
+			if (servico.isPresent()) {
+				return servico;
+			}
+		}
+		return Optional.empty();
 	}
 
 	/**

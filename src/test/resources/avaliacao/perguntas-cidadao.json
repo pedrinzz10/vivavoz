@@ -1,5 +1,5 @@
 {
-  "descricao": "Perguntas do dia a dia de pessoas idosas e pessoas com deficiência, escritas como seriam faladas (com e sem acento, indiretas, com erros de transcrição). Diferentes dos exemplos do RAG e do conjunto frases-intencoes.json. Em TIRAR_DUVIDA, 'servico' é o id esperado em conhecimento/servicos-publicos.json. Usado por ./gradlew avaliarIa.",
+  "descricao": "Perguntas do dia a dia de pessoas idosas e pessoas com deficiência, escritas como seriam faladas (com e sem acento, indiretas, com erros de transcrição). Diferentes dos exemplos do RAG e do conjunto frases-intencoes.json. Em TIRAR_DUVIDA, 'servico' é o id esperado em conhecimento/servicos-publicos.json. Qualquer pergunta é TIRAR_DUVIDA (inclusive 'resultado do jogo'); DESCONHECIDA é cumprimento ou fala sem pergunta. Usado por ./gradlew avaliarIa.",
   "perguntas": [
     { "texto": "quero saber como faço pra me aposentar", "intencao": "TIRAR_DUVIDA", "servico": "aposentadoria-inss" },
     { "texto": "ja tenho 65 anos posso pedir a aposentadoria", "intencao": "TIRAR_DUVIDA", "servico": "aposentadoria-inss" },
@@ -53,7 +53,7 @@
     { "texto": "tem um carro parado em cima da rampa e não passo com a cadeira", "intencao": "ZELADORIA_REPORT" },
 
     { "texto": "bom dia, tudo bem com você?", "intencao": "DESCONHECIDA" },
-    { "texto": "qual é o resultado do jogo de ontem", "intencao": "DESCONHECIDA" },
+    { "texto": "qual é o resultado do jogo de ontem", "intencao": "TIRAR_DUVIDA" },
     { "texto": "me conta uma piada", "intencao": "DESCONHECIDA" }
   ]
 }

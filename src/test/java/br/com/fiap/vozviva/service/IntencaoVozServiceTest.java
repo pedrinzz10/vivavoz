@@ -136,6 +136,35 @@ class IntencaoVozServiceTest {
 	}
 
 	@Test
+	void continuacaoDaConversaUsaOServicoDaFalaAnterior() {
+		RespostaIa ia = new RespostaIa(Intencao.TIRAR_DUVIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA, "Vou ver.", 0.9);
+		String fala = "e quanto tempo demora pra sair?";
+
+		Orientada orientada = IntencaoVozService.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
+				LIMITE), fala, java.util.List.of("quero pedir minha aposentadoria"), SERVICOS);
+
+		assertThat(orientada.servico().id()).isEqualTo("aposentadoria-inss");
+	}
+
+	@Test
+	void falaQueCitaOutroServicoNaoHerdaODaConversa() {
+		RespostaIa ia = new RespostaIa(Intencao.TIRAR_DUVIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA, "Vou ver.", 0.9);
+		String fala = "e precisa ter o cadastro único?";
+
+		Orientada orientada = IntencaoVozService.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
+				LIMITE), fala, java.util.List.of("como tiro a carteira do idoso?"), SERVICOS);
+
+		assertThat(orientada.servico().id()).isEqualTo("cadastro-unico");
+	}
+
+	@Test
+	void corteDeLuzPorFaltaDePagamentoNaoEPagamentoDoInss() {
+		assertThat(SERVICOS.buscar("o que eu faço se cortarem minha luz por falta de pagamento?"))
+			.map(s -> s.id())
+			.isNotEqualTo(java.util.Optional.of("pagamento-beneficio-inss"));
+	}
+
+	@Test
 	void semIaADuvidaVemDaBase() {
 		assertThat(IntencaoVozService.classificarSemIa("como faço a prova de vida", SERVICOS))
 			.isEqualTo(Intencao.TIRAR_DUVIDA);

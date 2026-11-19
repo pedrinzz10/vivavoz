@@ -503,15 +503,31 @@ Ela só classifica e orienta: não executa nenhuma ação, e o socorro, por exem
 | `BUSCAR_ATENDIMENTO` | `MOSTRAR_ATENDIMENTOS` | "Onde tem farmácia aqui perto?" |
 | `VERIFICAR_INFORMACAO` | `MOSTRAR_VERIFICACAO` | "Recebi uma mensagem do INSS, é golpe?" |
 | `ZELADORIA_REPORT` | `ABRIR_ZELADORIA_DOTNET` | "Tem um buraco na calçada e não passo com a cadeira" |
-| `TIRAR_DUVIDA` | `MOSTRAR_ORIENTACAO` | "Como faço para pedir minha aposentadoria?", "Como assino um documento no gov.br?" |
+| `TIRAR_DUVIDA` | `MOSTRAR_ORIENTACAO` | "Como faço para pedir minha aposentadoria?", "Idoso tem prioridade na fila do banco?" (qualquer pergunta) |
 | `DESCONHECIDA` | `PEDIR_REPETICAO` | "Bom dia" |
 
 A resposta traz `intencao`, `acao`, `urgencia` (`BAIXA` a `CRITICA`), `entidades` (`tipoAtendimento`,
-`exigeAcessibilidade`, `problemaRua`, `impedeCadeirante`, `referenciaLocal`), `mensagemFalada` (até 200
+`exigeAcessibilidade`, `problemaRua`, `impedeCadeirante`, `referenciaLocal`), `mensagemFalada` (até 200, ou 400 na resposta de uma dúvida;
 caracteres), `confianca` e `analisadoPor`. Em `BUSCAR_ATENDIMENTO` com localização, ela já traz os
 atendimentos mais próximos (o mesmo resultado de `GET /api/v1/atendimentos/proximos`): um toque a menos. Em
 `TIRAR_DUVIDA`, ela traz `orientacao` (`titulo`, `resumo`, `passos`, `link` oficial, `telefone` e `localPresencial`),
 e com localização também o CRAS (ou outro local presencial do serviço) mais perto.
+
+**Qualquer dúvida e continuidade da conversa.**
+- **Contexto:** as falas da mesma pessoa nos últimos 15 minutos (até 3, do histórico de voz) vão para a IA como
+  `<conversa_anterior>`. Assim, "e quanto tempo demora?" depois de "quero me aposentar" é sobre a aposentadoria, e
+  "e tem algum com rampa?" depois de "hospital perto" continua sendo hospital, agora com acessibilidade. Numa dúvida
+  que não cita o serviço, vale o serviço da fala anterior mais recente.
+- **Resposta à pergunta feita** (`ai/RespostaIaDuvida`, prompt `prompts/resposta-duvida.txt`): toda dúvida recebe
+  uma resposta curta (até 400 caracteres) à pergunta. Quando a base tem o serviço, a IA usa só os fatos dele (RAG) e
+  o app mostra também os passos, o link e o telefone da base. Sem serviço na base, vem só o texto, sem link nem
+  telefone ("Resposta do assistente. Confirme nos canais oficiais").
+- **Filtro de segurança:** a resposta é descartada se citar um site que não termine em gov.br (ou iti.br), um número
+  longo ou um telefone fora das centrais oficiais (192, 190, 193, 100, 135, 121, 136, 180, 188). Aí vale a
+  orientação da base. Saúde sem diagnóstico nem dose; urgência sempre 192.
+- **Limitações:** a resposta aberta vem do conhecimento geral do modelo e pode ter imprecisões; por isso termina
+  indicando onde confirmar. Perguntas que dependem de dados em tempo real (previsão do tempo, resultado de jogo,
+  preço) recebem uma resposta honesta de onde consultar.
 
 **Dúvidas sobre serviços públicos** (`conhecimento/servicos-publicos.json`, 15 serviços): as dúvidas mais frequentes
 de idosos e pessoas com deficiência, levantadas nas centrais e portais oficiais (serviços mais procurados na Central
@@ -556,7 +572,7 @@ sobre serviços públicos.
 
 | Configuração | Acurácia | Socorros reconhecidos | Socorros falsos | Como rodar |
 |---|---|---|---|---|
-| Sem IA: regras e base de serviços (linha de base, 39 falas) | 97,4% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-intencoes/`) |
+| Sem IA: regras e base de serviços (linha de base, 39 falas) | 92,3% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-intencoes/`) |
 | IA + regras (modelo real, 39 falas, 19/11/2026) | **100%** | **100%** | **0** | `./gradlew avaliarIa` com as credenciais da OCI |
 | IA + regras (API publicada, 19/11/2026, 32 falas, antes das dúvidas) | **100%** | **100%** | **0** | `python scripts/avaliar-ia-publicada.py` (relatório em [`docs/avaliacao/intencoes-ia-e-regras.md`](docs/avaliacao/intencoes-ia-e-regras.md)); ou `./gradlew avaliarIa` com as credenciais da OCI |
 
@@ -566,7 +582,7 @@ dúvidas sobre serviços públicos, socorros, buscas, golpes, problemas na rua e
 
 | Configuração | Intenção certa | Serviço certo nas dúvidas | Socorros reconhecidos | Socorros falsos |
 |---|---|---|---|---|
-| Sem IA (regras e base de serviços) | 95,9% (47/49) | 100% (27/27) | 100% | 0 |
+| Sem IA (regras e base de serviços) | 93,9% (46/49) | 100% (27/27) | 100% | 0 |
 | IA + regras (modelo real) | **100% (49/49)** | **100% (27/27)** | **100%** | **0** |
 
 A primeira rodada mostrou três falhas, corrigidas por padrão e não por frase: "que dia **cai** o pagamento" virava
@@ -575,6 +591,19 @@ socorro (agora "cai o pagamento/benefício/dinheiro" é dinheiro que entra, como
 vão para a checagem de golpe). Uma dúvida que a IA marca mas que não é sobre serviço público ("quanto custa o pão")
 pede para repetir em vez de mostrar a orientação geral. Sem IA, ainda escapam dois problemas na rua ditos de forma
 indireta ("ta toda quebrada", "carro em cima da rampa"), que a IA acerta.
+
+**Dúvidas abertas e conversas** (`src/test/resources/avaliacao/conversas-cidadao.json`), com o relatório em
+[`docs/avaliacao/conversas-cidadao-ia-e-regras.md`](docs/avaliacao/conversas-cidadao-ia-e-regras.md):
+
+| Conjunto | Antes do contexto e das respostas | Depois |
+|---|---|---|
+| Dúvidas abertas fora da base, respondidas de forma útil (juiz: o mesmo modelo) | 0/15 | **15/15** (15/18 com as 3 de tempo real) |
+| Conversas em que a pergunta seguinte depende da anterior | 2/10 | **10/10** |
+
+O juiz automático tende a ser otimista; a revisão humana das respostas encontrou imprecisões pontuais, que o texto
+compensa indicando onde confirmar. Com a mudança, "previsão do tempo" e "quanto custa o pão" passaram a ser
+TIRAR_DUVIDA nos conjuntos rotulados (qualquer pergunta é dúvida; DESCONHECIDA ficou para cumprimentos e falas sem
+sentido), e os conjuntos anteriores continuam em 100% com a IA (39 falas, 49 perguntas e 30 mensagens de golpe).
 
 Medição com o modelo real na API publicada: as 32 respostas vieram da IA, incluindo a fala que as regras erravam
 ("meu remédio acabou, onde eu compro") e as armadilhas ("pronto socorro", "a árvore caiu").

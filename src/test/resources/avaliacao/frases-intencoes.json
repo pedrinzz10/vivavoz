@@ -1,5 +1,5 @@
 {
-  "descricao": "Falas rotuladas para avaliar a classificação de intenção (diferentes dos exemplos usados no RAG). Inclui transcrições sem acento, falas indiretas e armadilhas (pronto-socorro, árvore que caiu, aviso de prova de vida recebido por link).",
+  "descricao": "Falas rotuladas para avaliar a classificação de intenção (diferentes dos exemplos usados no RAG). Inclui transcrições sem acento, falas indiretas e armadilhas (pronto-socorro, árvore que caiu, aviso de prova de vida recebido por link). Desde 19/11/2026 qualquer pergunta é TIRAR_DUVIDA (o assistente responde dúvidas abertas), então 'quanto custa o pão' e 'previsão do tempo' deixaram de ser DESCONHECIDA; DESCONHECIDA ficou para cumprimentos e falas sem sentido.",
   "frases": [
     { "texto": "Caí e não consigo levantar", "intencao": "SOCORRO" },
     { "texto": "socorro meu marido desmaiou", "intencao": "SOCORRO" },
@@ -28,7 +28,7 @@
     { "texto": "tem um carro parado na rampa de novo", "intencao": "ZELADORIA_REPORT" },
     { "texto": "a rua alagou toda", "intencao": "ZELADORIA_REPORT" },
     { "texto": "bom dia", "intencao": "DESCONHECIDA" },
-    { "texto": "qual a previsão do tempo pra amanhã", "intencao": "DESCONHECIDA" },
+    { "texto": "qual a previsão do tempo pra amanhã", "intencao": "TIRAR_DUVIDA" },
     { "texto": "liga a televisão", "intencao": "DESCONHECIDA" },
     { "texto": "obrigado", "intencao": "DESCONHECIDA" },
     { "texto": "onde eu acho um lugar para resgatar minha aposentadoria", "intencao": "TIRAR_DUVIDA" },
@@ -39,6 +39,6 @@
     { "texto": "quero denunciar que meu sobrinho pega meu dinheiro sem eu deixar", "intencao": "TIRAR_DUVIDA" },
     { "texto": "recebi uma mensagem dizendo que tenho que fazer a prova de vida por um link", "intencao": "VERIFICAR_INFORMACAO" },
     { "texto": "é... não sei", "intencao": "DESCONHECIDA" },
-    { "texto": "quanto custa o pão", "intencao": "DESCONHECIDA" }
+    { "texto": "quanto custa o pão", "intencao": "TIRAR_DUVIDA" }
   ]
 }
