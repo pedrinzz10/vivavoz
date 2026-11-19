@@ -2,6 +2,8 @@
 do ./gradlew avaliarIa: 30 mensagens de golpe/legítimas e 32 falas de intenção por voz.
 
 Cria um usuário de teste, chama a API para cada item, grava os relatórios em docs/avaliacao/ e apaga o usuário no fim.
+Atenção: cada verificação de golpe entra nas estatísticas anônimas da API (tabela verificacoes_golpe, sem dono), que
+não saem com o usuário. No fim, o script mostra o SQL que apaga só os registros da janela desta avaliação.
 Uso: python scripts/avaliar-ia-publicada.py [URL da API]   (padrão: a API da equipe na Azure)
 """
 import json
@@ -90,7 +92,8 @@ def avaliar_voz(token):
 
 
 def main():
-    agora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    inicio = datetime.now(timezone.utc)
+    agora = inicio.strftime("%Y-%m-%d %H:%M UTC")
     email = f"avaliacao.ia.{int(time.time())}@vozviva.dev"
     chamar("POST", "/auth/cadastro", {"nome": "Avaliação da IA", "email": email, "senha": "avaliacao2026",
                                       "papel": "CIDADAO", "consentimento": True})
@@ -100,6 +103,7 @@ def main():
         v = avaliar_voz(token)
     finally:
         chamar("DELETE", "/auth/eu", token=token)
+    fim = datetime.now(timezone.utc)
 
     SAIDA.mkdir(parents=True, exist_ok=True)
     (SAIDA / "golpes-ia-e-regras.md").write_text(
@@ -127,6 +131,11 @@ def main():
           f"socorros falsos {v['falsos']}, com IA {dict(v['origem'])}")
     for e in v["erros"]:
         print("   ", e)
+
+    print()
+    print("As verificações desta avaliação entraram nas estatísticas anônimas de golpes. Para tirá-las, rode no banco:")
+    print(f"  DELETE FROM verificacoes_golpe WHERE criada_em BETWEEN '{inicio:%Y-%m-%d %H:%M:%S}' "
+          f"AND '{fim:%Y-%m-%d %H:%M:%S}';")
 
 
 if __name__ == "__main__":
