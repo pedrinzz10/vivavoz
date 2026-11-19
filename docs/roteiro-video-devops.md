@@ -366,41 +366,146 @@ no Azure DevOps, nunca no código.
 
 **Fazer:** **Boards → Work items → New Work Item** (setinha do botão) **→ Task** → título **"Descrever no Swagger
 que o cidadão também mantém o perfil"** → **Save**. **Anote o número da tarefa** que aparece no topo (provavelmente
-104).
+105).
 
 Não use o "New item" da tela **Boards → Boards**: ali o quadro mostra as Features, e o botão criaria uma Feature, não
 uma Task.
 
-#### 3.4 Nova branch e alteração no código-fonte (≈ 2 min)
+#### 3.4 Nova branch e alteração no código-fonte, pelo terminal (≈ 2 min)
 
-1. Na tarefa aberta, clique no menu **⋯** (canto superior direito) → **New branch...** → nome
-   `feature/swagger-perfil`, **Based on** `main` → **Create branch**. A branch já nasce ligada à tarefa e aparece na
-   seção **Development** dela. (Se a seção Development mostrar o link **Create a branch**, ele faz a mesma coisa.)
-2. No Repos, escolha a branch `feature/swagger-perfil`, abra
-   `src/main/java/br/com/fiap/vozviva/config/OpenApiConfig.java` e clique em **Edit**. Na linha 81, troque:
+1. **Criar a branch pela tarefa** (no navegador): na tarefa aberta, clique no menu **⋯** (canto superior direito) →
+   **New branch...** → nome `feature/swagger-perfil`, **Based on** `main` → **Create branch**. A branch já nasce
+   ligada à tarefa e aparece na seção **Development** dela.
+2. **No Cloud Shell da Azure**, um comando por vez. Troque **105** pelo número da sua tarefa.
 
-```java
-new Tag().name(TAG_PERFIL).description("Perfil de emergência mantido pelo cuidador"),
+```bash
+cd ~
 ```
-por:
-```java
-new Tag().name(TAG_PERFIL).description("Perfil de emergência mantido pelo cidadão ou pelo cuidador"),
+**O que faz:** volta para a pasta inicial do Cloud Shell.
+
+```bash
+R=499b84ac-1321-427f-aa17-267ca6975798
 ```
-**O que muda:** só o texto que descreve o módulo de perfil na documentação (Swagger). Hoje o próprio cidadão
-também mantém o perfil, então o texto antigo estava desatualizado.
+**O que faz:** guarda o identificador do Azure DevOps, para o comando seguinte ficar curto.
 
-3. Clique em **Commit** com a mensagem `Swagger: o cidadão também mantém o perfil #104` (troque 104 pelo número da
-   tarefa). O `#104` liga o commit à tarefa; na janela do commit, o campo **Work items to link** também aceita a tarefa.
+```bash
+T=$(az account get-access-token --resource $R --query accessToken -o tsv)
+```
+**O que faz:** pega um token de acesso ao Azure DevOps com o login que o Cloud Shell já tem. Não aparece na tela,
+e nenhuma senha é digitada.
 
-> "A alteração é no código-fonte, não no README, e fica ligada à tarefa."
+```bash
+H="Authorization: Bearer $T"
+```
+**O que faz:** monta o cabeçalho de autenticação que o Git vai mandar ao Azure Repos.
 
-#### 3.5 Pull request e merge na main (≈ 1 min)
+```bash
+U=https://dev.azure.com/vozviva/vozviva/_git/vozviva
+```
+**O que faz:** guarda o endereço do repositório no **Azure Repos** (não no GitHub).
 
-**Fazer:** **Create a pull request** para a `main` → confira a tarefa em **Work items** → **Create** →
-**Approve** → **Complete**, marcando **Complete associated work items after merging** e **Delete branch** →
-**Complete merge**.
+```bash
+git -c http.extraHeader="$H" clone -q $U ~/repo
+```
+**O que faz:** baixa o repositório do Azure Repos para a pasta `~/repo`, usando o token.
 
-> "O merge na main dispara a pipeline sozinho, sem ninguém clicar em Run."
+```bash
+cd ~/repo && git switch feature/swagger-perfil
+```
+**O que faz:** entra no repositório e muda para a branch criada pela tarefa.
+
+```bash
+F=src/main/java/br/com/fiap/vozviva/config/OpenApiConfig.java
+```
+**O que faz:** guarda o caminho do arquivo que vai ser alterado.
+
+```bash
+sed -i 's/mantido pelo cuidador/mantido pelo cidadão ou pelo cuidador/' $F
+```
+**O que faz:** troca o texto da linha 81, a descrição do módulo de perfil no Swagger. Hoje o próprio cidadão também
+mantém o perfil, então o texto antigo estava desatualizado.
+
+```bash
+git diff
+```
+**O que faz:** mostra a alteração: a linha antiga em vermelho e a nova em verde. Aperte `q` para sair.
+> "A alteração é no código-fonte, não no README."
+
+```bash
+git config user.name "Pedro Henrique de Oliveira"
+```
+```bash
+git config user.email RM562312@fiap.com.br
+```
+**O que faz:** diz ao Git quem é o autor do commit.
+
+```bash
+git commit -am "Swagger: o cidadão também mantém o perfil #105"
+```
+**O que faz:** grava a alteração na branch. O `#105` liga o commit à tarefa no Boards.
+
+```bash
+git -c http.extraHeader="$H" push -q
+```
+**O que faz:** envia o commit para a branch no Azure Repos.
+
+#### 3.5 Pull request, aprovação e merge na main, pelo terminal (≈ 1 min)
+
+```bash
+az devops configure --defaults organization=https://dev.azure.com/vozviva
+```
+```bash
+az devops configure --defaults project=vozviva
+```
+**O que faz:** define a organização e o projeto padrão dos comandos `az repos` a seguir.
+
+```bash
+M="Swagger: o cidadão também mantém o perfil"
+```
+**O que faz:** guarda o título do pull request.
+
+```bash
+Q="--query pullRequestId -o tsv"
+```
+**O que faz:** guarda a parte do comando que pega só o número do PR.
+
+```bash
+PR=$(az repos pr create -r vozviva -s feature/swagger-perfil --title "$M" --work-items 105 $Q)
+```
+**O que faz:** abre o pull request da branch para a `main` (o destino padrão), ligado à tarefa 105. O número do PR
+fica guardado em `PR`.
+
+```bash
+O="--delete-source-branch true --transition-work-items true"
+```
+**O que faz:** guarda as opções de conclusão: apagar a branch depois do merge e mover a tarefa para **Done**.
+
+```bash
+az repos pr update --id $PR --auto-complete true $O -o none
+```
+**O que faz:** marca o PR para **concluir sozinho** quando as regras da `main` forem cumpridas, com as opções acima.
+
+```bash
+echo "PR $PR: https://dev.azure.com/vozviva/vozviva/_git/vozviva/pullrequest/$PR"
+```
+**O que faz:** mostra o número e o link do PR. Abra o link no navegador para mostrar o PR no vídeo.
+
+```bash
+az repos pr set-vote --id $PR --vote approve -o none
+```
+**O que faz:** aprova o PR com o seu usuário, que é o revisor obrigatório da `main`. Com a aprovação e a tarefa
+vinculada, as regras ficam cumpridas e o PR **conclui sozinho** (merge na `main`).
+
+```bash
+az repos pr show --id $PR --query "{status:status, merge:mergeStatus}" -o table
+```
+**O que faz:** confere o PR. Em alguns segundos, o status passa a `completed`. Se ainda estiver `active`, rode de
+novo depois de uns segundos.
+
+> "A main é protegida: o PR só entrou porque tem revisor aprovando e tarefa vinculada. O merge dispara a pipeline
+> sozinho, sem ninguém clicar em Run."
+
+**Mostrar no navegador:** o PR concluído (link do `echo`), com a tarefa em **Work items** e o commit.
 
 #### 3.6 Execução completa da pipeline (≈ 2 min no vídeo final; 8 a 12 min gravando)
 
@@ -446,6 +551,21 @@ Pegue a senha do banco no cofre: portal → Key vaults → `kv-vozviva-rm562312`
 "Mostrar"). Depois abra o banco: portal → SQL databases → `vozviva` → **Query editor**, entre com o usuário
 `vozvivaadmin` e cole a senha (o campo esconde o que é digitado). Se pedir, clique em **Allowlist IP**.
 > "A senha do banco também está no Key Vault: copio de lá sem mostrar."
+
+**4.0 O banco antes do CRUD.** As tabelas só existem depois que a API Java sobe pela primeira vez (no deploy da
+Parte 3): o Flyway cria as tabelas e carrega os locais de atendimento, e a API cria os usuários de teste. Se o Query
+editor não mostrar as tabelas, confira se a API está no ar
+(`https://app-vozviva-rm562312.azurewebsites.net/actuator/health/readiness` responde `UP`). Rode no Query editor:
+
+```sql
+SELECT COUNT(*) AS locais FROM pontos_atendimento;
+SELECT email, papel FROM usuarios;
+SELECT COUNT(*) AS perfis FROM perfis_emergencia;
+```
+**O que mostra:** os 237 locais de atendimento carregados do OpenStreetMap; os usuários de teste (cidadão, cuidador
+e gestores); e nenhum perfil ainda. Os dados do CRUD a seguir são criados agora, pelo Swagger.
+> "As tabelas foram criadas pelo Flyway quando a API subiu. Agora vou criar, ler, alterar e apagar dados pela API e
+> conferir cada operação aqui no banco."
 
 **Regra da disciplina:** para provar que gravou, use **`SELECT` no Query editor**, nunca o GET. Faça o `SELECT`
 depois de **cada** operação. Faltar qualquer operação tira 30 pontos.
