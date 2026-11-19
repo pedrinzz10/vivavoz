@@ -455,9 +455,9 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
   # --async: o "az webapp deploy" às vezes fica minutos conferindo a partida do site mesmo com a API já no ar.
   # O script acompanha o status do próprio deploy na Azure e depois confere a API, com limite de tempo.
   APP_DOTNET_ID="$(az webapp show -g "$GRUPO" -n "$WEBAPP_DOTNET" --query id -o tsv)"
+  # Cada consulta tem limite de 30 s: a Azure às vezes demora mais de 1 minuto e responde GatewayTimeout.
   ultimo_deploy() {
-    az rest --method get --url "https://management.azure.com${APP_DOTNET_ID}/deployments?api-version=2022-03-01" \
-      --query "value | sort_by(@, &properties.start_time) | [-1].{id:name, status:properties.status}" -o tsv 2> /dev/null
+    timeout 30 az rest --method get --url "https://management.azure.com${APP_DOTNET_ID}/deployments?api-version=2022-03-01"       --query "value | sort_by(@, &properties.start_time) | [-1].{id:name, status:properties.status}" -o tsv       2> /dev/null || true
   }
   DEPLOY_ANTERIOR="$(ultimo_deploy | cut -f1)"
   az webapp deploy -g "$GRUPO" -n "$WEBAPP_DOTNET" --src-path "${PASTA_DOTNET}/zeladoria.zip" --type zip \
@@ -467,18 +467,33 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
   echo "    enviado o commit ${COMMIT_DOTNET}; esperando o deploy terminar..."
   # Status do deploy no App Service: 3 = falhou, 4 = concluído. Só vale um deploy diferente do anterior.
   STATUS_DEPLOY=""
-  for tentativa in $(seq 1 60); do
+  for tentativa in $(seq 1 30); do
     read -r ID_DEPLOY STATUS_DEPLOY <<< "$(ultimo_deploy)" || true
     if [ -n "${ID_DEPLOY:-}" ] && [ "$ID_DEPLOY" != "$DEPLOY_ANTERIOR" ] && { [ "$STATUS_DEPLOY" = 3 ] || [ "$STATUS_DEPLOY" = 4 ]; }; then
       break
     fi
+    # Primeiro deploy de um app novo (nenhum deploy anterior): não há versão antiga que possa responder, então a
+    # API no ar já confirma o deploy, mesmo sem o status.
+    if [ -z "$DEPLOY_ANTERIOR" ]         && [ "$(curl -s -m 15 -o /dev/null -w '%{http_code}' "https://${WEBAPP_DOTNET}.azurewebsites.net/health/live")" = 200 ]; then
+      break
+    fi
     sleep 10
   done
-  if [ "$STATUS_DEPLOY" != 4 ]; then
-    echo "    o deploy da API .NET não terminou com sucesso (status ${STATUS_DEPLOY:-desconhecido}); veja em Deployment Center" >&2
+  # A Azure às vezes não responde a lista de deploys de um app recém-criado (GatewayTimeout): sem o status, a
+  # confirmação fica com o /health/live abaixo. Só um deploy que falhou de verdade (status 3) interrompe.
+  if [ "$STATUS_DEPLOY" = 3 ]; then
+    echo "    o deploy da API .NET falhou; veja em Deployment Center" >&2
     exit 1
   fi
-  echo "    deploy concluído; conferindo a API..."
+  if [ "$STATUS_DEPLOY" = 4 ]; then
+    echo "    deploy concluído; conferindo a API..."
+  elif [ -n "$DEPLOY_ANTERIOR" ]; then
+    # Reenvio sem o status do deploy novo: a versão anterior ainda pode responder, então o /health/live não prova
+    # que o pacote novo entrou.
+    echo "    a Azure não informou o status do deploy novo; confira em Deployment Center se o commit ${COMMIT_DOTNET} entrou"
+  else
+    echo "    deploy enviado; conferindo a API..."
+  fi
   for tentativa in $(seq 1 30); do
     if [ "$(curl -s -m 15 -o /dev/null -w '%{http_code}' "https://${WEBAPP_DOTNET}.azurewebsites.net/health/live")" = 200 ]; then
       echo "    API .NET no ar (/health/live respondeu 200)"
