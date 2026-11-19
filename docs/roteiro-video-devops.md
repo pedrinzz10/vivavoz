@@ -257,20 +257,22 @@ export SUFIXO=rm562312 LIBERAR_MEU_IP=sim
 os `SELECT` da Parte 4.
 
 ```bash
-code ~/vivavoz/scripts/provisionar-azure.sh
+grep -n "^passo" scripts/provisionar-azure.sh
 ```
-**O que faz:** abre o script no editor do próprio Cloud Shell, em cima do terminal. Assim, enquanto ele roda,
-você mostra o código sem sair dessa tela. (Se o editor não abrir, mostre o arquivo numa aba do Azure Repos.)
+**O que faz:** lista os títulos de todas as etapas do script (Key Vault, Azure SQL, Container Registry, rede,
+RabbitMQ, App Service, API .NET e orçamento), com o número da linha de cada uma. Use a lista para dizer o que o
+script vai criar. Não use o editor `code`: no Cloud Shell novo ele nem sempre abre.
 
 ```bash
 ./scripts/provisionar-azure.sh 2>&1 | tee ~/provisionar.log
 ```
 **O que faz:** roda o script que cria tudo. O `tee` mostra a saída na tela e guarda uma cópia em
 `provisionar.log`, para consultar se algo der errado.
-**Tempo:** 15 a 20 minutos. **Fique nesta aba**, rolando o editor e o terminal: o Cloud Shell desconecta depois
+**Tempo:** 15 a 20 minutos. Volte a esta aba de vez em quando e role o terminal: o Cloud Shell desconecta depois
 de um tempo sem uso.
 
-**Nos primeiros 1 a 2 minutos**, role o script no editor e explique os blocos de uma vez (não precisa esperar cada
+**Nos primeiros 1 a 2 minutos**, abra o script numa aba do **Azure Repos** (Repos → Files →
+`scripts/provisionar-azure.sh`), role e explique os blocos de uma vez (não precisa esperar cada
 um aparecer no terminal). Depois diga:
 > "O script leva uns 15 minutos. Vou acelerar o vídeo até ele terminar."
 
