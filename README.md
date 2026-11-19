@@ -10,6 +10,7 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 |---|---|
 | **API publicada (Azure)** | Swagger: https://app-vozviva-rm562312.azurewebsites.net/swagger-ui.html · Health: https://app-vozviva-rm562312.azurewebsites.net/actuator/health · API .NET de zeladoria: https://app-zeladoria-rm562312.azurewebsites.net/swagger |
 | **Swagger local** | http://localhost:8080/swagger-ui.html |
+| **Vídeo de DevOps** | https://www.youtube.com/watch?v=coxtKPCUOJw |
 | **Vídeo pitch** | _a preencher_ |
 | **Roteiro das apresentações** | [`docs/roteiro-apresentacao.md`](docs/roteiro-apresentacao.md) |
 | **Arquivos de entrega** | [`docs/entrega/`](docs/entrega): `.txt` de identificação e folha de rosto do PDF de DevOps |
