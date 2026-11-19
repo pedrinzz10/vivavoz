@@ -169,7 +169,8 @@ Deixe estas abas abertas, na ordem em que vão aparecer:
 | README no Azure Repos | `https://dev.azure.com/vozviva/vozviva/_git/vozviva` |
 | Desenho no draw.io | [abrir `docs/arquitetura.drawio`](https://app.diagrams.net/#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fpedrinzz10%2Fvivavoz%2Fmain%2Fdocs%2Farquitetura.drawio) |
 | Portal Azure com o Cloud Shell aberto | `https://portal.azure.com` (o mesmo Cloud Shell da etapa A2) |
-| Azure DevOps | `https://dev.azure.com/vozviva/vozviva` |
+| Azure DevOps | `https://dev.azure.com/vozviva/vozviva` (Summary com a descrição e o README; dashboard em Overview → Dashboards) |
+| Work items do Boards | `https://dev.azure.com/vozviva/vozviva/_workitems` |
 
 **Checklist técnico:** resolução de 1280×720 ou mais, microfone testado, **narração falada** (legendas no lugar
 da voz tiram 30 pontos), notificações desligadas e nenhuma senha aberta em outra janela.
@@ -308,7 +309,9 @@ o Container Registry, o Key Vault, o Container Instance (RabbitMQ) e a rede virt
 
 Abra `https://dev.azure.com/vozviva/vozviva` e mostre rapidamente:
 
-- **Overview:** projeto **privado**, processo Scrum.
+- **Overview → Summary:** projeto **privado**, processo Scrum, a descrição, as tags e o README do repositório.
+- **Overview → Dashboards:** o resumo da solução e o histórico da pipeline.
+- **Overview → Wiki:** o repositório publicado como wiki (README, roteiros e arquivos de entrega).
 - **Boards → Backlogs:** os itens do backlog.
 - **Repos → Files:** o código, a pasta `scripts` (com o `script-bd.sql` e os scripts Azure CLI), a pasta
   `dockerfiles` e o `azure-pipeline.yml` na raiz.
@@ -361,13 +364,18 @@ no Azure DevOps, nunca no código.
 
 #### 3.3 Nova tarefa no Boards (≈ 30 s)
 
-**Fazer:** Boards → **New item → Task** → título **"Descrever no Swagger que o cidadão também mantém o perfil"** →
-**Save**. **Anote o número da tarefa** (por exemplo, 101).
+**Fazer:** **Boards → Work items → New Work Item** (setinha do botão) **→ Task** → título **"Descrever no Swagger
+que o cidadão também mantém o perfil"** → **Save**. **Anote o número da tarefa** que aparece no topo (provavelmente
+104).
+
+Não use o "New item" da tela **Boards → Boards**: ali o quadro mostra as Features, e o botão criaria uma Feature, não
+uma Task.
 
 #### 3.4 Nova branch e alteração no código-fonte (≈ 2 min)
 
-1. Na tarefa, em **Development**, clique em **Create a branch**: nome `feature/swagger-perfil`, a partir da
-   `main`. Assim a branch já fica ligada à tarefa.
+1. Na tarefa aberta, clique no menu **⋯** (canto superior direito) → **New branch...** → nome
+   `feature/swagger-perfil`, **Based on** `main` → **Create branch**. A branch já nasce ligada à tarefa e aparece na
+   seção **Development** dela. (Se a seção Development mostrar o link **Create a branch**, ele faz a mesma coisa.)
 2. No Repos, escolha a branch `feature/swagger-perfil`, abra
    `src/main/java/br/com/fiap/vozviva/config/OpenApiConfig.java` e clique em **Edit**. Na linha 81, troque:
 
@@ -381,8 +389,8 @@ new Tag().name(TAG_PERFIL).description("Perfil de emergência mantido pelo cidad
 **O que muda:** só o texto que descreve o módulo de perfil na documentação (Swagger). Hoje o próprio cidadão
 também mantém o perfil, então o texto antigo estava desatualizado.
 
-3. Clique em **Commit** com a mensagem `Swagger: o cidadão também mantém o perfil #101` (troque 101 pelo número da
-   tarefa). O `#101` liga o commit à tarefa.
+3. Clique em **Commit** com a mensagem `Swagger: o cidadão também mantém o perfil #104` (troque 104 pelo número da
+   tarefa). O `#104` liga o commit à tarefa; na janela do commit, o campo **Work items to link** também aceita a tarefa.
 
 > "A alteração é no código-fonte, não no README, e fica ligada à tarefa."
 
@@ -496,7 +504,7 @@ SELECT id, perfil_id, nome, telefone, prioridade FROM contatos_emergencia ORDER 
 
 ### Parte 5 – Tarefa concluída com os links (≈ 30 s)
 
-**Mostrar:** Boards → a tarefa da etapa 3.3 → estado **Done** → seção **Development**, com a **branch**, o
+**Mostrar:** Boards → Work items → a tarefa da etapa 3.3 → estado **Done** → seção **Development**, com a **branch**, o
 **commit** e o **pull request**. Se ela não fechou sozinha, mude o estado para **Done** na hora.
 
 > "A tarefa virou branch, commit e pull request, passou pelos testes e foi publicada na Azure automaticamente."
