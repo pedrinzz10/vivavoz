@@ -453,18 +453,41 @@ if [ "$PUBLICAR_DOTNET" = "sim" ]; then
     -o "${PASTA_DOTNET}/publicado" --nologo -v q
   (cd "${PASTA_DOTNET}/publicado" && zip -qr "${PASTA_DOTNET}/zeladoria.zip" .)
   # --async: o "az webapp deploy" às vezes fica minutos conferindo a partida do site mesmo com a API já no ar.
-  # O envio é confirmado aqui, e a partida é conferida pelo /health/live da própria API, com limite de tempo.
+  # O script acompanha o status do próprio deploy na Azure e depois confere a API, com limite de tempo.
+  APP_DOTNET_ID="$(az webapp show -g "$GRUPO" -n "$WEBAPP_DOTNET" --query id -o tsv)"
+  ultimo_deploy() {
+    az rest --method get --url "https://management.azure.com${APP_DOTNET_ID}/deployments?api-version=2022-03-01" \
+      --query "value | sort_by(@, &properties.start_time) | [-1].{id:name, status:properties.status}" -o tsv 2> /dev/null
+  }
+  DEPLOY_ANTERIOR="$(ultimo_deploy | cut -f1)"
   az webapp deploy -g "$GRUPO" -n "$WEBAPP_DOTNET" --src-path "${PASTA_DOTNET}/zeladoria.zip" --type zip \
     --async true -o none
   COMMIT_DOTNET="$(git -C "${PASTA_DOTNET}/codigo" rev-parse --short HEAD)"
   rm -rf "$PASTA_DOTNET"
-  echo "    enviado o commit ${COMMIT_DOTNET}; esperando a API .NET subir..."
+  echo "    enviado o commit ${COMMIT_DOTNET}; esperando o deploy terminar..."
+  # Status do deploy no App Service: 3 = falhou, 4 = concluído. Só vale um deploy diferente do anterior.
+  STATUS_DEPLOY=""
+  for tentativa in $(seq 1 60); do
+    read -r ID_DEPLOY STATUS_DEPLOY <<< "$(ultimo_deploy)" || true
+    if [ -n "${ID_DEPLOY:-}" ] && [ "$ID_DEPLOY" != "$DEPLOY_ANTERIOR" ] && { [ "$STATUS_DEPLOY" = 3 ] || [ "$STATUS_DEPLOY" = 4 ]; }; then
+      break
+    fi
+    sleep 10
+  done
+  if [ "$STATUS_DEPLOY" != 4 ]; then
+    echo "    o deploy da API .NET não terminou com sucesso (status ${STATUS_DEPLOY:-desconhecido}); veja em Deployment Center" >&2
+    exit 1
+  fi
+  echo "    deploy concluído; conferindo a API..."
   for tentativa in $(seq 1 30); do
     if [ "$(curl -s -m 15 -o /dev/null -w '%{http_code}' "https://${WEBAPP_DOTNET}.azurewebsites.net/health/live")" = 200 ]; then
       echo "    API .NET no ar (/health/live respondeu 200)"
       break
     fi
-    [ "$tentativa" = 30 ] && echo "    a API .NET ainda não respondeu; confira em alguns minutos: https://${WEBAPP_DOTNET}.azurewebsites.net/health/live"
+    if [ "$tentativa" = 30 ]; then
+      echo "    a API .NET não respondeu em 5 minutos: https://${WEBAPP_DOTNET}.azurewebsites.net/health/live" >&2
+      exit 1
+    fi
     sleep 10
   done
 fi
