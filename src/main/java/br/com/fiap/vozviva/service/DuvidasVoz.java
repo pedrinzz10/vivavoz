@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.regex.Pattern;
 
 /**
@@ -61,15 +62,16 @@ public class DuvidasVoz {
 	 * A decisão final e a orientação mostrada no app. Qualquer dúvida recebe uma resposta à pergunta feita (com os
 	 * fatos da base, quando ela tem o serviço); sem resposta segura da IA, fica a orientação da base.
 	 *
-	 * @param comIa {@code false} quando a IA está indisponível ou a pessoa passou do limite de uso
+	 * @param podeChamarIa consultado só quando a resposta precisa do modelo (cada chamada conta no limite de uso)
 	 */
-	public Respondida responder(Decisao decidida, String fala, List<TurnoAnterior> anteriores, boolean comIa) {
+	public Respondida responder(Decisao decidida, String fala, List<TurnoAnterior> anteriores,
+			BooleanSupplier podeChamarIa) {
 		Orientada orientada = orientar(decidida, fala, anteriores.stream().map(TurnoAnterior::fala).toList(), servicos);
 		Decisao decisao = orientada.decisao();
 		OrientacaoServicoResponse orientacao = orientada.servico() == null ? null
 				: OrientacaoServicoResponse.de(orientada.servico());
 		boolean duvida = decidida.intencao() == Intencao.TIRAR_DUVIDA || decisao.intencao() == Intencao.TIRAR_DUVIDA;
-		if (!comIa || !duvida) {
+		if (!duvida || !podeChamarIa.getAsBoolean()) {
 			return new Respondida(decisao, orientacao);
 		}
 		ServicoPublico daBase = orientada.servico() == null || orientada.servico().id().equals(servicos.geral().id())
@@ -125,7 +127,11 @@ public class DuvidasVoz {
 			}
 		}
 		else if ((intencao == Intencao.BUSCAR_ATENDIMENTO || intencao == Intencao.DESCONHECIDA) && !mensagemRecebida) {
-			servico = servicos.buscar(fala).orElse(null);
+			// "Onde fica a Defensoria mais perto?" pede o lugar: se ele já é o atendimento presencial do serviço, segue
+			// como busca (com a lista); "remédio de graça na Farmácia Popular" pede a orientação.
+			servico = servicos.buscar(fala)
+				.filter(s -> tipoPedido == null || s.localPresencial() != tipoPedido)
+				.orElse(null);
 		}
 		if (servico != null) {
 			TipoAtendimento local = servico.localPresencial() != null ? servico.localPresencial() : tipoPedido;

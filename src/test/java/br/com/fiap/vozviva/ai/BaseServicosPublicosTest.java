@@ -77,6 +77,7 @@ class BaseServicosPublicosTest {
 			"perdi minha identidade, como tiro a segunda via? | carteira-identidade",
 			"como tiro a segunda via do meu RG? | carteira-identidade",
 			"como renovo a carteira de motorista depois dos 70 anos? | renovar-cnh",
+			"como renovar a carteira do idoso? | carteira-pessoa-idosa",
 			"como peço um advogado de graça? | advogado-gratuito",
 			"idoso tem prioridade na fila do banco? | direitos-pessoa-idosa",
 			"pessoa com deficiência paga meia entrada no cinema? | direitos-pessoa-deficiencia"

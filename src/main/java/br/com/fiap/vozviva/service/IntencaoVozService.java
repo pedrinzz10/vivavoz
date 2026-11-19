@@ -105,7 +105,9 @@ public class IntencaoVozService {
 		Optional<RespostaIa> respostaIa = comIa
 				? ia.analisar(fala, exemplos.parecidos(fala, EXEMPLOS_RECUPERADOS), anteriores) : Optional.empty();
 		Decisao decidida = decidir(regras, respostaIa.orElse(null), confiancaMinima);
-		DuvidasVoz.Respondida respondida = duvidas.responder(decidida, fala, anteriores, comIa);
+		// A resposta da dúvida é outra chamada ao modelo: conta no limite de novo.
+		DuvidasVoz.Respondida respondida = duvidas.responder(decidida, fala, anteriores,
+				() -> comIa && limiteIa.consumir(usuarioId));
 		Decisao decisao = respondida.decisao();
 		OrientacaoServicoResponse orientacao = respondida.orientacao();
 

@@ -165,6 +165,14 @@ class IntencaoVozServiceTest {
 	}
 
 	@Test
+	void buscaPelaDefensoriaContinuaBuscaComALista() {
+		Orientada orientada = orientar("onde fica a Defensoria Pública mais próxima?", null);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.BUSCAR_ATENDIMENTO);
+		assertThat(orientada.decisao().entidades().tipoAtendimento()).isEqualTo(TipoAtendimento.DEFENSORIA);
+	}
+
+	@Test
 	void semIaADuvidaVemDaBase() {
 		assertThat(IntencaoVozService.classificarSemIa("como faço a prova de vida", SERVICOS))
 			.isEqualTo(Intencao.TIRAR_DUVIDA);
