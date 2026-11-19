@@ -257,7 +257,7 @@ export SUFIXO=rm562312 LIBERAR_MEU_IP=sim
 os `SELECT` da Parte 4.
 
 ```bash
-grep -n "^passo" scripts/provisionar-azure.sh
+grep -n '^[[:space:]]*passo ' scripts/provisionar-azure.sh
 ```
 **O que faz:** lista os títulos de todas as etapas do script (Key Vault, Azure SQL, Container Registry, rede,
 RabbitMQ, App Service, API .NET e orçamento), com o número da linha de cada uma. Use a lista para dizer o que o
