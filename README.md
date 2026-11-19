@@ -8,7 +8,7 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 
 | | |
 |---|---|
-| **API publicada (Azure)** | _a preencher depois do deploy_: `https://<webAppName>.azurewebsites.net/swagger-ui.html` |
+| **API publicada (Azure)** | Swagger: https://app-vozviva-rm562312.azurewebsites.net/swagger-ui.html · Health: https://app-vozviva-rm562312.azurewebsites.net/actuator/health · API .NET de zeladoria: https://app-zeladoria-rm562312.azurewebsites.net/swagger |
 | **Swagger local** | http://localhost:8080/swagger-ui.html |
 | **Vídeo pitch** | _a preencher_ |
 | **Roteiro das apresentações** | [`docs/roteiro-apresentacao.md`](docs/roteiro-apresentacao.md) |
@@ -456,7 +456,11 @@ de banco e saúde. "Golpe detectado" = `PROVAVEL_GOLPE` ou `SUSPEITA`.
 | Configuração | Acurácia | Recall | Precisão | Falsos alarmes | Como rodar |
 |---|---|---|---|---|---|
 | Só regras (linha de base) | 83,3% | 72,2% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-golpes/somente-regras.md`) |
-| IA + regras | meta ≥ 80% | meta ≥ 90% | — | — | `./gradlew avaliarIa` (exige `OCI_GENAI_API_KEY` ou as variáveis da assinatura; consome créditos da OCI) |
+| IA + regras (API publicada, 19/11/2026) | **100%** | **100%** | **100%** | **0** | `python scripts/avaliar-ia-publicada.py` (relatório em [`docs/avaliacao/golpes-ia-e-regras.md`](docs/avaliacao/golpes-ia-e-regras.md)); ou `./gradlew avaliarIa` com as credenciais da OCI |
+
+Medição com o modelo real (`meta.llama-3.3-70b-instruct` na OCI, São Paulo) na API publicada na Azure: as 30
+respostas vieram da IA (`analisadoPor: IA_E_REGRAS`). Os golpes semânticos que as regras deixavam passar (falso
+advogado, motoboy, vaga de emprego) foram todos detectados, sem falso alarme nas mensagens legítimas.
 
 Os golpes que as regras não pegam são os semânticos (falso advogado, motoboy, "vaga de emprego"), que é
 onde a IA agrega. As regras foram ajustadas com padrões gerais conhecidos ("somente hoje", "perdi meu
@@ -515,7 +519,10 @@ de socorro) e "a árvore caiu" (zeladoria, não queda de uma pessoa).
 | Configuração | Acurácia | Socorros reconhecidos | Socorros falsos | Como rodar |
 |---|---|---|---|---|
 | Só regras (linha de base) | 96,9% | 100% | 0 | `./gradlew test` (relatório em `build/reports/avaliacao-intencoes/`) |
-| IA + regras | meta ≥ 90% | meta 100% | — | `./gradlew avaliarIa` (exige `OCI_GENAI_API_KEY` ou as variáveis da assinatura; consome créditos da OCI) |
+| IA + regras (API publicada, 19/11/2026) | **100%** | **100%** | **0** | `python scripts/avaliar-ia-publicada.py` (relatório em [`docs/avaliacao/intencoes-ia-e-regras.md`](docs/avaliacao/intencoes-ia-e-regras.md)); ou `./gradlew avaliarIa` com as credenciais da OCI |
+
+Medição com o modelo real na API publicada: as 32 respostas vieram da IA, incluindo a fala que as regras erravam
+("meu remédio acabou, onde eu compro") e as armadilhas ("pronto socorro", "a árvore caiu").
 
 Duas falhas das regras foram corrigidas depois da primeira medição: "alagou" não casava com "alaga", e
 "calçada está toda quebrada" tinha palavras no meio. As duas correções são de padrão, e não de frase do
