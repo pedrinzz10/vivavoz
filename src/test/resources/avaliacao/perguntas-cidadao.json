@@ -48,6 +48,12 @@
     { "texto": "mandaram mensagem do gov.br pedindo pra eu assinar um documento pelo link, posso confiar?", "intencao": "VERIFICAR_INFORMACAO" },
     { "texto": "disseram que tenho valor a receber do inss e pediram um pix pra liberar", "intencao": "VERIFICAR_INFORMACAO" },
 
+    { "texto": "caí num golpe, fiz um pix pra um golpista, o que eu faço?", "intencao": "TIRAR_DUVIDA", "servico": "golpe-sofrido" },
+    { "texto": "passei minha senha do banco pra um homem no telefone", "intencao": "TIRAR_DUVIDA", "servico": "golpe-sofrido" },
+    { "texto": "clonaram meu whatsapp e tão pedindo dinheiro pros meus filhos", "intencao": "TIRAR_DUVIDA", "servico": "golpe-sofrido" },
+    { "texto": "como sei se uma mensagem é golpe?", "intencao": "TIRAR_DUVIDA", "servico": "reconhecer-golpe" },
+    { "texto": "é golpe essa mensagem: seu cpf será bloqueado hoje, clique no link", "intencao": "VERIFICAR_INFORMACAO" },
+
     { "texto": "a calçada da minha rua ta toda quebrada", "intencao": "ZELADORIA_REPORT" },
     { "texto": "o poste da esquina está apagado faz uma semana", "intencao": "ZELADORIA_REPORT" },
     { "texto": "tem um carro parado em cima da rampa e não passo com a cadeira", "intencao": "ZELADORIA_REPORT" },

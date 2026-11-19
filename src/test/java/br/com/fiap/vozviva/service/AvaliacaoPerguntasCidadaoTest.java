@@ -38,7 +38,8 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * build/reports/avaliacao-intencoes/perguntas-cidadao.md.
  */
 @Tag("llm")
-@SpringBootTest(properties = "spring.ai.model.chat=openai")
+// Sem o limite de uso da IA: a avaliação faz muitas perguntas com a mesma pessoa e precisa medir o modelo.
+@SpringBootTest(properties = { "spring.ai.model.chat=openai", "vozviva.ia.limite-por-hora=100000" })
 @ActiveProfiles("test")
 class AvaliacaoPerguntasCidadaoTest {
 
@@ -60,7 +61,7 @@ class AvaliacaoPerguntasCidadaoTest {
 				Papel.CIDADAO)).getId();
 
 		Resultado semIa = avaliar(perguntas, p -> {
-			var orientada = IntencaoVozService.orientar(
+			var orientada = DuvidasVoz.orientar(
 					IntencaoVozService.decidir(RegrasIntencao.analisar(p.texto()), null, 1.0), p.texto(), servicos);
 			return new Obtido(orientada.decisao().intencao(), orientada.servico() == null ? null : orientada.servico().titulo(), "REGRAS");
 		});

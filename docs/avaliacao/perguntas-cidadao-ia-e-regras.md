@@ -1,11 +1,11 @@
-# Avaliação: perguntas do cidadão (49 perguntas)
+# Avaliação: perguntas do cidadão (54 perguntas)
 
-Executada em 19/11/2026 com o código do PR #55, localmente, contra o modelo real (`meta.llama-3.3-70b-instruct` na OCI, São Paulo), com `./gradlew avaliarIa`. Conjunto `src/test/resources/avaliacao/perguntas-cidadao.json` (49 perguntas), diferente dos exemplos do RAG. Sem IA, "resultado do jogo" não tem resposta (fica DESCONHECIDA), por isso a linha de base caiu de 95,9% para 93,9% quando qualquer pergunta passou a ser TIRAR_DUVIDA.
+Executada em 19/11/2026, localmente, com o código do PR #58 e o modelo real (`meta.llama-3.3-70b-instruct` na OCI, São Paulo), por `./gradlew avaliarIa`. Conjunto `src/test/resources/avaliacao/perguntas-cidadao.json` (54 perguntas, incluindo 5 sobre golpe: quem caiu num golpe, como reconhecer e uma mensagem para conferir), diferente dos exemplos do RAG. "Onde eu vou atualizar o cadastro único" virou busca do CRAS mais perto: é uma resposta aceitável para uma pergunta de "onde", mas está contada como erro.
 
 | Configuração | Intenção certa | Serviço certo nas dúvidas | Socorros reconhecidos | Socorros falsos | Respostas com IA |
 |---|---|---|---|---|---|
-| Sem IA (regras e base de serviços) | 93,9% (46/49) | 100,0% (27/27) | 100,0% | 0 | 0 de 49 |
-| IA + regras (modelo real) | 100,0% (49/49) | 100,0% (27/27) | 100,0% | 0 | 49 de 49 |
+| Sem IA (regras e base de serviços) | 94,4% (51/54) | 100,0% (31/31) | 100,0% | 0 | 0 de 54 |
+| IA + regras (modelo real) | 98,1% (53/54) | 96,8% (30/31) | 100,0% | 0 | 54 de 54 |
 
 ## Erros sem IA
 
@@ -15,4 +15,4 @@ Executada em 19/11/2026 com o código do PR #55, localmente, contra o modelo rea
 
 ## Erros com IA
 
-Nenhum.
+- "preciso atualizar o cadastro unico onde eu vou": esperado TIRAR_DUVIDA, obtido BUSCAR_ATENDIMENTO

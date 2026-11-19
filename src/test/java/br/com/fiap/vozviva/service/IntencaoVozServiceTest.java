@@ -9,7 +9,7 @@ import br.com.fiap.vozviva.model.Intencao;
 import br.com.fiap.vozviva.model.TipoAtendimento;
 import br.com.fiap.vozviva.model.Urgencia;
 import br.com.fiap.vozviva.service.IntencaoVozService.Decisao;
-import br.com.fiap.vozviva.service.IntencaoVozService.Orientada;
+import br.com.fiap.vozviva.service.DuvidasVoz.Orientada;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -24,7 +24,7 @@ class IntencaoVozServiceTest {
 	private static final BaseServicosPublicos SERVICOS = new BaseServicosPublicos(JsonMapper.builder().build());
 
 	private static Orientada orientar(String fala, RespostaIa ia) {
-		return IntencaoVozService.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia, LIMITE), fala,
+		return DuvidasVoz.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia, LIMITE), fala,
 				SERVICOS);
 	}
 
@@ -51,7 +51,7 @@ class IntencaoVozServiceTest {
 		Orientada orientada = orientar("onde fica um lugar bom por aqui", ia);
 
 		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.BUSCAR_ATENDIMENTO);
-		assertThat(orientada.decisao().mensagemFalada()).isEqualTo(IntencaoVozService.PERGUNTA_TIPO_ATENDIMENTO);
+		assertThat(orientada.decisao().mensagemFalada()).isEqualTo(DuvidasVoz.PERGUNTA_TIPO_ATENDIMENTO);
 		assertThat(orientada.servico()).isNull();
 	}
 
@@ -140,7 +140,7 @@ class IntencaoVozServiceTest {
 		RespostaIa ia = new RespostaIa(Intencao.TIRAR_DUVIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA, "Vou ver.", 0.9);
 		String fala = "e quanto tempo demora pra sair?";
 
-		Orientada orientada = IntencaoVozService.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
+		Orientada orientada = DuvidasVoz.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
 				LIMITE), fala, java.util.List.of("quero pedir minha aposentadoria"), SERVICOS);
 
 		assertThat(orientada.servico().id()).isEqualTo("aposentadoria-inss");
@@ -151,7 +151,7 @@ class IntencaoVozServiceTest {
 		RespostaIa ia = new RespostaIa(Intencao.TIRAR_DUVIDA, Urgencia.BAIXA, EntidadesFala.NENHUMA, "Vou ver.", 0.9);
 		String fala = "e precisa ter o cadastro único?";
 
-		Orientada orientada = IntencaoVozService.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
+		Orientada orientada = DuvidasVoz.orientar(IntencaoVozService.decidir(RegrasIntencao.analisar(fala), ia,
 				LIMITE), fala, java.util.List.of("como tiro a carteira do idoso?"), SERVICOS);
 
 		assertThat(orientada.servico().id()).isEqualTo("cadastro-unico");
@@ -162,6 +162,58 @@ class IntencaoVozServiceTest {
 		assertThat(SERVICOS.buscar("o que eu faço se cortarem minha luz por falta de pagamento?"))
 			.map(s -> s.id())
 			.isNotEqualTo(java.util.Optional.of("pagamento-beneficio-inss"));
+	}
+
+	@Test
+	void buscaPelaDefensoriaContinuaBuscaComALista() {
+		Orientada orientada = orientar("onde fica a Defensoria Pública mais próxima?", null);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.BUSCAR_ATENDIMENTO);
+		assertThat(orientada.decisao().entidades().tipoAtendimento()).isEqualTo(TipoAtendimento.DEFENSORIA);
+	}
+
+	@Test
+	void caiNumGolpeNaoESocorroERecebeAAjudaDeQuemFoiVitima() {
+		assertThat(RegrasIntencao.analisar("caí num golpe, fiz um pix pra um golpista").intencao())
+			.isNotEqualTo(Intencao.SOCORRO);
+		assertThat(RegrasIntencao.analisar("caí no banheiro e não consigo levantar").intencao()).isEqualTo(Intencao.SOCORRO);
+
+		Orientada orientada = orientar("caí num golpe, fiz um pix pra um golpista, o que eu faço?", null);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(orientada.servico().id()).isEqualTo("golpe-sofrido");
+		assertThat(orientada.servico().sobreGolpe()).isTrue();
+	}
+
+	@Test
+	void vitimaQueAIaMandouConferirRecebeOQueFazerAgora() {
+		RespostaIa ia = new RespostaIa(Intencao.VERIFICAR_INFORMACAO, Urgencia.MEDIA, EntidadesFala.NENHUMA,
+				"Vou verificar se é um golpe.", 0.9);
+
+		Orientada orientada = orientar("passei minha senha do banco pra um homem no telefone", ia);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(orientada.servico().id()).isEqualTo("golpe-sofrido");
+	}
+
+	@Test
+	void mensagemParaConferirContinuaSendoChecagemDeGolpe() {
+		RespostaIa ia = new RespostaIa(Intencao.VERIFICAR_INFORMACAO, Urgencia.MEDIA, EntidadesFala.NENHUMA,
+				"Vou verificar a mensagem.", 0.9);
+
+		Orientada orientada = orientar("é golpe essa mensagem: seu cpf será bloqueado hoje, clique no link", ia);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.VERIFICAR_INFORMACAO);
+		assertThat(orientada.servico()).isNull();
+	}
+
+	@Test
+	void comoReconhecerUmGolpeEDuvidaComDestaqueDeGolpe() {
+		Orientada orientada = orientar("como sei se uma mensagem é golpe?", null);
+
+		assertThat(orientada.decisao().intencao()).isEqualTo(Intencao.TIRAR_DUVIDA);
+		assertThat(orientada.servico().id()).isEqualTo("reconhecer-golpe");
+		assertThat(orientada.servico().sobreGolpe()).isTrue();
 	}
 
 	@Test

@@ -1,0 +1,26 @@
+name: Links oficiais
+
+# Toda segunda-feira confere se os links da base de serviços públicos (aposentadoria, BPC, gov.br...) continuam no
+# ar. Um link quebrado faz o assistente mandar o cidadão para uma página que não existe mais.
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/main/resources/conhecimento/servicos-publicos.json'
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    name: Conferir links oficiais
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python scripts/verificar-links-oficiais.py

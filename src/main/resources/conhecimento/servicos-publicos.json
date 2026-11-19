@@ -1,5 +1,5 @@
 {
-  "descricao": "Base curada de dúvidas frequentes de pessoas idosas e pessoas com deficiência sobre serviços públicos. A resposta ao cidadão vem sempre daqui (resumo, passos, link e telefone oficiais), nunca do modelo. Um serviço só responde se a fala citar um dos seus \"termos\" (todas as palavras do termo, sem acento); entre os citados, vale o mais parecido pela busca TF-IDF, e um serviço de apoio (a conta gov.br, que é meio para os outros) só vence se nenhum outro for citado. Fontes: gov.br, INSS (serviços mais procurados na Central 135), MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC.",
+  "descricao": "Base curada de dúvidas frequentes de pessoas idosas e pessoas com deficiência sobre serviços públicos. A resposta ao cidadão vem sempre daqui (resumo, passos, link e telefone oficiais), nunca do modelo. Um serviço só responde se a fala citar um dos seus \"termos\" (todas as palavras do termo, sem acento); entre os citados, vale o mais parecido pela busca TF-IDF, e um serviço de apoio (a conta gov.br, que é meio para os outros) só vence se nenhum outro for citado. Serviços com sobreGolpe=true (vítima de golpe, como reconhecer um golpe) respondem mesmo quando a fala cita mensagem ou link; os outros nunca tomam o lugar da checagem de golpe. Cada serviço tem a data da última revisão (revisadoEm): um teste avisa quando passa de 180 dias, e um workflow semanal confere se os links continuam no ar. Fontes: gov.br, INSS (serviços mais procurados na Central 135), MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC.",
   "versao": "2026-11-19",
   "servicos": [
     {
@@ -11,6 +11,7 @@
         "aposentado"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "como pedir aposentadoria",
         "quero me aposentar",
@@ -30,7 +31,8 @@
       "link": "https://www.gov.br/pt-br/servicos/solicitar-aposentadoria-por-idade-trabalhador-urbano",
       "telefone": "135",
       "orgao": "INSS",
-      "localPresencial": null
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "pagamento-beneficio-inss",
@@ -52,6 +54,7 @@
         "aposentadoria cai"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "quando cai minha aposentadoria",
         "calendário de pagamento do INSS",
@@ -73,7 +76,8 @@
       "link": "https://meu.inss.gov.br",
       "telefone": "135",
       "orgao": "INSS",
-      "localPresencial": null
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "prova-de-vida",
@@ -82,6 +86,7 @@
         "prova vida"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "prova de vida",
         "como fazer a prova de vida",
@@ -98,7 +103,8 @@
       "link": "https://www.gov.br/inss/pt-br/assuntos/prova-de-vida-confira-as-perguntas-respostas-sobre-o-procedimento",
       "telefone": "135",
       "orgao": "INSS",
-      "localPresencial": null
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "pericia-inss",
@@ -110,6 +116,7 @@
         "afastado doenca"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "agendar perícia",
         "perícia do INSS",
@@ -128,7 +135,8 @@
       "link": "https://meu.inss.gov.br",
       "telefone": "135",
       "orgao": "INSS",
-      "localPresencial": null
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "bpc-idoso",
@@ -143,6 +151,7 @@
         "nunca trabalhei"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "BPC LOAS idoso",
         "benefício para idoso que nunca contribuiu",
@@ -159,7 +168,8 @@
       "link": "https://www.gov.br/pt-br/servicos/solicitar-beneficio-assistencial-ao-idoso",
       "telefone": "135",
       "orgao": "INSS",
-      "localPresencial": "CRAS"
+      "localPresencial": "CRAS",
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "bpc-deficiencia",
@@ -173,6 +183,7 @@
         "beneficio deficiente"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "BPC LOAS deficiente",
         "benefício para pessoa com deficiência",
@@ -189,7 +200,8 @@
       "link": "https://www.gov.br/pt-br/servicos/solicitar-beneficio-assistencial-a-pessoa-com-deficiencia",
       "telefone": "135",
       "orgao": "INSS",
-      "localPresencial": "CRAS"
+      "localPresencial": "CRAS",
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "cadastro-unico",
@@ -200,6 +212,7 @@
         "nis"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "Cadastro Único",
         "CadÚnico",
@@ -217,7 +230,8 @@
       "link": "https://www.gov.br/mds/pt-br/acoes-e-programas/cadastro-unico",
       "telefone": "121",
       "orgao": "Ministério do Desenvolvimento e Assistência Social",
-      "localPresencial": "CRAS"
+      "localPresencial": "CRAS",
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "carteira-pessoa-idosa",
@@ -231,6 +245,7 @@
         "viaja idoso"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "carteira do idoso",
         "carteira da pessoa idosa",
@@ -247,7 +262,8 @@
       "link": "https://www.gov.br/pt-br/servicos/adquirir-carteira-do-idoso",
       "telefone": "121",
       "orgao": "Ministério do Desenvolvimento e Assistência Social",
-      "localPresencial": "CRAS"
+      "localPresencial": "CRAS",
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "passe-livre-pcd",
@@ -261,6 +277,7 @@
         "passagem deficiencia"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "passe livre",
         "passe livre interestadual",
@@ -277,7 +294,8 @@
       "link": "https://www.gov.br/pt-br/servicos/obter-passe-livre-interestadual-digital",
       "telefone": null,
       "orgao": "ANTT",
-      "localPresencial": null
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "assinatura-gov",
@@ -288,6 +306,7 @@
         "assino"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "como assinar documentos no gov",
         "assinatura digital gov.br",
@@ -305,7 +324,8 @@
       "link": "https://www.gov.br/governodigital/pt-br/identidade/assinatura-eletronica",
       "telefone": null,
       "orgao": "Governo Digital (ITI)",
-      "localPresencial": null
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "conta-gov",
@@ -320,6 +340,7 @@
         "conta ouro"
       ],
       "apoio": true,
+      "sobreGolpe": false,
       "perguntas": [
         "esqueci a senha do gov",
         "criar conta gov.br",
@@ -337,7 +358,8 @@
       "link": "https://acesso.gov.br",
       "telefone": null,
       "orgao": "Governo Digital",
-      "localPresencial": null
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "farmacia-popular",
@@ -353,6 +375,7 @@
         "medicamento gratuito"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "remédio de graça",
         "Farmácia Popular",
@@ -369,7 +392,8 @@
       "link": "https://www.gov.br/saude/pt-br/composicao/sectics/farmacia-popular",
       "telefone": "136",
       "orgao": "Ministério da Saúde",
-      "localPresencial": null
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "tarifa-social-energia",
@@ -382,6 +406,7 @@
         "desconto luz"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "desconto na conta de luz",
         "tarifa social de energia",
@@ -397,7 +422,8 @@
       "link": "https://www.gov.br/aneel/pt-br/assuntos/tarifas/tarifa-social",
       "telefone": null,
       "orgao": "ANEEL",
-      "localPresencial": "CRAS"
+      "localPresencial": "CRAS",
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "credencial-estacionamento",
@@ -409,6 +435,7 @@
         "estacionar vaga"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "vaga de idoso",
         "vaga de deficiente",
@@ -424,7 +451,8 @@
       "link": "https://www.gov.br/pt-br/servicos/emitir-credencial-de-estacionamento-digital",
       "telefone": null,
       "orgao": "Senatran",
-      "localPresencial": null
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     },
     {
       "id": "denuncia-violencia",
@@ -441,6 +469,7 @@
         "pega dinheiro"
       ],
       "apoio": false,
+      "sobreGolpe": false,
       "perguntas": [
         "denunciar maus tratos",
         "estão me maltratando",
@@ -458,7 +487,263 @@
       "link": "https://www.gov.br/mdh/pt-br/ondh",
       "telefone": "100",
       "orgao": "Ministério dos Direitos Humanos e da Cidadania",
-      "localPresencial": "DELEGACIA"
+      "localPresencial": "DELEGACIA",
+      "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "cartao-sus",
+      "titulo": "Cartão do SUS",
+      "termos": [
+        "cartao sus",
+        "cartao saude",
+        "cartao nacional saude",
+        "cns",
+        "meu sus"
+      ],
+      "apoio": false,
+      "sobreGolpe": false,
+      "perguntas": [
+        "como tiro o cartão do SUS",
+        "segunda via do cartão do SUS",
+        "perdi meu cartão do SUS",
+        "cartão nacional de saúde"
+      ],
+      "resumo": "O cartão do SUS é feito de graça no posto de saúde (UBS), com documento com foto, CPF e comprovante de endereço. Depois, ele aparece no aplicativo Meu SUS Digital.",
+      "passos": [
+        "Vá ao posto de saúde (UBS) mais perto com documento com foto, CPF e comprovante de endereço.",
+        "Peça o cadastro no Cartão Nacional de Saúde na recepção.",
+        "Depois, use o cartão digital no aplicativo Meu SUS Digital, entrando com a conta gov.br."
+      ],
+      "link": "https://www.gov.br/saude/pt-br/composicao/seidigi/meususdigital/perguntas-e-respostas/cidadao/9-como-faco-o-cartao",
+      "telefone": "136",
+      "orgao": "Ministério da Saúde",
+      "localPresencial": "UBS",
+      "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "carteira-identidade",
+      "titulo": "Carteira de Identidade (RG novo, CIN)",
+      "termos": [
+        "identidade",
+        "cin",
+        "registro geral",
+        "segunda via documento"
+      ],
+      "apoio": false,
+      "sobreGolpe": false,
+      "perguntas": [
+        "como tiro a segunda via do RG",
+        "perdi minha identidade",
+        "nova carteira de identidade",
+        "como faço o RG novo"
+      ],
+      "resumo": "A nova Carteira de Identidade usa o CPF como número, e a primeira via é gratuita. Agende no instituto de identificação do seu estado e leve a certidão de nascimento ou de casamento.",
+      "passos": [
+        "Agende o atendimento no site ou aplicativo do instituto de identificação ou do Poupatempo do seu estado.",
+        "Leve a certidão de nascimento ou de casamento e o CPF.",
+        "Depois, a versão digital fica no aplicativo gov.br."
+      ],
+      "link": "https://www.gov.br/governodigital/pt-br/identidade/cin",
+      "telefone": null,
+      "orgao": "Governo Digital",
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "renovar-cnh",
+      "titulo": "Renovar a carteira de motorista (CNH)",
+      "termos": [
+        "cnh",
+        "carteira motorista",
+        "habilitacao",
+        "carteira habilitacao"
+      ],
+      "apoio": false,
+      "sobreGolpe": false,
+      "perguntas": [
+        "como renovo a carteira de motorista",
+        "renovar CNH depois dos 70 anos",
+        "minha carteira de motorista venceu"
+      ],
+      "resumo": "A renovação da CNH é feita no Detran do seu estado, com exame médico. Para quem tem 70 anos ou mais, a CNH vale 3 anos e não tem renovação automática.",
+      "passos": [
+        "Entre no site ou aplicativo do Detran do seu estado e peça a renovação.",
+        "Agende e faça o exame médico em uma clínica credenciada.",
+        "Acompanhe a nova CNH no aplicativo CNH do Brasil."
+      ],
+      "link": "https://www.gov.br/secom/pt-br/acompanhe-a-secom/noticias/2026/01/governo-do-brasil-anuncia-renovacao-automatica-para-bom-condutor-valendo-a-partir-desta-sexta-9",
+      "telefone": null,
+      "orgao": "Senatran e Detran do estado",
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "advogado-gratuito",
+      "titulo": "Advogado de graça (Defensoria Pública)",
+      "termos": [
+        "advogado",
+        "defensoria",
+        "defensor",
+        "justica gratuita",
+        "processo"
+      ],
+      "apoio": false,
+      "sobreGolpe": false,
+      "perguntas": [
+        "como peço um advogado de graça",
+        "o que é a defensoria pública",
+        "preciso de um advogado e não tenho dinheiro"
+      ],
+      "resumo": "A Defensoria Pública dá orientação e advogado de graça a quem não pode pagar. Questões com o INSS vão para a Defensoria Pública da União; as outras, para a do seu estado.",
+      "passos": [
+        "Separe documento com foto, CPF, comprovante de renda e os papéis do seu caso.",
+        "Procure a Defensoria Pública da sua cidade ou agende pelo site.",
+        "Para problemas com o INSS, procure a Defensoria Pública da União."
+      ],
+      "link": "https://www.dpu.def.br",
+      "telefone": null,
+      "orgao": "Defensoria Pública da União",
+      "localPresencial": "DEFENSORIA",
+      "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "direitos-pessoa-idosa",
+      "titulo": "Direitos da pessoa idosa",
+      "termos": [
+        "prioridade",
+        "prioritario",
+        "fila",
+        "meia entrada",
+        "estatuto idoso",
+        "direitos idoso",
+        "desconto idoso"
+      ],
+      "apoio": false,
+      "sobreGolpe": false,
+      "perguntas": [
+        "idoso tem prioridade na fila",
+        "atendimento prioritário",
+        "idoso paga meia entrada",
+        "quais são os direitos do idoso"
+      ],
+      "resumo": "A partir dos 60 anos, a pessoa tem atendimento prioritário e meia-entrada em eventos culturais e de lazer, pelo Estatuto da Pessoa Idosa. Se um direito for negado, ligue 100.",
+      "passos": [
+        "Apresente um documento com foto para comprovar a idade.",
+        "Se o atendimento prioritário for negado, peça para falar com o responsável.",
+        "Para denunciar desrespeito a um direito, ligue 100."
+      ],
+      "link": "https://www.gov.br/mdh/pt-br/navegue-por-temas/pessoa-idosa",
+      "telefone": "100",
+      "orgao": "Ministério dos Direitos Humanos e da Cidadania",
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "direitos-pessoa-deficiencia",
+      "titulo": "Direitos da pessoa com deficiência",
+      "termos": [
+        "direitos deficiente",
+        "direitos deficiencia",
+        "meia entrada deficiente",
+        "meia entrada deficiencia",
+        "acompanhante",
+        "lei inclusao",
+        "prioridade deficiente"
+      ],
+      "apoio": false,
+      "sobreGolpe": false,
+      "perguntas": [
+        "pessoa com deficiência paga meia entrada",
+        "quais os direitos da pessoa com deficiência",
+        "posso levar acompanhante",
+        "atendimento prioritário para deficiente"
+      ],
+      "resumo": "A pessoa com deficiência tem atendimento prioritário, meia-entrada em eventos culturais e direito a acompanhante na saúde, pela Lei Brasileira de Inclusão. Direito negado? Ligue 100.",
+      "passos": [
+        "Leve um documento ou laudo que comprove a deficiência, quando pedirem.",
+        "Se um direito for negado, peça para falar com o responsável.",
+        "Para denunciar, ligue 100."
+      ],
+      "link": "https://www.gov.br/mdh/pt-br/navegue-por-temas/pessoa-com-deficiencia",
+      "telefone": "100",
+      "orgao": "Ministério dos Direitos Humanos e da Cidadania",
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "golpe-sofrido",
+      "titulo": "Caí em um golpe: o que fazer agora",
+      "termos": [
+        "vitima golpe",
+        "pix golpista",
+        "pix golpe",
+        "passei senha",
+        "passei codigo",
+        "clonaram",
+        "clonado",
+        "invadiram conta",
+        "roubaram conta",
+        "dinheiro golpista",
+        "fui enganado",
+        "fui enganada",
+        "enganaram"
+      ],
+      "apoio": false,
+      "sobreGolpe": true,
+      "perguntas": [
+        "caí num golpe o que eu faço",
+        "fiz um pix para um golpista",
+        "passei minha senha para um golpista",
+        "clonaram meu whatsapp",
+        "fui vítima de golpe",
+        "como recupero o dinheiro do golpe"
+      ],
+      "resumo": "Ligue agora para o seu banco pelo número atrás do cartão: peça o bloqueio e conteste o Pix pelo MED, que pode devolver o dinheiro. Depois, registre um boletim de ocorrência.",
+      "passos": [
+        "Ligue já para o banco pelo número que está atrás do cartão ou no aplicativo do banco.",
+        "Peça o bloqueio da conta e do cartão e conteste o Pix pelo MED, o quanto antes (até 80 dias).",
+        "Troque as senhas e não passe nenhum código para ninguém.",
+        "Registre o boletim de ocorrência na delegacia ou na delegacia online do seu estado.",
+        "WhatsApp clonado: avise seus contatos para não mandarem dinheiro."
+      ],
+      "link": "https://www.bcb.gov.br/estabilidadefinanceira/pix",
+      "telefone": null,
+      "orgao": "Banco Central do Brasil",
+      "localPresencial": "DELEGACIA",
+      "revisadoEm": "2026-11-19"
+    },
+    {
+      "id": "reconhecer-golpe",
+      "titulo": "Como reconhecer um golpe",
+      "termos": [
+        "reconhecer golpe",
+        "identificar golpe",
+        "saber golpe",
+        "sei golpe",
+        "evitar golpe",
+        "proteger golpe",
+        "cair golpe"
+      ],
+      "apoio": false,
+      "sobreGolpe": true,
+      "perguntas": [
+        "como sei se uma mensagem é golpe",
+        "como evitar cair em golpe",
+        "como me proteger de golpes",
+        "como identificar um golpe"
+      ],
+      "resumo": "Banco, INSS e governo nunca pedem senha, código ou Pix por mensagem ou ligação. Desconfie de pressa, prêmio e link. Na dúvida, desligue e confirme pelo número oficial.",
+      "passos": [
+        "Nunca passe senha, código que chegou por SMS ou dados do cartão.",
+        "Desconfie de mensagens com pressa, ameaça de bloqueio, prêmio ou link.",
+        "Não clique no link: digite o endereço oficial ou ligue para o número oficial.",
+        "Use o botão É golpe? do app para conferir a mensagem."
+      ],
+      "link": "https://www.gov.br/mcom/pt-br/noticias/2026/copy_of_julho/ataque-phishing-como-identificar-tentativas-de-fraude-na-internet",
+      "telefone": null,
+      "orgao": "Ministério das Comunicações",
+      "localPresencial": null,
+      "revisadoEm": "2026-11-19"
     }
   ],
   "geral": {
@@ -466,6 +751,7 @@
     "titulo": "Ajuda com serviços públicos",
     "termos": [],
     "apoio": false,
+    "sobreGolpe": false,
     "perguntas": [],
     "resumo": "Ainda não sei orientar sobre isso. O CRAS da sua cidade ajuda com benefícios e cadastros, e o Disque Social 121 tira dúvidas de graça.",
     "passos": [
@@ -476,6 +762,7 @@
     "link": "https://www.gov.br/pt-br",
     "telefone": "121",
     "orgao": "Governo Federal",
-    "localPresencial": "CRAS"
+    "localPresencial": "CRAS",
+    "revisadoEm": "2026-11-19"
   }
 }

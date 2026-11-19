@@ -8,10 +8,12 @@ import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Base curada das dúvidas mais frequentes de pessoas idosas e pessoas com deficiência sobre serviços públicos
@@ -29,6 +31,9 @@ public class BaseServicosPublicos {
 
 	static final String ARQUIVO = "conhecimento/servicos-publicos.json";
 
+	/** "RG" tem só 2 letras, e o índice ignora palavras tão curtas: vira "identidade" antes da busca. */
+	private static final Pattern SIGLA_RG = Pattern.compile("\\brg\\b");
+
 	private final List<ServicoPublico> todos;
 	private final IndiceTfIdf<ServicoPublico> indice;
 	private final ServicoPublico geral;
@@ -42,8 +47,9 @@ public class BaseServicosPublicos {
 
 	/** O serviço de que a fala trata, se a base tiver um com relação suficiente. */
 	public Optional<ServicoPublico> buscar(String fala) {
-		Set<String> palavrasDaFala = IndiceTfIdf.contar(fala).keySet();
-		List<ServicoPublico> citados = indice.buscar(fala, indice.tamanho()).stream()
+		String texto = SIGLA_RG.matcher(IndiceTfIdf.normalizar(fala)).replaceAll("identidade");
+		Set<String> palavrasDaFala = IndiceTfIdf.contar(texto).keySet();
+		List<ServicoPublico> citados = indice.buscar(texto, indice.tamanho()).stream()
 			.filter(s -> s.citadoEm(palavrasDaFala))
 			.toList();
 		return citados.stream().filter(s -> !s.apoio()).findFirst().or(() -> citados.stream().findFirst());
@@ -60,6 +66,11 @@ public class BaseServicosPublicos {
 	/** Orientação para uma dúvida que a base não cobre: CRAS e Disque Social 121. */
 	public ServicoPublico geral() {
 		return geral;
+	}
+
+	/** Todos os serviços da base (para conferir links e datas de revisão). */
+	public List<ServicoPublico> todos() {
+		return todos;
 	}
 
 	public int tamanho() {
@@ -90,22 +101,29 @@ public class BaseServicosPublicos {
 	 *
 	 * @param termos          palavras que a fala precisa citar para o serviço responder (todas as de um termo)
 	 * @param apoio           serviço que é meio para os outros (conta gov.br): perde para qualquer outro citado
+	 * @param sobreGolpe      ajuda contra golpe (vítima de golpe, como reconhecer um golpe): responde mesmo quando a fala
+	 *                        cita mensagem, link ou Pix, e o app mostra com o destaque de golpe
 	 * @param perguntas       jeitos comuns de perguntar sobre o serviço (só para a busca)
 	 * @param resumo          frase curta (até 200 caracteres) que o app lê em voz alta
 	 * @param link            página oficial do serviço
 	 * @param telefone        central oficial gratuita, quando houver (ex.: 135 do INSS)
 	 * @param localPresencial onde a pessoa pode ser atendida perto de casa, quando fizer sentido (ex.: CRAS)
+	 * @param revisadoEm      quando o conteúdo foi conferido nas fontes oficiais (regras de benefício mudam)
 	 */
-	public record ServicoPublico(String id, String titulo, List<String> termos, boolean apoio, List<String> perguntas,
+	public record ServicoPublico(String id, String titulo, List<String> termos, boolean apoio, boolean sobreGolpe,
+			List<String> perguntas,
 			String resumo, List<String> passos, String link, String telefone, String orgao,
-			TipoAtendimento localPresencial) {
+			TipoAtendimento localPresencial, LocalDate revisadoEm) {
 
 		String textoIndexado() {
 			return titulo + " " + String.join(" ", termos) + " " + String.join(" ", perguntas);
 		}
 
 		boolean citadoEm(Set<String> palavrasDaFala) {
-			return termos.stream().anyMatch(t -> palavrasDaFala.containsAll(IndiceTfIdf.contar(t).keySet()));
+			// Um termo sem palavra indexável (ex.: "rg", curto demais) nunca casa: senão casaria com qualquer fala.
+			return termos.stream()
+				.map(t -> IndiceTfIdf.contar(t).keySet())
+				.anyMatch(palavras -> !palavras.isEmpty() && palavrasDaFala.containsAll(palavras));
 		}
 
 	}

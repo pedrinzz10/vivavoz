@@ -246,6 +246,8 @@ quebra o build se um endpoint ficar fora do contrato ou sem descrição.
 | `OCI_GENAI_BASE_URL` | Endpoint compatível com OpenAI da OCI (padrão `https://inference.generativeai.sa-saopaulo-1.oci.oraclecloud.com/openai/v1`) |
 | `OCI_GENAI_MODEL` | Modelo usado (padrão `meta.llama-3.3-70b-instruct`) |
 | `VOZ_CONFIANCA_MINIMA` | Confiança mínima para a IA decidir a intenção sozinha (padrão `0.6`) |
+| `VOZ_RETENCAO_DIAS` | Prazo do histórico de voz; uma vez por dia apaga o que for mais velho (padrão `90`) |
+| `IA_LIMITE_POR_HORA` | Chamadas ao modelo por pessoa por hora; acima disso a resposta segue só com as regras e a base, sem bloquear (padrão `60`) |
 | `DB_URL` | URL JDBC do banco (Azure SQL em produção; padrão do dev aponta para o SQL Server do docker-compose) |
 | `DB_USERNAME` / `DB_PASSWORD` | Credenciais do banco (no dev, usuário `sa` e a senha do `.env`) |
 | `RABBITMQ_HOST` / `RABBITMQ_PORT` | Endereço do RabbitMQ |
@@ -525,16 +527,42 @@ e com localização também o CRAS (ou outro local presencial do serviço) mais 
 - **Filtro de segurança:** a resposta é descartada se citar um site que não termine em gov.br (ou iti.br), um número
   longo ou um telefone fora das centrais oficiais (192, 190, 193, 100, 135, 121, 136, 180, 188). Aí vale a
   orientação da base. Saúde sem diagnóstico nem dose; urgência sempre 192.
+- **Limite de uso da IA:** até `IA_LIMITE_POR_HORA` chamadas ao modelo por pessoa por hora (padrão 60). Acima disso
+  a API não recusa nada: responde só com as regras e a base, como com a IA fora do ar. Um socorro nunca é bloqueado
+  por custo.
+- **Retenção (LGPD):** o histórico de voz, que agora dá contexto à conversa, é apagado depois de `VOZ_RETENCAO_DIAS`
+  (padrão 90), por uma tarefa diária (`RetencaoHistoricoVoz`).
 - **Limitações:** a resposta aberta vem do conhecimento geral do modelo e pode ter imprecisões; por isso termina
   indicando onde confirmar. Perguntas que dependem de dados em tempo real (previsão do tempo, resultado de jogo,
   preço) recebem uma resposta honesta de onde consultar.
 
-**Dúvidas sobre serviços públicos** (`conhecimento/servicos-publicos.json`, 15 serviços): as dúvidas mais frequentes
+**Três ajudas diferentes contra golpe.** Golpe tem tratamento próprio porque a pressa e a ajuda são outras:
+
+| A pessoa diz | Intenção | O que recebe |
+|---|---|---|
+| "É golpe essa mensagem: seu CPF será bloqueado, clique no link" | `VERIFICAR_INFORMACAO` | A checagem da mensagem (`POST /api/v1/verificacoes`): risco, sinais e canal oficial |
+| "Caí num golpe, fiz um Pix pra um golpista", "passei minha senha", "clonaram meu WhatsApp" | `TIRAR_DUVIDA` (serviço `golpe-sofrido`) | O que fazer agora: ligar para o banco, contestar o Pix pelo MED (até 80 dias), trocar senhas, boletim de ocorrência |
+| "Como sei se uma mensagem é golpe?" | `TIRAR_DUVIDA` (serviço `reconhecer-golpe`) | Como reconhecer: órgãos não pedem senha nem Pix, desconfiar de pressa e link |
+
+- "Caí num golpe" não é queda: a regra de segurança do socorro ignora "caí num/no golpe" (antes virava SOCORRO e o
+  app oferecia avisar os contatos e ligar 192).
+- Quem já caiu num golpe não tem mensagem para conferir: mesmo que a IA marque `VERIFICAR_INFORMACAO`, a API entrega
+  a ajuda da base. Com uma mensagem concreta para conferir, a checagem continua.
+- A orientação traz `sobreGolpe: true`, e o app mostra o selo **Ajuda contra golpe** (o parecer de uma mensagem
+  tem o selo **Verificação de golpe**; uma dúvida comum, **Orientação**). O app ganhou a tela **É golpe?**, com a
+  checagem da mensagem colada e o botão **Já caí num golpe**.
+
+**Dúvidas sobre serviços públicos** (`conhecimento/servicos-publicos.json`, 23 serviços, 2 deles sobre golpe): as dúvidas mais frequentes
 de idosos e pessoas com deficiência, levantadas nas centrais e portais oficiais (serviços mais procurados na Central
 135 do INSS, gov.br, MDS, Ministério da Saúde, ANEEL, ANTT, ITI e MDHC): aposentadoria, pagamento do benefício, prova
 de vida, perícia, BPC para idoso e para pessoa com deficiência, Cadastro Único, Carteira da Pessoa Idosa, Passe Livre,
-assinatura e conta gov.br, Farmácia Popular, Tarifa Social de energia, credencial de estacionamento e denúncia de
-violência (Disque 100). Os links foram conferidos em 19/11/2026.
+assinatura e conta gov.br, Farmácia Popular, Tarifa Social de energia, credencial de estacionamento, denúncia de
+violência (Disque 100), cartão do SUS, carteira de identidade, renovação da CNH, advogado gratuito (Defensoria) e os
+direitos da pessoa idosa e da pessoa com deficiência (prioridade, meia-entrada, acompanhante). Os links foram
+conferidos em 19/11/2026.
+- **Base sempre em dia:** cada serviço tem a data da última revisão (`revisadoEm`), e um teste falha de propósito
+  quando ela passa de 180 dias. O workflow `Links oficiais` (toda segunda-feira e em todo PR que muda a base) roda
+  `scripts/verificar-links-oficiais.py` e falha se algum link sair do ar.
 - A resposta vem **sempre da base**, nunca do texto do modelo: a IA só reconhece que é uma dúvida, e o link e o
   telefone são os oficiais.
 - Um serviço só responde se a fala citar um dos seus termos ("aposentadoria", "prova de vida", "assinar"...);
@@ -560,7 +588,8 @@ violência (Disque 100). Os links foram conferidos em 19/11/2026.
 - **Sem IA:** as regras determinísticas respondem, sempre no mesmo contrato JSON. Isso vale com o modelo fora
   do ar, sem chave ou com resposta malformada.
 - **LGPD:** o histórico guarda o texto, a intenção, a confiança e a latência, para o próprio usuário consultar
-  e para avaliar a IA. A localização nunca é gravada.
+  e para avaliar a IA, e as falas dos últimos 15 minutos dão contexto à conversa. A localização nunca é gravada, e o
+  histórico é apagado depois de 90 dias (`VOZ_RETENCAO_DIAS`).
 
 ### Avaliação
 
@@ -576,14 +605,14 @@ sobre serviços públicos.
 | IA + regras (modelo real, 39 falas, 19/11/2026) | **100%** | **100%** | **0** | `./gradlew avaliarIa` com as credenciais da OCI |
 | IA + regras (API publicada, 19/11/2026, 32 falas, antes das dúvidas) | **100%** | **100%** | **0** | `python scripts/avaliar-ia-publicada.py` (relatório em [`docs/avaliacao/intencoes-ia-e-regras.md`](docs/avaliacao/intencoes-ia-e-regras.md)); ou `./gradlew avaliarIa` com as credenciais da OCI |
 
-**Perguntas do cidadão** (`src/test/resources/avaliacao/perguntas-cidadao.json`, 49 perguntas do dia a dia: 27
-dúvidas sobre serviços públicos, socorros, buscas, golpes, problemas na rua e falas fora do tema), com o relatório em
+**Perguntas do cidadão** (`src/test/resources/avaliacao/perguntas-cidadao.json`, 54 perguntas do dia a dia: 31
+dúvidas, inclusive de quem caiu num golpe e de como reconhecer um, socorros, buscas, golpes, problemas na rua e falas fora do tema), com o relatório em
 [`docs/avaliacao/perguntas-cidadao-ia-e-regras.md`](docs/avaliacao/perguntas-cidadao-ia-e-regras.md):
 
 | Configuração | Intenção certa | Serviço certo nas dúvidas | Socorros reconhecidos | Socorros falsos |
 |---|---|---|---|---|
-| Sem IA (regras e base de serviços) | 93,9% (46/49) | 100% (27/27) | 100% | 0 |
-| IA + regras (modelo real) | **100% (49/49)** | **100% (27/27)** | **100%** | **0** |
+| Sem IA (regras e base de serviços) | 94,4% (51/54) | 100% (31/31) | 100% | 0 |
+| IA + regras (modelo real) | **98,1% (53/54)** | **96,8% (30/31)** | **100%** | **0** |
 
 A primeira rodada mostrou três falhas, corrigidas por padrão e não por frase: "que dia **cai** o pagamento" virava
 socorro (agora "cai o pagamento/benefício/dinheiro" é dinheiro que entra, como "pronto socorro" é um lugar),

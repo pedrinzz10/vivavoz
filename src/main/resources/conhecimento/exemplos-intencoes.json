@@ -37,6 +37,9 @@
     { "fala": "Meu filho é autista, ele tem direito a algum benefício?", "intencao": "TIRAR_DUVIDA", "urgencia": "BAIXA", "entidades": {} },
     { "fala": "Como pego remédio de pressão de graça", "intencao": "TIRAR_DUVIDA", "urgencia": "BAIXA", "entidades": {} },
     { "fala": "Idoso viaja de ônibus de graça para outro estado?", "intencao": "TIRAR_DUVIDA", "urgencia": "BAIXA", "entidades": {} },
+    { "fala": "Caí num golpe, fiz um Pix para um desconhecido, e agora?", "intencao": "TIRAR_DUVIDA", "urgencia": "ALTA", "entidades": {} },
+    { "fala": "Passei o código que chegou no meu celular para um rapaz que ligou", "intencao": "TIRAR_DUVIDA", "urgencia": "ALTA", "entidades": {} },
+    { "fala": "Como eu faço para não cair em golpe pelo celular?", "intencao": "TIRAR_DUVIDA", "urgencia": "BAIXA", "entidades": {} },
     { "fala": "Que horas são?", "intencao": "DESCONHECIDA", "urgencia": "BAIXA", "entidades": {} },
     { "fala": "Hmm, deixa eu ver, não lembro", "intencao": "DESCONHECIDA", "urgencia": "BAIXA", "entidades": {} }
   ]

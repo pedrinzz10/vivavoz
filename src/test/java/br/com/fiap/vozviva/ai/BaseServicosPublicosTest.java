@@ -8,6 +8,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.LocalDate;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class BaseServicosPublicosTest {
@@ -58,6 +60,38 @@ class BaseServicosPublicosTest {
 			"hospital com rampa perto", "é... não sei" })
 	void falaSemRelacaoComServicoNaoInventaOrientacao(String fala) {
 		assertThat(base.buscar(fala)).isEmpty();
+	}
+
+	@Test
+	void todoServicoFoiRevisadoNosUltimos180Dias() {
+		// Regras de benefício e links mudam: este teste falha de propósito quando a base fica velha, para alguém
+		// conferir de novo nas fontes oficiais e atualizar o revisadoEm.
+		LocalDate limite = LocalDate.now().minusDays(180);
+		assertThat(base.todos()).allSatisfy(s -> assertThat(s.revisadoEm()).as(s.id()).isAfter(limite));
+		assertThat(base.geral().revisadoEm()).isAfter(limite);
+	}
+
+	@ParameterizedTest
+	@CsvSource(delimiter = '|', value = {
+			"como eu tiro o cartão do SUS? | cartao-sus",
+			"perdi minha identidade, como tiro a segunda via? | carteira-identidade",
+			"como tiro a segunda via do meu RG? | carteira-identidade",
+			"como renovo a carteira de motorista depois dos 70 anos? | renovar-cnh",
+			"como renovar a carteira do idoso? | carteira-pessoa-idosa",
+			"como peço um advogado de graça? | advogado-gratuito",
+			"idoso tem prioridade na fila do banco? | direitos-pessoa-idosa",
+			"pessoa com deficiência paga meia entrada no cinema? | direitos-pessoa-deficiencia"
+	})
+	void encontraOsServicosNovos(String fala, String idEsperado) {
+		assertThat(base.buscar(fala)).map(ServicoPublico::id).contains(idEsperado);
+	}
+
+	@Test
+	void todoTermoTemPalavraQueOIndiceConsegueLer() {
+		// "rg" tem só 2 letras e o índice ignora palavras curtas: um termo assim casaria com qualquer fala.
+		assertThat(base.todos()).allSatisfy(s -> assertThat(s.termos())
+			.as(s.id())
+			.allSatisfy(t -> assertThat(IndiceTfIdf.contar(t)).as(t).isNotEmpty()));
 	}
 
 	@Test

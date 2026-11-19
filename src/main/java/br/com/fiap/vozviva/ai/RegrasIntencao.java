@@ -31,6 +31,10 @@ public final class RegrasIntencao {
 	private static final Pattern DINHEIRO_QUE_CAI = Pattern.compile(
 			"\\bcai (o |a |na |no |meu |minha )?(pagamento|beneficio|aposentadoria|dinheiro|salario|pensao|conta|deposito|bpc|loas)\\b");
 
+	/** "Caí num golpe": a pessoa foi enganada, não sofreu uma queda (a ajuda é outra: banco, MED, boletim). */
+	private static final Pattern GOLPE_EM_QUE_CAIU = Pattern.compile(
+			"\\b(eu )?cai (num|no|numa|em um|em uma|em|nesse|nessa) (golpe|conto|fraude|golpista)\\b");
+
 	/** Sinais de perigo agora: sempre viram SOCORRO. */
 	private static final Pattern SOCORRO = padrao(
 			"\\b(socorro|me acuda|emergencia)\\b",
@@ -96,7 +100,8 @@ public final class RegrasIntencao {
 	public static Resultado analisar(String fala) {
 		String texto = SEPARADORES.matcher(IndiceTfIdf.normalizar(fala)).replaceAll(" ").strip();
 		// "Pronto socorro" é um lugar, não um pedido de socorro.
-		String semNomesDeLugar = DINHEIRO_QUE_CAI.matcher(texto.replace("pronto socorro", "pronto atendimento"))
+		String semQuedaFalsa = GOLPE_EM_QUE_CAIU.matcher(texto).replaceAll("fui vitima de golpe");
+		String semNomesDeLugar = DINHEIRO_QUE_CAI.matcher(semQuedaFalsa.replace("pronto socorro", "pronto atendimento"))
 			.replaceAll("entra $2");
 		if (SOCORRO.matcher(semNomesDeLugar).find()) {
 			return socorro();

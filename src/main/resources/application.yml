@@ -97,6 +97,8 @@ springdoc:
 
 vozviva:
   ia:
+    # Chamadas ao modelo por pessoa por hora. Acima disso a resposta segue só com as regras e a base (nunca bloqueia).
+    limite-por-hora: ${IA_LIMITE_POR_HORA:60}
     # A IA liga com a API key do Generative AI (spring.ai.openai.api-key) ou com a assinatura abaixo completa.
     # Assinatura com a chave de assinatura (API signing key) de um usuário da OCI, para contas sem API key do
     # Generative AI. Com os cinco campos preenchidos, cada chamada é assinada e a API key não é usada.
@@ -110,6 +112,8 @@ vozviva:
   voz:
     # Abaixo desta confiança a resposta da IA não decide sozinha: valem as regras ou o app pede para repetir.
     confianca-minima: ${VOZ_CONFIANCA_MINIMA:0.6}
+    # Prazo do histórico de voz (LGPD): uma vez por dia apaga as interações mais velhas que isso.
+    retencao-dias: ${VOZ_RETENCAO_DIAS:90}
   seguranca:
     jwt:
       # Segredo de assinatura do JWT (mínimo de 32 caracteres), compartilhado com a API .NET.
