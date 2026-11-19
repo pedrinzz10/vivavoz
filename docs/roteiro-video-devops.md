@@ -441,6 +441,16 @@ access a resource"**. Se aparecer, clique em **View** e em **Permit** e explique
 
 ### Parte 4 – CRUD em três tabelas, conferindo direto no banco (≈ 4 a 5 min)
 
+**Jeito mais rápido, pelo Cloud Shell da Azure:** o script faz todo o CRUD na API publicada e, depois de cada
+operação, roda o `SELECT` direto no Azure SQL. Ele pausa a cada passo para você explicar (aperte Enter para seguir).
+A senha do banco é lida do Key Vault e não aparece.
+
+```bash
+cd ~/vivavoz && ./scripts/demonstrar-crud.sh
+```
+
+Se preferir fazer pelo Swagger e pelo Query editor, siga os passos abaixo.
+
 Para ser rápido: deixe o Swagger e o Query editor em **duas abas lado a lado** (ou alterne com Ctrl+Tab), cole os
 JSON do bloco de notas e, no Query editor, deixe os três `SELECT` escritos e rode só o que interessa (selecione a
 linha e clique em **Run**).
