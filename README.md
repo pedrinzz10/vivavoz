@@ -18,6 +18,21 @@ As especificações das funcionalidades estão em [`specs/specs.json`](specs/spe
 | **Roteiro do vídeo pitch (Java)** | [`docs/roteiro-video-java.md`](docs/roteiro-video-java.md): pitch de 5 minutos com a demonstração na API publicada |
 | **Requisito 5 (Java Advanced)** | **Opção A: RabbitMQ.** O botão de emergência publica o evento e um consumidor assíncrono avisa os contatos ([detalhes](#botão-de-emergência-arquitetura-distribuída--opção-a-rabbitmq)) |
 
+## Disciplina de IA generativa (Disruptive Architectures: IoT, IoB & Generative IA)
+
+A IA generativa do VozViva está neste repositório. Onde está cada critério do enunciado:
+
+| Critério | Onde está |
+|---|---|
+| Problema e adequação ao tema | [O problema e quem a solução atende](#o-problema-e-quem-a-solução-atende) |
+| IA generativa funcionando e integrada | Spring AI + OCI Generative AI em duas funcionalidades da API: [assistente contra golpes](#assistente-contra-golpes-spring-ai--rag) e [classificação de intenção por voz](#classificação-de-intenção-por-voz-spring-ai--rag). A intenção de zeladoria encaminha o cidadão para a API .NET |
+| Aprofundamento técnico e justificativa | RAG por TF-IDF sobre `src/main/resources/conhecimento/golpes.json` e `exemplos-intencoes.json`; regras determinísticas antes da IA e como reserva se o modelo falhar |
+| Dados e arquitetura | [Arquitetura](#arquitetura) e base de conhecimento em `src/main/resources/conhecimento/` |
+| Testes e avaliação | Conjuntos rotulados em `src/test/resources/avaliacao/` (32 falas e 30 mensagens), com resultados na seção "Avaliação" de cada funcionalidade. Com o modelo real na API publicada: 100% de acurácia nos dois conjuntos, sem falso alarme e sem socorro falso ([golpes](docs/avaliacao/golpes-ia-e-regras.md), [intenções](docs/avaliacao/intencoes-ia-e-regras.md)) |
+| Uso responsável | Limitações em cada funcionalidade, LGPD e [declaração de uso de IA](#declaração-de-uso-de-ia-generativa) |
+
+Entrega no portal: [`docs/entrega/ia-generativa.txt`](docs/entrega/ia-generativa.txt).
+
 ## Integrantes (grupo VozViva)
 
 | Nome | RM | Turma |
